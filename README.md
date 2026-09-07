@@ -2,11 +2,11 @@
 
 A standalone student tutorial on extracting vector polarization from continuous-wave NMR spectra.
 
-**[Read the tutorial](https://zetanaut.github.io/NMR-AI/) · [Baseline-fitting practical](https://zetanaut.github.io/NMR-AI/baseline.html)**
+**[Read the tutorial](https://zetanaut.github.io/NMR-AI/) · [Baseline practical](https://zetanaut.github.io/NMR-AI/baseline.html) · [Experimental lineshape matching](https://zetanaut.github.io/NMR-AI/matching.html)**
 
 The three phases are a physically grounded training-data generator, an efficient DNN/CNN, and validation with bias, residual width, and relative errors at a stated polarization scale.
 
-The generator couples a complex Dulya/Pake spin-1 susceptibility to a passive Q-meter circuit: coil and stray capacitance, RLGC transmission line, one tuning capacitor, finite-source/input loading, and a phase-sensitive detector. Baseline and signal are computed from the same circuit at χ=0 and χ(P). Independent reference subtraction and TE area calibration precede the networks.
+The generators couple complex Dulya/Pake spin-1 susceptibility to a passive Q-meter circuit: coil and stray capacitance, RLGC transmission line, one tuning capacitor, finite-source/input loading, and a phase-sensitive detector. Baseline and signal are computed from the same circuit at χ=0 and χ(P). The new experimental-matching workflow extracts polarization from the spin-1 lineshape without TE calibration. The existing 512-bin learning benchmark separately uses TE-area features.
 
 The scientific source is [Seay, Fernando, and Keller, arXiv:2603.10146v5](https://arxiv.org/abs/2603.10146v5). Read the [detailed physics/electronics notes](notes/physics-electronics-theory.md) and [baseline-fitting record](notes/baseline-fitting.md) for derivations, conventions, component assumptions, and measured-fit diagnostics.
 
@@ -77,7 +77,48 @@ The public CSV is the explicitly authorized raw-data exception. Other measuremen
 and full fit products stay local. The main 512-bin synthetic training benchmark is
 unchanged; it is not silently relabeled as this 500-bin measured acquisition.
 
-## Run the learning labs
+## Match the supplied spin-1 signals and make training data
+
+[Sample_RawSignal.csv](examples/Sample_RawSignal.csv) contains five experimental
+spin-1 sweeps, published byte-for-byte with permission. The grid and n=1 cable
+setup are confirmed to match the baseline example. The reader audits Unicode
+line separators and blank lines without changing samples or record order.
+
+```bash
+python tools/match_experimental_signals.py \
+  --output-dir local-results/experimental-matching --starts 6
+python tools/generate_matched_data.py \
+  --matching-report local-results/experimental-matching/matching_report.json \
+  --num-samples 2000 --num-configurations 100 --seed 42 \
+  --output local-results/experiment-anchored.npz
+python tools/export_signal_matching.py \
+  --fit-dir local-results/experimental-matching \
+  --dataset local-results/experiment-anchored.npz
+```
+
+This fits the tuning capacitor, frequency-dependent detector phase, readout and
+complex Pake lineshape against all 500 samples of every scan. Polarizations are
+determined from the intrinsic branch shapes/area ratio; no TE normalization is
+needed. The selected P estimates are approximately 35.08%, −5.74%, 36.85%,
+41.07%, and −7.96% in file order, with residual RMS about 6.0–6.6 × 10⁻⁵
+recorded units. These are fit results, not calibrated uncertainty claims.
+
+The generator draws **new simulator-known P labels**, with explicit robustness
+excursions around the complete fitted seed configurations. Its first noise
+model uses a high-frequency noise-scale proxy; correlated residual structure
+and endpoint artifacts remain visible and need separate modeling. A supplied
+500×500 covariance can replace the white-Gaussian reference. Five scans do not
+define a measured population distribution or a large held-out test set.
+
+The [new practical](https://zetanaut.github.io/NMR-AI/matching.html) shows all
+fits, residuals, physical parameter meanings, and a generated example. The
+[matching record](notes/experimental-matching.md) documents every step.
+This new 500-bin recorded-unit lineshape dataset is separate from the existing
+512-bin TE-area learning benchmark below; it needs grid-aware preprocessing
+without a required TE calibration channel. No new trained-network accuracy is
+claimed here.
+
+## Run the existing 512-bin learning labs
 
 ```bash
 python tools/generate_data.py --num-samples 2000 --num-configurations 100 \

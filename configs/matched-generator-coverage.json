@@ -1,0 +1,27 @@
+{
+  "source": "Controlled robustness exercise around jointly fitted experimental seed configurations. Half-ranges below are explicit teaching choices, not measured hardware uncertainties or a five-scan empirical population.",
+  "reference_averages": 16,
+  "reference_source": "Independent synthetic baseline averaged over 16 sweeps for the teaching exercise; not the acquisition's reported averaging count.",
+  "circuit_fractional_half_ranges": {
+    "drive_v": 0.01,
+    "drive_resistance_ohm": 0.01,
+    "input_resistance_ohm": 0.01,
+    "damping_resistance_ohm": 0.01,
+    "coil_resistance_ohm": 0.01,
+    "coil_inductance_h": 0.01,
+    "tune_capacitance_f": 0.01,
+    "cable_resistance_ohm_per_m": 0.01,
+    "susceptibility_scale_cgs": 0.05,
+    "detector_gain": 0.01
+  },
+  "center_half_range_mhz": 0.001,
+  "split_fractional_half_range": 0.01,
+  "g_fractional_half_range": 0.05,
+  "eta_half_range": 0.005,
+  "phase_half_range_rad": 0.01,
+  "phase_slope_half_range_rad_per_mhz": 0.01,
+  "phase_curvature_half_range_rad_per_mhz2": 0.02,
+  "offset_half_range_recorded": 0.001,
+  "cable_trim_half_range_m": 0.005,
+  "fixed_quantities": "Frequency grid, n=1 branch, 3.580 m half-wave propagation scale, nominal sqrt(L/C)=50 ohm, G'=0, C_stray=0 and nominal filling factor. Vary effective susceptibility amplitude rather than two separately unidentifiable coupling scales. Recompute cable L/C together when conductor loss changes."
+}

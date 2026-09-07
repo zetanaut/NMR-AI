@@ -4,6 +4,14 @@ This is the laboratory record for the [baseline practical](../docs/baseline.html
 The circuit follows [arXiv:2603.10146v5, Fig. 1 and Eqs. (1)–(14)](https://arxiv.org/pdf/2603.10146v5#page=4);
 see the [physics notes](physics-electronics-theory.md) for topology and conventions.
 
+Continue with [Practical 01B](../docs/matching.html) and its
+[experimental-matching record](experimental-matching.md) for the five supplied
+polarized scans. That next model fits the slow detector phase as well as the
+tuning capacitor, improving the earlier baseline comparison while retaining
+n=1. Spin-1 polarization comes from the lineshape; TE calibration is not needed.
+The constant-phase fit below remains explicitly a diagnostic of that simpler
+electronics assumption, not a prerequisite capacitor measurement.
+
 ## Establish acquisition metadata first
 
 The public example is now [`examples/deuteron-baseline.csv`](../examples/deuteron-baseline.csv),

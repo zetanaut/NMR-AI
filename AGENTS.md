@@ -5,6 +5,8 @@ or performance claims, read these files completely:
 
 - `notes/physics-electronics-theory.md`
 - `notes/baseline-fitting.md`
+- `notes/experimental-matching.md` when working on experimental signal matching
+  or the new 500-bin experiment-anchored generator.
 
 The user's requirement is to follow the real physics and supplied theory, not
 invent plausible-looking substitutes. Keep paper statements, mathematical
@@ -34,6 +36,16 @@ is distinct from the existing synthetic teaching benchmark.
 The owner explicitly authorized publishing `examples/deuteron-baseline.csv`
 as a student test example. Use the shared `baseline_data.py` loader to report its
 decimal-spacing repairs; do not silently rewrite values or the confirmed grid.
+The five raw spin-1 sweeps in examples/Sample_RawSignal.csv are also authorized
+for publication, byte-for-byte including UTF-8 record separators. Their grid and
+n=1, 3.580 m half-wave setup are confirmed to match the baseline. Use the audited
+experimental_data.py reader. Polarization is inferred by spin-1 lineshape/branch
+ratio fitting; TE calibration or externally supplied P is NOT a prerequisite.
+Fit the tuning capacitor and detector phase rather than treating earlier fit
+estimates as independently known measurements. Keep experimental P fit estimates
+distinct from newly sampled simulator truth labels and from accuracy claims.
+The 500-bin lineshape generator has no TE-area input requirement and is separate
+from the existing 512-bin TE-area benchmark. Do not conflate their preprocessing.
 
 NMR-AI is a standalone educational repository. Do not add runtime dependencies,
 imports, links, workflow integrations, or automatic data/checkpoint transfers to

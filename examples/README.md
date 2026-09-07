@@ -1,4 +1,4 @@
-# Public deuteron baseline example
+# Public deuteron teaching examples
 
 [deuteron-baseline.csv](deuteron-baseline.csv) is the measured baseline supplied
 by the repository owner for public student use. It is independent of any research
@@ -65,3 +65,37 @@ coil, loss and detector records before treating fitted values as physical settin
 For this setup, copy and refine the preset; the blank template is for other setups.
 See the [fitting procedure](../notes/baseline-fitting.md) for diagnostics, parameter
 meanings, and publication.
+
+## Polarized spin-1 raw signals
+
+[Sample_RawSignal.csv](Sample_RawSignal.csv) is also explicitly authorized for
+public student use. Its bytes are preserved exactly, including five UTF-8
+U+2028 line separators and blank lines. SHA-256:
+`cdbb7e3afa6531694a4b97848d295bbb5c7c03ef62d796b053e3b4e16fbaea5a`.
+
+There are five distinct timestamp-plus-500-sample records. They use the same
+confirmed frequency grid and n=1, 3.580 m cable half-wave setup as the baseline.
+Timestamps are not in increasing order; file order is retained. The file has
+no polarization or frequency columns. Polarization is determined by matching
+the spin-1 lineshape; TE calibration is not needed for that extraction.
+
+Use the UTF-8-aware, audited reader:
+
+```python
+from experimental_data import load_signal_csv
+
+signals, audit = load_signal_csv("examples/Sample_RawSignal.csv")
+assert signals.shape == (5, 501)
+assert len(audit["unicode_line_separators"]) == 5
+assert len(audit["blank_logical_lines_1based"]) == 18
+```
+
+It reuses the strict numeric grammar from `baseline_data.py`, but handles this
+file's record separators explicitly. It never removes a separator inside an
+otherwise invalid number to invent a new value. No records are deduplicated,
+sorted or smoothed. The original single-baseline parser remains unchanged.
+
+See [Practical 01B](../docs/matching.html) and the
+[experimental matching record](../notes/experimental-matching.md) for full
+signal/circuit fits, noise diagnostics and a 500-bin generator that samples new
+simulator-known polarizations around fitted experimental configurations.

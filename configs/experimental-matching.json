@@ -1,0 +1,87 @@
+{
+  "description": "Match the five experimental spin-1 sweeps and infer polarization from the complex lineshape. No TE calibration is required. These five scans are development examples, not a held-out performance benchmark.",
+  "acquisition": "configs/deuteron-acquisition.json",
+  "grid_status": "confirmed",
+  "grid_source": "Experimental set up details: signal scans use the same 500-bin frequency grid and n=1, 358.0 cm cable setup as the baseline example.",
+  "component_setup": "configs/deuteron-baseline-setup.json",
+  "hardware_hypothesis": "Use the stated n=1 half-wave at nominal length 3.580 m, nominal coil and resistances, and zero shunt stray capacitance as an explicit first-model assumption. FIT the tuning capacitance and slow detector phase as in paper Eqs. 10-14. Other fixed component seeds remain assumptions, not new measurements. Do not inherit the previous bound-saturated baseline solution as known hardware.",
+  "spin_hypothesis": "Single-site deuteron Pake powder, complex absorption and dispersion, spin-temperature Q(P). No independent tensor enhancement assumed.",
+  "initial_signal_window_mhz": [
+    32.5,
+    32.85
+  ],
+  "fit_parameters": {
+    "center_mhz": {
+      "initial": 32.674,
+      "bounds": [
+        32.64,
+        32.71
+      ],
+      "source": "Initial position estimated from localized features; numerical search range on the confirmed acquisition grid."
+    },
+    "split_mhz": {
+      "initial": 0.065,
+      "bounds": [
+        0.045,
+        0.085
+      ],
+      "source": "Half-separation scale in the reduced-frequency Pake model; initial feature spacing, not a quadrupole calibration."
+    },
+    "g": {
+      "initial": 0.03,
+      "bounds": [
+        0.004,
+        0.2
+      ],
+      "source": "Lorentzian HWHM divided by splitting scale; numerical model-development interval."
+    },
+    "eta": {
+      "initial": 0.03,
+      "bounds": [
+        0,
+        0.25
+      ],
+      "source": "Single-site EFG asymmetry hypothesis; numerical interval, not measured material composition."
+    },
+    "P_model": {
+      "initial": 0.3,
+      "bounds": [
+        -0.95,
+        0.95
+      ],
+      "source": "Polarization inferred by fitting the spin-temperature Pake branch shapes and their integrated intensity ratio; no TE calibration required."
+    },
+    "log10_signal_scale_cgs": {
+      "initial": -4,
+      "bounds": [
+        -8,
+        -1
+      ],
+      "source": "Log10 effective susceptibility amplitude with filling factor held nominal; not independent material calibration."
+    },
+    "phase_slope_rad_per_mhz": {
+      "initial": 0,
+      "bounds": [
+        -1,
+        1
+      ],
+      "source": "Unknown slow detector-phase slope; explicit sensitivity bounds, not measured phase uncertainty."
+    },
+    "phase_curvature_rad_per_mhz2": {
+      "initial": 0,
+      "bounds": [
+        -3,
+        3
+      ],
+      "source": "Unknown slow detector-phase curvature from paper Eq. 10; explicit numerical bounds, not a voltage polynomial."
+    },
+    "log10_tune_capacitance_pf": {
+      "initial": 1.6989700043360187,
+      "bounds": [
+        1,
+        3.3010299956639813
+      ],
+      "source": "Unknown tuning capacitor, fitted with an initial 50 pF scale close to the earlier fit. Search interval 10-2000 pF is numerical, not a measured tolerance."
+    }
+  }
+}

@@ -1,0 +1,2 @@
+# Preserve supplied measurement bytes, including their original separators.
+examples/*.csv -text -whitespace

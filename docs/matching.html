@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Match real deuteron spin-1 Pake signals and physical Q-meter backgrounds, then generate new labeled training spectra without TE calibration."><meta name="theme-color" content="#173c3a"><title>NMR / AI — Match experimental spin-1 spectra</title><link rel="stylesheet" href="assets/style.css"></head>
+<body>
+<a class="skip-link" href="#main">Skip to the practical</a>
+<header class="topbar"><a class="brand" href="index.html">NMR <span>/</span> AI</a><span class="topbar-note">Practical 01B · Match experiment</span><a class="repo-link" href="https://github.com/zetanaut/NMR-AI">View on GitHub ↗</a></header>
+<div class="layout"><aside class="sidebar"><p class="eyebrow">Experiment → generator</p><nav aria-label="Practical sections"><a href="baseline.html">← Physical-baseline practical</a><a href="#start">The matching task</a><a href="#data">1 · Inspect the supplied scans</a><a href="#model">2 · Fit circuit and lineshape</a><a href="#parameters">All matching parameters</a><a href="#results">3 · Inspect every match</a><a href="#noise">4 · Separate noise and mismatch</a><a href="#coverage">5 · Choose robust coverage</a><a href="#generate">6 · Generate labeled data</a><a href="#generated-example">A generated example</a><a href="#validation">Validation and next steps</a></nav><p class="sidebar-footer">Polarization from spin-1 lineshape. No TE calibration required.</p></aside>
+<main id="main">
+<section id="start" class="hero"><p class="eyebrow">From five experimental sweeps to new training examples</p><h1>Match the lineshape.<br><em>Build the generator.</em></h1><p class="lede">These measured signals are our development examples. Fit the physical Q-meter response and complex spin-1 Pake doublet together, infer polarization from the branch shapes, and use the fitted configurations to generate new spectra with known simulator labels.</p>
+<p>This is the next part of phase one, after the <a href="baseline.html">baseline practical</a>. It uses <a href="https://github.com/zetanaut/NMR-AI/blob/main/examples/Sample_RawSignal.csv">Sample_RawSignal.csv</a>, shared for teaching. The implementation is standalone and follows <a href="https://arxiv.org/pdf/2603.10146#page=4">the paper's circuit theory</a> and <a href="https://arxiv.org/pdf/2603.10146#page=7">spin-1 lineshape relations</a>.</p>
+<aside class="note"><h3>The right polarization method for this exercise</h3><p>For the spin-temperature spin-1 model, polarization is determined by the relative areas of the two intrinsic absorption branches. TE calibration is not needed for lineshape matching. Fit estimates still need residual checks, model-sensitivity checks and independent validation before making a precision claim.</p></aside>
+</section>
+
+<section id="data" class="chapter"><p class="eyebrow">01 · Preserve the measurement</p><h2>Five scans. The same confirmed frequency contract.</h2>
+<p>The file has five timestamp-plus-500-sample records, five Unicode line separators (U+2028), and 18 blank logical lines. There are no polarization labels or frequency columns. The <a href="https://github.com/zetanaut/NMR-AI/blob/main/tools/experimental_data.py">audited reader</a> handles those separators explicitly, rejects malformed numbers, and preserves every record in its supplied order. Timestamps are not in increasing order; do not sort silently.</p>
+<div class="equation small">fⱼ = 32.3 + 0.0015287 j MHz, &nbsp; j = 0, …, 499<br>n = 1, &nbsp; λ/2 = 3.580 m at 32.7 MHz</div>
+<p>These signal scans use the same grid and cable setup as the baseline example, confirmed in the experimental set up details. The file is published byte-for-byte: <code>cdbb7e3afa6531694a4b97848d295bbb5c7c03ef62d796b053e3b4e16fbaea5a</code>. Amplitudes remain in recorded units; that does not prevent lineshape-based polarization extraction.</p>
+<pre><code>import sys
+sys.path.insert(0, "tools")
+from experimental_data import load_signal_csv
+from baseline_data import load_acquisition, acquisition_grid
+
+records, audit = load_signal_csv("examples/Sample_RawSignal.csv")
+frequency_mhz = acquisition_grid(load_acquisition()) / 1e6
+assert records.shape == (5, 501)
+signals = records[:, 1:]  # keep field 0 as timestamp metadata</code></pre>
+<div class="baseline-figure-scroll" tabindex="0" role="region" aria-label="Five measured raw sweeps; scroll horizontally on small screens"><img class="baseline-fit-image" src="assets/experimental-raw-signals.svg" width="1050" height="500" alt="Five experimental raw sweeps and the earlier measured baseline on the confirmed frequency axis."></div>
+<p>The backgrounds are not identical to the earlier baseline: gain, phase, tuning and offset affect the sweep. Direct subtraction alone would leave a large background difference. We fit each raw sweep with the circuit, rather than treating that difference as nuclear signal or random noise.</p>
+</section>
+
+<section id="model" class="chapter"><p class="eyebrow">02 · Match the full measurement</p><h2>One circuit. Complex susceptibility. A fitted detector response.</h2>
+<div class="equation small">χ(f;P) = sχ [w₊ K₊(f) + w₋ K₋(f)]<br>Q(P) = 3P² / [2 + √(4 − 3P²)]<br>w₊ = (P + Q)/2, &nbsp; w₋ = (P − Q)/2<br>r = w₊/w₋, &nbsp; P = (r² − 1)/(r² + r + 1)</div>
+<p>K₊ and K₋ are the complex powder-averaged Pake kernels, including absorption, dispersion, Lorentzian broadening and EFG asymmetry. Their absorption integrals are normalized on the infinite reduced-frequency axis, not renormalized to this finite sweep. The branch-area ratio is not a detector peak-height ratio. At P = 0 the signal vanishes; the limiting ratio is one, but there is no finite observed signal from which to determine that ratio.</p>
+<p>The same coil, stray admittance, passive RLGC line, one series capacitor and loaded detection node are used for χ = 0 and χ ≠ 0. Cable L and C stay consistent with the known half-wave. This first matching model fixes the cable at its nominal 3.580 m and uses zero shunt stray capacitance as an explicit simplifying assumption. Coil and resistance seeds remain the stated nominal values. The tuning capacitor is fitted, not held at an assumed knob setting.</p>
+<div class="equation small">φ(f) = φ₀ + φ₁(f − f_ref) + φ₂(f − f_ref)²<br>y_fit(f) = a Re[u(f) exp(iφ_var(f))]<br>+ b Im[u(f) exp(iφ_var(f))] + d<br>a = A cos φ₀, &nbsp; b = −A sin φ₀</div>
+<p>Fit the slowly varying phase terms described in the paper's Eqs. (10)–(14). This extends the constant-phase diagnostic in the earlier baseline practical. It is a phase response acting on complex voltage, not an invented polynomial voltage background. The three linear readout coefficients are solved analytically at each nonlinear step; they still count as three fitted unknowns.</p>
+<ol><li>Initialize the electronics using the declared wings outside 32.50–32.85 MHz. This only provides starting values; nuclear tails can extend into the wings.</li><li>Fit all 500 raw samples jointly with the signal-on circuit. Do not freeze a wing-subtracted polynomial or exclude the endpoints.</li><li>Repeat from six starting points, including both signs of polarization. Save unsuccessful alternatives too.</li><li>Reconstruct the full fitted sweep and χ = 0 baseline from the saved parameters, then inspect their difference and the full residual separately.</li></ol>
+<pre><code>python tools/match_experimental_signals.py \
+  --output-dir local-results/experimental-matching --starts 6</code></pre>
+<p>The <a href="https://github.com/zetanaut/NMR-AI/blob/main/configs/experimental-matching.json">matching configuration</a> specifies the confirmed grid, circuit hypothesis, every starting value and numerical bound. Saved outputs include per-scan CSVs, per-scan fit records, the baseline-reference comparison and <code>matching_report.json</code>. Use a fresh output directory.</p>
+</section>
+
+<section id="parameters" class="chapter"><p class="eyebrow">Parameter inventory</p><h2>Know what each fitted quantity means.</h2>
+<div class="table-wrap"><table><caption>Nine nonlinear coordinates plus three profiled readout coefficients: twelve fitted unknowns per signal scan</caption><thead><tr><th>Parameter</th><th>Meaning and units</th><th>Fit treatment</th></tr></thead><tbody>
+<tr><td>Center f_c</td><td>Larmor-centered lineshape position, MHz</td><td>Fit within 32.64–32.71 MHz</td></tr>
+<tr><td>Split scale Δ</td><td>Reduced frequency x = (f − f_c)/Δ; Δ = 3ω_Q/(2π), MHz</td><td>Fit within 0.045–0.085 MHz; not an observed peak separation after broadening</td></tr>
+<tr><td>Broadening g</td><td>Dimensionless Lorentzian HWHM divided by Δ; physical HWHM = gΔ</td><td>Fit within 0.004–0.20</td></tr>
+<tr><td>EFG asymmetry η</td><td>Single-site electric-field-gradient asymmetry; distinct from coil filling factor</td><td>Fit within 0–0.25 in this model</td></tr>
+<tr><td>P</td><td>Fractional vector polarization, constrained through Q(P) and both branch weights</td><td>Fit within −0.95 to +0.95; TE calibration is not used</td></tr>
+<tr><td>log₁₀ sχ</td><td>Effective susceptibility amplitude for the nominal filling factor</td><td>Fit within −8 to −1; represents an amplitude nuisance, not a universal material constant</td></tr>
+<tr><td>log₁₀ C_tune[pF]</td><td>Effective series tuning capacitance; a knob-to-capacitance conversion is a separate quantity</td><td>Fit over 10–2000 pF; numerical interval, not a measured tolerance</td></tr>
+<tr><td>φ₁</td><td>Detector phase slope in rad/MHz</td><td>Fit within −1 to +1 rad/MHz</td></tr>
+<tr><td>φ₂</td><td>Detector phase curvature in rad/MHz²</td><td>Fit within −3 to +3 rad/MHz²</td></tr>
+<tr><td>a, b</td><td>Two voltage quadratures, recorded units per node volt; equivalently gain A and phase φ₀</td><td>Profiled linear least squares; RF drive held nominal to avoid an unidentifiable gain product</td></tr>
+<tr><td>d</td><td>Additive detector/DAQ offset, recorded units</td><td>Profiled linear least squares; no sweep-minimum subtraction</td></tr>
+</tbody></table></div>
+<p>Fixed inputs are the acquisition grid, nominal 32.7 MHz reference, n=1 cable at 3.580 m, nominal coil R/L and source/input/damping resistances, nominal cable impedance and loss, G′=0, C_stray=0 and nominal filling factor. The <a href="assets/experimental-matching.json">machine-readable record</a> retains them all; the <a href="baseline.html#fit-parameters">baseline parameter catalogue</a> explains their physical roles. In that stored reference-circuit object, the tuning-capacitor entry is only an initialization value: the actual capacitor is derived from the fitted log-coordinate at every evaluation.</p>
+<p>These bounds are explicit fitting choices, not error bars. Do not optimize filling factor and susceptibility amplitude as two independently identifiable measurements. For tensor-enhanced or multi-site samples, replace the spin-temperature single-site assumption with the appropriate constrained physics.</p>
+</section>
+
+<!-- BEGIN MATCHING RESULTS -->
+<section id="results" class="chapter">
+<p class="eyebrow">Measured results · every supplied scan</p><h2>The fitted lineshapes, with the residuals visible.</h2>
+<p>Each curve is fitted directly to all 500 raw samples. The left panels subtract only that fit's physical χ = 0 circuit response for display. The right panels show recorded minus full fitted voltage; no endpoints are cropped from the fit or statistics. Polarization comes from the spin-1 shape, not TE area calibration.</p>
+<div class="baseline-figure-scroll" tabindex="0" role="region" aria-label="All five measured matches; scroll horizontally on small screens"><img class="baseline-fit-image" src="assets/experimental-signal-matches.svg" width="1200" height="1400" alt="All five experimental Pake signals after fitted circuit-background subtraction, alongside full-sweep residuals."></div>
+<div class="table-wrap"><table><caption>Best full-sweep fit for each experimental record; P is a fitted estimate, not an uncertainty claim</caption>
+<thead><tr><th>Scan</th><th>P from shape</th><th>Center (MHz)</th><th>Split scale (kHz)</th><th>Lorentzian HWHM (kHz)</th><th>EFG η</th><th>C_tune (pF)</th><th>RMS (10⁻⁶ units)</th></tr></thead><tbody><tr><td>1</td><td>35.078%</td><td>32.678999</td><td>62.458</td><td>1.207</td><td>0.0643</td><td>635.16</td><td>60.13</td></tr><tr><td>2</td><td>-5.738%</td><td>32.678749</td><td>62.308</td><td>1.382</td><td>0.0634</td><td>1153.70</td><td>66.43</td></tr><tr><td>3</td><td>36.846%</td><td>32.680238</td><td>62.487</td><td>1.154</td><td>0.0658</td><td>611.28</td><td>61.36</td></tr><tr><td>4</td><td>41.070%</td><td>32.679916</td><td>62.425</td><td>0.939</td><td>0.0677</td><td>649.28</td><td>62.35</td></tr><tr><td>5</td><td>-7.965%</td><td>32.678977</td><td>62.313</td><td>0.973</td><td>0.0673</td><td>1128.65</td><td>65.38</td></tr></tbody></table></div>
+<p>All selected fits converged without an active near-bound warning. There were 6 starting points per scan; 1 alternative start(s) reached the evaluation limit and remain in the saved report. Agreement among successful starts checks the optimizer—it is not a polarization confidence interval. The <a href="assets/experimental-matching.json">complete fit record</a> retains all candidates, parameter sources, the numerical conditioning and code/data hashes.</p>
+<h3>Check the branches before interpreting detector peaks</h3>
+<div class="baseline-figure-scroll" tabindex="0" role="region" aria-label="Intrinsic absorption and dispersion; scroll horizontally on small screens"><img class="baseline-fit-image" src="assets/experimental-pake-branches.svg" width="1100" height="450" alt="Intrinsic absorption branches and dispersion for the first fitted scan."></div>
+<p>These intrinsic absorption branches have the fitted spin-temperature area ratio. The observed detector trace additionally contains dispersion mixing and the circuit transfer function. Do not replace the branch-area ratio with the ratio of two observed peak heights.</p>
+<h3>What remains in the residual?</h3>
+<div class="table-wrap"><table><caption>Noise-scale diagnostic and full-residual structure; all amplitudes in recorded units</caption><thead><tr><th>Scan</th><th>High-frequency σ proxy (10⁻⁶)</th><th>Full residual lag-one correlation</th><th>Maximum |residual| (10⁻⁶)</th></tr></thead><tbody><tr><td>1</td><td>19.51</td><td>0.430</td><td>837.6</td></tr><tr><td>2</td><td>22.92</td><td>0.518</td><td>922.2</td></tr><tr><td>3</td><td>20.54</td><td>0.426</td><td>852.1</td></tr><tr><td>4</td><td>19.32</td><td>0.438</td><td>855.2</td></tr><tr><td>5</td><td>22.06</td><td>0.511</td><td>920.4</td></tr></tbody></table></div>
+<p>The high-frequency proxy is much smaller than the full RMS. Residuals contain smooth mismatch and endpoint structure, not just random noise. The first generator uses the measured high-frequency scale in a white-Gaussian reference model; it does not claim that white noise reproduces every observed residual. Supply a characterized 500 × 500 covariance for colored Gaussian noise, and model reproducible acquisition artifacts separately.</p>
+</section>
+<section id="generated-example" class="chapter"><p class="eyebrow">From fitted examples to new labeled sweeps</p><h2>A generated event—not a copied experimental label.</h2>
+<p>This example is event 1 from an actual run of 2,000 newly generated spectra and 100 varied configurations. Its polarization was sampled by the simulator. The experimentally fitted P values are not copied into the training target array.</p>
+<div class="baseline-figure-scroll" tabindex="0" role="region" aria-label="Generated example; scroll horizontally on small screens"><img class="baseline-fit-image" src="assets/matched-generator-example.svg" width="1100" height="470" alt="First newly generated raw spectrum, physical baseline, and circuit-coupled signal with independent reference noise."></div>
+<p>Raw voltage, clean χ = 0 baseline, clean nuclear response, event noise and independently noisy reference are stored separately. This is a 500-bin, recorded-unit, lineshape-regression dataset. It is not silently converted into the existing 512-bin TE-area benchmark.</p>
+</section>
+<!-- END MATCHING RESULTS -->
+
+<section id="noise" class="chapter"><p class="eyebrow">04 · Characterize what is left</p><h2>Do not turn every residual into noise.</h2>
+<div class="equation small">σ_proxy = MAD(Δ² residual) / [0.67448975 √6]</div>
+<p>The √6 follows from the variance of coefficients [1, −2, 1] for independent equal-variance noise. MAD is the median absolute deviation about the median. This diagnostic uses consecutive triplets entirely within the declared outer wings; all 500 bins still enter the fit and full residual statistics. It assumes locally smooth mean response and Gaussian independent noise. Colored noise, high-frequency pickup and unresolved features can invalidate that interpretation.</p>
+<p>The generator's default is a first white-Gaussian reference at this estimated high-frequency scale. The visible residual correlation and endpoint deviations are not erased or relabeled as white noise. Investigate stationary noise correlation, coherent pickup, settling and model mismatch separately. Five different polarized scans are not repeated measurements of an unchanged signal and cannot supply an unrestricted 500 × 500 noise covariance.</p>
+<pre><code>python tools/generate_matched_data.py \
+  --matching-report local-results/experimental-matching/matching_report.json \
+  --noise-covariance characterized_covariance_recorded_units_squared.npy \
+  --output local-results/matched-correlated.npz</code></pre>
+<p>Use that optional covariance only when characterized for the same 500-bin grid and recorded-unit convention. The generator rejects wrong dimensions, asymmetry and negative eigenvalues; a positive-semidefinite matrix can still be scientifically inappropriate for the acquisition.</p>
+</section>
+
+<section id="coverage" class="chapter"><p class="eyebrow">05 · Robustness has to be explicit</p><h2>Preserve fitted relationships, then explore controlled variations.</h2>
+<p>Each measured fit supplies one complete seed configuration. Keep its capacitance, readout, amplitude and lineshape parameters together; combining arbitrary independent extrema would destroy fitted relationships. Generate new configurations around those seeds using <a href="https://github.com/zetanaut/NMR-AI/blob/main/configs/matched-generator-coverage.json">the explicit coverage file</a>.</p>
+<div class="table-wrap"><table><caption>Default robustness half-ranges: teaching choices, not inferred experimental uncertainties</caption><thead><tr><th>Coordinates</th><th>Variation</th><th>Constraint preserved</th></tr></thead><tbody>
+<tr><td>RF drive, source/input/damping R, coil R/L, tuning C, conductor loss, readout gain</td><td>±1%</td><td>Positive components; inherited joint operating-point seed</td></tr>
+<tr><td>Effective susceptibility amplitude</td><td>±5%</td><td>Nominal filling factor held fixed rather than double-counting coupling uncertainty</td></tr>
+<tr><td>Cable trim</td><td>±5 mm</td><td>Inside the established ±3% n=1 neighborhood; L/C recomputed together when loss changes to retain λ/2=3.580 m</td></tr>
+<tr><td>Center, splitting, broadening, EFG η</td><td>±1 kHz, ±1%, ±5%, ±0.005</td><td>Positive widths and 0 ≤ η ≤ 1</td></tr>
+<tr><td>Phase offset, slope, curvature</td><td>±0.01 rad, ±0.01 rad/MHz, ±0.02 rad/MHz²</td><td>Phase applied to complex voltage, not added as a background polynomial</td></tr>
+<tr><td>Readout offset</td><td>±0.001 recorded units</td><td>Explicit additive detector offset</td></tr>
+<tr><td>Polarization</td><td>New uniform draws over −0.6 to +0.6 by default</td><td>Exact spin-temperature weights; configurable interval within −1 to +1</td></tr>
+</tbody></table></div>
+<p>Five development examples do not establish the frequency of operating conditions or their full correlations. These excursions test sensitivity and broaden training coverage. Expand or constrain them using further development scans and physical constraints, rather than presenting them as measured distributions.</p>
+</section>
+
+<section id="generate" class="chapter"><p class="eyebrow">06 · Produce labeled data</p><h2>New P. New physical configuration. Independent noise.</h2>
+<pre><code>python tools/generate_matched_data.py \
+  --matching-report local-results/experimental-matching/matching_report.json \
+  --num-samples 2000 --num-configurations 100 --seed 42 \
+  --output local-results/experiment-anchored.npz
+
+python tools/export_signal_matching.py \
+  --fit-dir local-results/experimental-matching \
+  --dataset local-results/experiment-anchored.npz</code></pre>
+<div class="equation small">B = V_det(χ = 0), &nbsp; S = V_det(χ(P)) − B<br>raw = V_det(χ(P)) + ε_event<br>reference = B + ε_reference / √N_reference</div>
+<p>The nuclear response is included once through susceptibility; it is not added twice. All outputs are float64 in recorded units, preserving small differences. The default independent reference averages 16 synthetic sweeps and is shared within a simulated configuration. That count is an explicit teaching setting, not a claimed experimental averaging count.</p>
+<p>The NPZ stores <code>signals</code>, <code>clean_raw</code>, <code>clean_baseline</code>, <code>clean_signal</code>, <code>noise</code>, independently noisy <code>baselines</code>, new fractional <code>P</code>, <code>configuration_id</code>, <code>source_scan_1based</code> and the exact <code>frequency_mhz</code>. The companion JSON records every configuration, coverage assumption, source/fit/code/data hash, noise convention and random seed. Output files are protected against overwrite.</p>
+<aside class="note"><h3>This is a lineshape-regression dataset</h3><p>No TE calibration or TE-area input channel is needed. Do not feed these 500-bin recorded-unit arrays through the old 512-bin TE-area preprocessing. A network for this workflow must use the saved grid and appropriate raw/reference or background-subtracted inputs. The existing learning benchmark remains separately reproducible; no new trained-network accuracy claim is made here.</p></aside>
+</section>
+
+<section id="validation" class="chapter"><p class="eyebrow">Before calling the generator validated</p><h2>Test the physics and the statistical task separately.</h2>
+<ul><li>Check each raw overlay, both intrinsic branches, full residuals, bound status and competing solutions.</li><li>Confirm the selected lineshape model is appropriate for the target material and spin-temperature state.</li><li>Validate noise and acquisition-artifact behavior; white noise alone does not explain the displayed residuals.</li><li>Recover known simulated polarizations over controlled pseudo-experiments, checking bias and width versus P.</li><li>Keep all descendants of each measured seed together when testing held-out experimental configurations. Five development scans do not constitute a large independent test set.</li><li>Increase generated counts only after these checks; more samples cannot remove a systematic model error.</li></ul>
+<p>Run <code>python -m unittest discover -s tests -v</code>. Tests cover raw-file preservation, the spin-1 branch-ratio relation, complex circuit readout, capacitor sensitivity, synthetic recovery, covariance validity, reproducibility and reconstruction of the published experimental matches.</p>
+<p>See the <a href="https://github.com/zetanaut/NMR-AI/blob/main/notes/experimental-matching.md">complete matching and generator record</a> for reproducibility and the separation between fitted experimental P and newly generated truth labels.</p>
+<div class="hero-actions"><a class="button" href="index.html#network">Continue to network design →</a><a class="text-link" href="baseline.html">Review the physical baseline ↗</a></div>
+</section>
+<footer><a class="brand" href="index.html">NMR <span>/</span> AI</a><p>Experimental lineshapes → fitted configurations → new labeled spectra</p></footer>
+</main></div></body></html>

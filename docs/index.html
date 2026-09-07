@@ -23,6 +23,7 @@
   <nav aria-label="Tutorial chapters">
     <a href="#start" class="active">Before you begin</a>
     <a href="baseline.html" class="subnav">Baseline-fitting practical ↗</a>
+    <a href="matching.html" class="subnav">Experimental lineshape matching ↗</a>
     <a href="#generator"><span>01</span> Build the generator</a>
     <a href="#network"><span>02</span> Design the network</a>
     <a href="#training"><span>03</span> Train &amp; evaluate</a>
@@ -64,6 +65,7 @@ python -c "import torch; print(torch.__version__); print('CUDA:', torch.cuda.is_
   <div class="equation">B(f) = V<sub>det</sub>(f, χ = 0)<br>S(f; P) = V<sub>det</sub>(f, χ(P)) − B(f)<br>V<sub>measured</sub>(f) = B(f) + S(f; P) + ε(f)</div>
   <p>The same circuit generates the baseline and signal-on response. Absorption changes coil losses; dispersion changes reactance. The cable and detector phase transform both. The nuclear response is included once, through complex susceptibility—not added again afterward.</p>
   <p><a class="button" href="baseline.html">Practical 01A · Derive and fit the Q-curve →</a></p>
+  <aside class="note"><h3>New: match five real spin-1 scans and generate training data</h3><p><a href="matching.html">Practical 01B</a> fits the capacitor, detector phase and complex Pake lineshape on the confirmed 500-bin deuteron grid. Polarization is inferred from the branch shapes without TE calibration. It shows every measured fit, residual diagnostics and an actual 2,000-event generation run. This lineshape-regression workflow is separate from the 512-bin TE-area learning benchmark illustrated below.</p></aside>
   <p>The practical starts from <a href="https://arxiv.org/pdf/2603.10146v5#page=4">Fig. 1 and Eqs. (1)–(14) of Seay, Fernando, and Keller</a>. It covers frequency and voltage conventions, passive parameter bounds, multi-start fitting, duplicate records, residual plots, and parameter identifiability. A close overlay is the beginning of validation, not its conclusion.</p>
   <div class="results-panel"><div class="panel-heading"><div><p class="eyebrow">Look inside a generated spectrum</p><label class="select-label" for="spectrum-select">View</label><select id="spectrum-select"><option value="residual">Circuit-coupled Pake signal + noise</option><option value="raw">Full sweep + physical Q-curve</option><option value="noise">Detector noise only</option></select></div><span class="badge">Physical forward model</span></div><svg id="spectrum-chart" class="chart" viewBox="0 0 850 290" role="img" aria-label="Complex Pake susceptibility propagated through a physical Q-meter circuit"></svg><p class="chart-caption" id="spectrum-caption">Generated P = 5% example. Voltage is in V; vertical scales change between views.</p><p class="provenance">An explicitly specified deuteron operating point, not a measured instrument calibration. The viewer subtracts the noiseless circuit baseline to expose the signal. Training uses a separate reference with its own noise.</p></div>
   <h3>1. Connect spin populations to a real powder lineshape</h3>

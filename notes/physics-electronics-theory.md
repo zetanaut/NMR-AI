@@ -4,6 +4,12 @@ Reference: D. Seay, I. P. Fernando, and D. Keller, *Polarized target nuclear mag
 
 These notes distinguish the paper's physics, explicit implementation conventions, and evidence from the supplied measurements. Equations below are restated/derived with unambiguous names. This independent educational implementation is not a reproduction of the paper's training runs or an experimentally calibrated deuteron instrument. The [baseline practical](../docs/baseline.html) explains the measured-fit workflow.
 
+The new [experimental-matching record](experimental-matching.md) documents five
+polarized spin-1 sweeps on the confirmed 500-bin grid. That workflow fits the
+capacitor, detector phase and complex branch shapes to infer P without TE
+calibration, then generates new simulator-labeled examples. The 512-bin TE-area
+benchmark discussed below remains a separate reproducible teaching task.
+
 ## 1. Continuous-wave measurement and conventions
 
 This is swept-frequency, continuous-wave, phase-sensitive NMR, not pulsed FID spectroscopy. An approximately constant-current RF source excites a coil coupled to the sample. The complex magnetic susceptibility changes the coil impedance; the tuning components, transmission line, input loading, and detector phase determine the recorded voltage. Analysis and calibration act on that response.
