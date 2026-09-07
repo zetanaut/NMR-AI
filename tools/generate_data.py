@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate spin-1 Pake teaching spectra; no experimental fits are bundled."""
+"""Generate an unvalidated Pake/polynomial prototype, NOT a physical Q-meter dataset."""
 
 import argparse
 import json

@@ -4,6 +4,10 @@ A self-contained student tutorial on extracting vector polarization from NMR spe
 
 **[Read the tutorial →](https://zetanaut.github.io/NMR-AI/)**
 
+**Scientific review status:** the current lab's cubic baseline is not the physical Q-meter circuit model. Its displayed runs are unvalidated software prototypes, not a reproduction of the paper or experimentally grounded performance measurements. The Pake correction addressed only the nuclear lineshape; it did not validate the instrument response.
+
+The complete [arXiv:2603.10146v5 paper](https://arxiv.org/abs/2603.10146v5) has now been reviewed, including Appendix A. Read the [detailed physics/electronics/theory notes](notes/physics-electronics-theory.md) and [implementation audit](notes/implementation-audit.md) before changing the generator. They distinguish sourced physics, derivations, code behavior, and unresolved conventions. The circuit replacement is pending those checks; missing values will not be filled with invented defaults.
+
 The three learning phases are:
 
 1. Build a training-data generator: match experimental spectra, characterize noise, vary physical parameters, and generate enough independent configurations and realizations.
@@ -57,7 +61,9 @@ On Windows, activate with `.venv\Scripts\activate`. A CPU supports all labs; the
 
 Generated datasets, configuration lists, and checkpoints live under git-ignored `local-results/`. The commands protect existing outputs, so choose a new output name for each experiment. No external source checkout, experimental data, or pretrained model is required.
 
-## What the teaching simulator represents
+## What the current prototype represents—and does not
+
+The Q-curve must come from a coil/tuning/transmission-line/loading/phase model. A cubic wing fit can be used during subtraction, but it is not the physical baseline generator. The current code has not yet been replaced with that circuit, and its gain, calibration, and noise assumptions are also under review. See the [audit](notes/implementation-audit.md) for the specific gaps.
 
 `tools/lineshape.py` implements the supplied **spin-1 Dulya/Pake powder doublet**: the analytic broadened branch formula, weighted azimuthal averaging, and spin-temperature transition weights in the weak-quadrupole approximation. It is self-contained and requires only NumPy. The theoretical reference is [Dulya et al., *A line-shape analysis for spin-1 NMR signals*, NIM A 398 (1997) 109–125](https://doi.org/10.1016/S0168-9002(97)00317-3).
 
@@ -71,7 +77,7 @@ The lessons explain how an experimental application would require fitting real s
 
 ## Data provenance and interpretation
 
-`docs/assets/results.js` contains three actual runs of this repository's **Dulya/Pake teaching simulator**: narrow variation with the multiscale model, broad variation with the same model, and the compact model on the same broad dataset. Each dataset has 6,000 spectra drawn from 300 synthetic configurations. The snapshot includes generation/training settings, split counts, histories, residual histograms, summary metrics, and prediction-CSV hashes. It also contains one simulated trace, with its configuration and seed, for the component viewer.
+`docs/assets/results.js` contains three actual runs of this repository's **Pake-plus-polynomial prototype**, retained as software-workflow examples only: narrow variation with the multiscale model, broad variation with the same model, and the compact model on the same broad dataset. Each dataset has 6,000 spectra drawn from 300 synthetic configurations. The snapshot includes generation/training settings, split counts, histories, residual histograms, summary metrics, and prediction-CSV hashes. It also contains one simulated trace, with its configuration and seed, for the component viewer. These are not accepted physical Q-meter benchmarks.
 
 These replace the original Gaussian-peak examples: both datasets were regenerated and all three networks retrained. Data, checkpoints, and published snapshots carry the `dulya-pake-v1` simulator identifier. Training, prediction, and export reject legacy artifacts so Gaussian-trained results cannot silently be presented as Pake results. Preserve older runs if needed and use fresh paths; do not add the new identifier to old artifacts.
 
@@ -96,6 +102,8 @@ python tools/export_results.py
 
 The snapshot recomputes bias, population residual SD (`ddof=0`), RMSE, MAE, and the 95th-percentile absolute error from the prediction CSVs in float64. The identity `RMSE² = bias² + width²` uses the same events and population SD. Relative values use a fixed nonzero reference `P0`; local-band metrics select signed truth values before computation. No uncertainty intervals are inferred from residual width.
 
+The tutorial residual is **prediction minus truth**, opposite to the paper's Eq. (38). Reverse the bias sign when comparing them. The paper's Eq. (45) defines SNR using peak noise, not noise SD. Its calibrated frequency integral is not automatically identical to this prototype's fixed-grid sum. These differences are documented in the notes and must be resolved explicitly in any reproduction.
+
 The recorded examples used PyTorch 2.11.0 with CUDA. Hardware and library versions can change numerical training results. These measurements illustrate learning and generalization within the theoretical Pake model with simplified instrument settings. They do not establish experimental accuracy; `0.0005` fractional P is an example acceptance target for the lessons.
 
 ## Editing
@@ -103,6 +111,8 @@ The recorded examples used PyTorch 2.11.0 with CUDA. Hardware and library versio
 - `docs/index.html`: the complete lesson text, examples, and semantic structure.
 - `docs/assets/style.css`: responsive and print styles.
 - `docs/assets/tutorial.js`: interactive plots, error conversion, navigation, and code copying.
+- `notes/physics-electronics-theory.md`: versioned paper reference, physics and electronics derivations, calibration, noise, and uncertainty notes.
+- `notes/implementation-audit.md`: source-to-code checks and unresolved questions blocking a physical circuit replacement.
 - `tools/nmr_lab.py`: teaching simulator, preprocessing, grouped splitting, and both networks.
 - `tools/lineshape.py`: standalone Dulya/Pake branch formula, powder averaging, transition weights, and discrete normalization.
 - `tools/generate_data.py`, `tools/train_model.py`, `tools/predict.py`: complete standalone lab workflow.

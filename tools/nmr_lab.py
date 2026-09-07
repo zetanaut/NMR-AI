@@ -1,5 +1,7 @@
 """Self-contained teaching models for the NMR-AI labs.
 
+UNVALIDATED PROTOTYPE: the polynomial baseline is not the physical Q-meter
+circuit in arXiv:2603.10146v5. See notes/implementation-audit.md before changes.
 The spin-1 Dulya/Pake powder lineshape is theoretical. Instrument gain, baseline,
 noise, and parameter distributions remain teaching assumptions, not fitted data.
 """

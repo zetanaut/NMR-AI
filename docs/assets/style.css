@@ -868,6 +868,11 @@ summary::marker {
   margin-bottom: 9px
 }
 
+.panel-heading>div {
+  min-width: 0;
+  max-width: 100%
+}
+
 .panel-heading h3 {
   font-family: Georgia, serif;
   font-size: 29px;

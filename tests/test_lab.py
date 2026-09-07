@@ -18,6 +18,7 @@ class LabInvariants(unittest.TestCase):
         source = Path(__file__).resolve().parents[1] / "docs/assets/results.js"
         snapshot = json.loads(source.read_text().split("window.TUTORIAL_RESULTS = ", 1)[1].strip().removesuffix(";"))
         self.assertEqual(snapshot["simulator"], SIMULATOR)
+        self.assertEqual(snapshot["validation_status"], "unvalidated-polynomial-baseline-prototype")
         spectrum = snapshot["spectrum"]
         self.assertEqual(spectrum["simulator"], SIMULATOR)
         event = simulate(spectrum["p"], spectrum["configuration"], np.random.default_rng(spectrum["seed"]),

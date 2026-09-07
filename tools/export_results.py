@@ -63,16 +63,19 @@ def main():
             "histogram": {"edges": edges.tolist(), "counts": counts.tolist(),
                           "outside": int(np.sum((error < edges[0]) | (error > edges[-1])))},
         })
-    snapshot = {"dataset": "NMR-AI standalone spin-1 Dulya/Pake powder simulator",
+    snapshot = {"dataset": "NMR-AI Pake/polynomial software prototype; not a physical Q-meter benchmark",
                 "simulator": SIMULATOR,
+                "validation_status": "unvalidated-polynomial-baseline-prototype",
                 "reference_p0": 0.05,
-                "note": "Actual runs of the tutorial's Pake simulator and networks, with synthetic instrument settings. "
-                        "Not experimental accuracy measurements. Recomputed from prediction CSVs in float64.",
+                "note": "Actual prototype runs retained for software-workflow illustration. The cubic baseline is not "
+                        "the paper's physical Q-meter circuit; gain, calibration, and noise are unvalidated. "
+                        "Not a paper reproduction or experimental accuracy measurement. "
+                        "See notes/implementation-audit.md. Metrics recomputed from prediction CSVs in float64.",
                 "runs": runs}
     configuration = sample_configurations(1)[0]
     event = simulate(0.05, configuration, np.random.default_rng(42))
     snapshot["spectrum"] = {
-        "label": "Spin-1 Dulya/Pake powder doublet; P=0.05, cc=-1.39",
+        "label": "Unvalidated prototype: Pake doublet with assumed gain/noise and a polynomial baseline; P=0.05",
         "simulator": SIMULATOR, "configuration": configuration,
         "p": 0.05, "noise_level": 2.7e-5, "seed": 42,
         "frequency": FREQUENCY.tolist(),
