@@ -76,8 +76,9 @@
       `<path d="${path(s.frequency.map((f, i) => [f, values[i]]), a.x, a.y)}" fill="none" stroke="${green}" stroke-width="1.8"/>` +
       (reference ? `<path d="${path(s.frequency.map((f, i) => [f, reference[i]]), a.x, a.y)}" fill="none" stroke="${rust}" stroke-width="1.5" stroke-dasharray="6 4"/>` : "") +
       `<text x="${a.left}" y="13">Generator voltage</text>`;
-    const explanation = mode === "raw" ? "Green: raw sweep. Dashed rust: simulator's true baseline." : mode === "residual" ? "Green: signal + noise after true-baseline subtraction. Dashed rust: clean signal including gain." : "Independent Gaussian noise; a single 512-bin realization.";
-    $("spectrum-caption").textContent = `${explanation} P = 5%, cc = −1.39, noise SD 2.7e−5. Vertical scales change between views.`;
+    const explanation = mode === "raw" ? "Green: raw sweep. Dashed rust: simulator's true baseline." : mode === "residual" ? "Green: Pake doublet + noise after true-baseline subtraction. Dashed rust: clean signal including gain." : "Independent Gaussian noise; a single 512-bin realization.";
+    const c = s.configuration;
+    $("spectrum-caption").textContent = `${explanation} P = ${(100*s.p).toFixed(0)}%, cc = ${c.cc}, g = ${c.g.toFixed(3)}, η = ${c.eta.toFixed(3)}, noise SD ${s.noise_level.toExponential(1)}. Vertical scales change between views.`;
   }
   $("spectrum-select").addEventListener("change", renderSpectrum);
   renderSpectrum();

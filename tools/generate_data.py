@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Generate a standalone two-peak teaching dataset; no experimental fits are bundled."""
+"""Generate spin-1 Pake teaching spectra; no experimental fits are bundled."""
 
 import argparse
 import json
 from pathlib import Path
 
 import numpy as np
+from lineshape import SIMULATOR
 from nmr_lab import FREQUENCY, sample_configurations, simulate, validate_configurations
 
 
@@ -49,8 +50,9 @@ def main():
         signals[i] = simulate(p, configs[group], rng, args.noise_level, args.noise_correlation, args.center_jitter)["signal"]
     args.output.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(args.output, signals=signals, P=labels.astype(np.float32), cc=cc,
-                        configuration_id=groups, frequency_mhz=FREQUENCY)
+                        configuration_id=groups, frequency_mhz=FREQUENCY, simulator=SIMULATOR)
     metadata = {key: str(value) if isinstance(value, Path) else value for key, value in vars(args).items()}
+    metadata["simulator"] = SIMULATOR
     args.output.with_suffix(".json").write_text(json.dumps({"settings": metadata, "configurations": configs}, indent=2))
     print(f"Saved {args.num_samples} spectra from {len(np.unique(groups))} sampled configurations to {args.output}")
 

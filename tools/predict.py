@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from lineshape import SIMULATOR
 from nmr_lab import build_model, make_features
 
 
@@ -20,10 +21,14 @@ def main():
         parser.error("Use a positive batch size and a new output path")
     torch.set_num_threads(2)
     checkpoint = torch.load(args.model_dir / "model.pt", map_location="cpu", weights_only=True)
+    if checkpoint.get("simulator") != SIMULATOR:
+        parser.error("Legacy checkpoint: regenerate Pake data and retrain into a new model directory")
     model = build_model(checkpoint["architecture"])
     model.load_state_dict(checkpoint["model_state"])
     model.eval()
     with np.load(args.data, allow_pickle=False) as data:
+        if "simulator" not in data or str(data["simulator"].item()) != SIMULATOR:
+            parser.error("Input must be a current Pake tutorial dataset; regenerate legacy data to a new path")
         features = make_features(data["signals"], data["cc"])
         truth = data["P"] if "P" in data.files else None
     with np.load(args.model_dir / "scaler.npz", allow_pickle=False) as scaler:

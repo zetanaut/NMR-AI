@@ -11,6 +11,7 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 
 from analyze_predictions import summarize
+from lineshape import SIMULATOR
 from nmr_lab import build_model, group_split, make_features
 
 
@@ -40,6 +41,8 @@ def main():
     if device == "cuda" and not torch.cuda.is_available():
         parser.error("CUDA is unavailable; use --device cpu")
     with np.load(args.data, allow_pickle=False) as data:
+        if "simulator" not in data or str(data["simulator"].item()) != SIMULATOR:
+            parser.error("This trainer requires current Pake data; regenerate legacy datasets to a new path")
         signals, cc, labels, groups = data["signals"], data["cc"], data["P"][:, None], data["configuration_id"]
     if signals.shape != (len(labels), 512) or cc.shape != (len(labels),) or groups.shape != (len(labels),):
         parser.error("Dataset must have 512 signal bins and aligned label, cc, and group arrays")
@@ -97,9 +100,11 @@ def main():
         prediction = np.concatenate([model(inputs.to(device)).cpu().numpy() * target_scale for inputs, _ in loaders[2]])[:, 0]
     truth = labels[test, 0]
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    torch.save({"architecture": args.architecture, "model_state": best_state}, args.output_dir / "model.pt")
+    torch.save({"architecture": args.architecture, "model_state": best_state, "simulator": SIMULATOR},
+               args.output_dir / "model.pt")
     np.savez(args.output_dir / "scaler.npz", feature_mean=mean, feature_std=std, target_scale=np.array([target_scale]))
     config = {key: str(value) if isinstance(value, Path) else value for key, value in vars(args).items()}
+    config["simulator"] = SIMULATOR
     (args.output_dir / "config.json").write_text(json.dumps(config, indent=2))
     split = {"strategy": "grouped", "group_column": "configuration_id", "rows": {}, "groups": {}}
     for name, idx in zip(["train", "validation", "test"], [train, validation, test]):

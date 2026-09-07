@@ -10,6 +10,7 @@ from pathlib import Path
 import numpy as np
 
 from analyze_predictions import load_predictions, summarize
+from lineshape import SIMULATOR
 from nmr_lab import FREQUENCY, sample_configurations, simulate
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,7 +23,7 @@ RUNS = [
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--runs-dir", type=Path, default=ROOT / "local-results")
+    parser.add_argument("--runs-dir", type=Path, default=ROOT / "local-results" / "pake")
     args = parser.parse_args()
     runs = []
     for run_id, label, directory in RUNS:
@@ -43,6 +44,8 @@ def main():
         if not dataset_file.is_absolute():
             dataset_file = ROOT / dataset_file
         dataset_settings = json.loads(dataset_file.with_suffix(".json").read_text())["settings"]
+        if config.get("simulator") != SIMULATOR or dataset_settings.get("simulator") != SIMULATOR:
+            raise ValueError("Refusing to publish legacy results as Pake runs; regenerate data and retrain")
         dataset_settings["output"] = dataset_file.name
         if dataset_settings.get("configurations"):
             dataset_settings["configurations"] = Path(dataset_settings["configurations"]).name
@@ -60,14 +63,18 @@ def main():
             "histogram": {"edges": edges.tolist(), "counts": counts.tolist(),
                           "outside": int(np.sum((error < edges[0]) | (error > edges[-1])))},
         })
-    snapshot = {"dataset": "NMR-AI standalone Gaussian-doublet teaching simulator",
+    snapshot = {"dataset": "NMR-AI standalone spin-1 Dulya/Pake powder simulator",
+                "simulator": SIMULATOR,
                 "reference_p0": 0.05,
-                "note": "Actual runs of the tutorial's simplified simulator and networks. "
+                "note": "Actual runs of the tutorial's Pake simulator and networks, with synthetic instrument settings. "
                         "Not experimental accuracy measurements. Recomputed from prediction CSVs in float64.",
                 "runs": runs}
-    event = simulate(0.05, sample_configurations(1)[0], np.random.default_rng(42))
+    configuration = sample_configurations(1)[0]
+    event = simulate(0.05, configuration, np.random.default_rng(42))
     snapshot["spectrum"] = {
-        "label": "Standalone Gaussian-doublet teaching simulator; P=0.05, cc=-1.39",
+        "label": "Spin-1 Dulya/Pake powder doublet; P=0.05, cc=-1.39",
+        "simulator": SIMULATOR, "configuration": configuration,
+        "p": 0.05, "noise_level": 2.7e-5, "seed": 42,
         "frequency": FREQUENCY.tolist(),
         **{name: [float(f"{value:.9g}") for value in event[name]]
            for name in ("signal", "baseline", "lineshape", "noise")},

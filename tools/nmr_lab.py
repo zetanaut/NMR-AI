@@ -1,12 +1,13 @@
 """Self-contained teaching models for the NMR-AI labs.
 
-The two Gaussian peaks and polynomial baseline illustrate the learning workflow.
-They are not a calibrated experimental lineshape or a Q-meter circuit model.
+The spin-1 Dulya/Pake powder lineshape is theoretical. Instrument gain, baseline,
+noise, and parameter distributions remain teaching assumptions, not fitted data.
 """
 
 import numpy as np
 import torch
 from torch import nn
+from lineshape import pake_doublet
 
 FREQUENCY = np.linspace(32.3, 33.1, 512)
 
@@ -16,8 +17,9 @@ def sample_configurations(count, seed=17, coverage="narrow", cc=-1.39):
     spread = 1.0 if coverage == "broad" else 0.25
     return [{
         "center_mhz": float(32.7 + rng.uniform(-0.025, 0.025) * spread),
-        "split_mhz": float(0.065 + rng.uniform(-0.01, 0.01) * spread),
-        "width_mhz": float(0.017 + rng.uniform(-0.005, 0.005) * spread),
+        "split_mhz": float(0.080 + rng.uniform(-0.01, 0.01) * spread),
+        "g": float(0.080 + rng.uniform(-0.02, 0.02) * spread),
+        "eta": float(0.030 + rng.uniform(-0.02, 0.02) * spread),
         "gain_slope": float(rng.uniform(-0.15, 0.15) * spread),
         "baseline": [float(-0.2 + rng.uniform(-0.03, 0.03) * spread),
                      float(rng.uniform(-0.02, 0.02) * spread),
@@ -31,11 +33,16 @@ def validate_configurations(configurations):
     if not isinstance(configurations, list) or len(configurations) < 3:
         raise ValueError("Supply a list of at least three configurations")
     for config in configurations:
-        values = [config[key] for key in ("center_mhz", "split_mhz", "width_mhz", "gain_slope", "cc")]
+        required = ("center_mhz", "split_mhz", "g", "eta", "gain_slope", "cc", "baseline")
+        if not isinstance(config, dict) or any(key not in config for key in required):
+            raise ValueError("Pake configurations need center_mhz, split_mhz, g, eta, gain_slope, cc, baseline")
+        values = [config[key] for key in required[:-1]]
         if not np.isfinite(values).all() or config["cc"] == 0:
             raise ValueError("Configuration values must be finite, with nonzero cc")
-        if config["width_mhz"] <= 0 or config["split_mhz"] <= 0 or abs(config["gain_slope"]) >= 1:
+        if config["g"] <= 0 or config["split_mhz"] <= 0 or abs(config["gain_slope"]) >= 1:
             raise ValueError("Widths and splitting must be positive; |gain_slope| must be below 1")
+        if not 0 <= config["eta"] <= 1:
+            raise ValueError("Quadrupole asymmetry eta must be between 0 and 1")
         if len(config["baseline"]) != 4 or not np.isfinite(config["baseline"]).all():
             raise ValueError("Each baseline needs four finite coefficients, constant through cubic")
 
@@ -43,11 +50,8 @@ def validate_configurations(configurations):
 def simulate(p, config, rng, noise_level=2.7e-5, noise_correlation=0.0, center_jitter=0.0):
     axis = np.linspace(-1.0, 1.0, len(FREQUENCY))
     center = config["center_mhz"] + rng.uniform(-center_jitter, center_jitter)
-    left = np.exp(-0.5 * ((FREQUENCY - center + config["split_mhz"]) / config["width_mhz"]) ** 2)
-    right = np.exp(-0.5 * ((FREQUENCY - center - config["split_mhz"]) / config["width_mhz"]) ** 2)
-    # Boltzmann-related spin-1 transition weights; Gaussian peaks are a teaching approximation.
-    q = 2.0 - np.sqrt(4.0 - 3.0 * p * p)
-    lineshape = 0.02 * (0.5 * (p + q) * left + 0.5 * (p - q) * right) / config["cc"]
+    x = (FREQUENCY - center) / config["split_mhz"]
+    lineshape, _, _ = pake_doublet(x, p, config["cc"], config["eta"], config["g"])
     lineshape *= 1.0 + config["gain_slope"] * axis
     baseline = np.polynomial.polynomial.polyval(axis, config["baseline"])
     noise = rng.normal(0.0, noise_level, len(axis))
