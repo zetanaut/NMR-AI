@@ -1,68 +1,74 @@
 #!/usr/bin/env python3
-"""Refresh the small public tutorial snapshot from local synthetic-run artifacts."""
+"""Export plots and metrics from standalone NMR-AI teaching runs."""
 
 import argparse
 import csv
 import hashlib
 import json
 from pathlib import Path
-import sys
 
 import numpy as np
 
 from analyze_predictions import load_predictions, summarize
+from nmr_lab import FREQUENCY, sample_configurations, simulate
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNS = [
-    ("restricted", "Restricted pool · shift augmentation", "RGC_vector_absolute_100k"),
-    ("broad", "Broad pool · fixed cc · no shifts", "RGC_vector_full_100k_2kcfg_ccfixed_noshift"),
-    ("curriculum", "Restricted → broad fine-tuning", "RGC_vector_full_curriculum_100k"),
+    ("narrow", "Narrow variation · multiscale CNN", "narrow_multiscale"),
+    ("broad", "Broad variation · multiscale CNN", "broad_multiscale"),
+    ("compact", "Broad variation · compact CNN", "broad_compact"),
 ]
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--project-dir", type=Path, default=ROOT.parent / "gen-NMR")
+    parser.add_argument("--runs-dir", type=Path, default=ROOT / "local-results")
     args = parser.parse_args()
     runs = []
     for run_id, label, directory in RUNS:
-        folder = args.project_dir / "ml" / "Models" / directory
+        folder = args.runs_dir / directory
         source = folder / "test_predictions.csv"
         truth, pred = load_predictions(source)
         error = pred - truth
-        bins = np.linspace(-0.008, 0.008, 81)
+        half_range = max(0.002, float(np.quantile(np.abs(error), 0.995)) * 1.1)
+        bins = np.linspace(-half_range, half_range, 61)
         counts, edges = np.histogram(error, bins=bins)
         local = (truth >= 0.045) & (truth < 0.055)
         with (folder / "history.csv").open(newline="") as stream:
             history = [{key: float(value) for key, value in row.items()} for row in csv.DictReader(stream)]
         with np.load(folder / "scaler.npz") as scaler:
             target_scale = float(scaler["target_scale"][0])
+        config = json.loads((folder / "config.json").read_text())
+        dataset_file = Path(config["data"])
+        if not dataset_file.is_absolute():
+            dataset_file = ROOT / dataset_file
+        dataset_settings = json.loads(dataset_file.with_suffix(".json").read_text())["settings"]
+        dataset_settings["output"] = dataset_file.name
+        if dataset_settings.get("configurations"):
+            dataset_settings["configurations"] = Path(dataset_settings["configurations"]).name
+        config["data"] = Path(config["data"]).name
+        config["output_dir"] = directory
         runs.append({
             "id": run_id, "label": label, "directory": directory,
             "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
             "metrics": summarize(truth, pred, 0.05),
             "near_five_percent": summarize(truth[local], pred[local], 0.05),
             "split": json.loads((folder / "split.json").read_text()),
-            "config": json.loads((folder / "config.json").read_text()),
+            "config": config,
+            "dataset_settings": dataset_settings,
             "history": history, "target_scale": target_scale,
             "histogram": {"edges": edges.tolist(), "counts": counts.tolist(),
                           "outside": int(np.sum((error < edges[0]) | (error > edges[-1])))},
         })
-    snapshot = {"source_commit": "496f70a7220aa40e382f4646c1d7035b35907399",
-                "experiment_date": "2026-09-02", "reference_p0": 0.05,
-                "note": "Recomputed in float64 from saved synthetic held-out prediction CSVs; "
-                        "rounding can differ slightly from original float32 metrics. "
-                        "Runs share development history: a fresh untouched evaluation is still needed.",
+    snapshot = {"dataset": "NMR-AI standalone Gaussian-doublet teaching simulator",
+                "reference_p0": 0.05,
+                "note": "Actual runs of the tutorial's simplified simulator and networks. "
+                        "Not experimental accuracy measurements. Recomputed from prediction CSVs in float64.",
                 "runs": runs}
-    sys.path.insert(0, str(args.project_dir.resolve() / "data_creation"))
-    from signal_generator_rgc import RGCSignalGenerator
-    generator = RGCSignalGenerator(output_dir=str(ROOT / "local-results"), seed=42,
-                                   p_range=(0.05, 0.05), label_mode="vector",
-                                   add_noise=True, noise_level=2.7e-5, cc_override=-1.39)
-    event = generator.generate_one()
+    event = simulate(0.05, sample_configurations(1)[0], np.random.default_rng(42))
     snapshot["spectrum"] = {
-        "label": "One illustrative output of the actual RGC simulator; seed 42, P=0.05, cc=-1.39",
-        "frequency": generator.freq_mhz.tolist(),
+        "label": "Standalone Gaussian-doublet teaching simulator; P=0.05, cc=-1.39",
+        "frequency": FREQUENCY.tolist(),
         **{name: [float(f"{value:.9g}") for value in event[name]]
            for name in ("signal", "baseline", "lineshape", "noise")},
     }

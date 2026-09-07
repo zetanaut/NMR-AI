@@ -94,7 +94,7 @@
        <path d="${path(history.map(r => [r.epoch, r.val_loss]), a.x, a.y)}" fill="none" stroke="${rust}" stroke-width="2" stroke-dasharray="5 3"/>
        <circle cx="${a.x(best.epoch)}" cy="${a.y(best.val_loss)}" r="4" fill="${rust}"/>
        <text x="${a.left}" y="13">Normalized MSE · log scale</text>`;
-    $("history-caption").textContent = `Green: training. Dashed rust: validation. Best epoch ${best.epoch}; validation RMSE ${(Math.sqrt(best.val_loss) * run.target_scale).toFixed(6)} fractional P. Training includes dropout${run.config.max_shift_bins > 0 ? " and shift augmentation" : ""}.`;
+    $("history-caption").textContent = `Green: training. Dashed rust: validation. Best epoch ${best.epoch}; validation RMSE ${(Math.sqrt(best.val_loss) * run.target_scale).toFixed(6)} fractional P. ${run.config.architecture === "physics_multiscale" ? "Training includes dropout." : "The compact model does not use dropout."}`;
 
     const hist = run.histogram;
     const hsvg = $("residual-chart");
@@ -104,8 +104,12 @@
     hsvg.innerHTML = `<title>Held-out residual histogram for ${escape(run.label)}</title>` + b.markup + bars +
       `<line x1="${b.x(0)}" x2="${b.x(0)}" y1="${b.top}" y2="${b.bottom}" stroke="${rust}" stroke-dasharray="4 3"/>
        <text x="${b.left}" y="13">Event count</text>`;
-    $("residual-caption").textContent = `${run.metrics.n.toLocaleString()} held-out events; ${hist.outside} outside the displayed ±0.8 pp range. All events enter the metrics. Absolute-error 95th percentile: ${(100 * run.metrics.p95_absolute_error).toFixed(4)} pp.`;
+    $("residual-caption").textContent = `${run.metrics.n.toLocaleString()} held-out events; ${hist.outside} outside the displayed ±${(100 * hist.edges.at(-1)).toFixed(2)} pp range. Axes change between runs; all events enter the metrics. Absolute-error 95th percentile: ${(100 * run.metrics.p95_absolute_error).toFixed(4)} pp.`;
     const m = run.near_five_percent;
+    if (m.n === 0) {
+      $("local-result").textContent = "No held-out events in the signed 4.5%–5.5% band. Generate more independent examples before reporting local performance.";
+      return;
+    }
     $("local-result").innerHTML = `<p><strong>Actually near +5% polarization:</strong> ${m.n.toLocaleString()} held-out events with 4.5% ≤ P &lt; 5.5%.</p><p>Bias <strong>${signed(m.bias * 100, 4)} pp</strong> · width <strong>${(100 * m.width).toFixed(4)} pp</strong> · RMSE <strong>${(100 * m.rmse).toFixed(4)} pp</strong>.<br>Relative to P₀ = 5%: bias ${signed(m.relative_bias_percent_at_p0)}%, width ${m.relative_width_percent_at_p0.toFixed(3)}%, RMSE ${m.relative_rmse_percent_at_p0.toFixed(3)}%. These are descriptive local-band metrics, without uncertainty intervals.</p>`;
   }
 

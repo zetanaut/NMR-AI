@@ -1,33 +1,26 @@
 #!/usr/bin/env python3
-"""Measure architecture forward-pass cost, without loading research checkpoints."""
+"""Measure forward-pass cost of the two standalone tutorial architectures."""
 
 import argparse
 import json
-from pathlib import Path
-import sys
 
 import torch
 from torch.utils.benchmark import Timer
+from nmr_lab import build_model
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--project-dir", type=Path, default=Path(__file__).resolve().parents[2] / "gen-NMR")
-    parser.add_argument("--architecture", choices=["physics_multiscale", "legacy"], default="physics_multiscale")
+    parser.add_argument("--architecture", choices=["physics_multiscale", "compact"], default="physics_multiscale")
     parser.add_argument("--device", choices=["cpu", "cuda"], default="cpu")
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--threads", type=int, default=1)
     args = parser.parse_args()
-    if not (args.project_dir / "ml" / "train_rgc_joint.py").is_file():
-        parser.error("Set --project-dir to your gen-NMR checkout")
-    sys.path.insert(0, str(args.project_dir.resolve()))
-    from ml.train_rgc_joint import JointRGCNet, LegacyJointRGCNet
     if args.batch_size < 1 or args.threads < 1:
         parser.error("batch-size and threads must be positive")
     if args.device == "cuda" and not torch.cuda.is_available():
         parser.error("CUDA is unavailable; use --device cpu")
     torch.set_num_threads(args.threads)
-    cls = JointRGCNet if args.architecture == "physics_multiscale" else LegacyJointRGCNet
-    model = cls(n_outputs=1).eval().to(args.device)
+    model = build_model(args.architecture).eval().to(args.device)
     inputs = torch.randn(args.batch_size, 2, 512, device=args.device)
     # Timer warms up and synchronizes accelerator work. Model/data stay on device.
     with torch.inference_mode():
