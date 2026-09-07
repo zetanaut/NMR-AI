@@ -75,10 +75,10 @@
     svg.innerHTML = `<title>${escape(s.label)}; ${escape(mode)} view</title>` + a.markup +
       `<path d="${path(s.frequency.map((f, i) => [f, values[i]]), a.x, a.y)}" fill="none" stroke="${green}" stroke-width="1.8"/>` +
       (reference ? `<path d="${path(s.frequency.map((f, i) => [f, reference[i]]), a.x, a.y)}" fill="none" stroke="${rust}" stroke-width="1.5" stroke-dasharray="6 4"/>` : "") +
-      `<text x="${a.left}" y="13">Generator voltage</text>`;
-    const explanation = mode === "raw" ? "Unvalidated prototype. Green: synthetic sweep. Dashed rust: assumed cubic baseline, not the physical Q-curve." : mode === "residual" ? "Unvalidated prototype. Green: Pake doublet + assumed noise after toy-baseline subtraction. Dashed rust: clean signal with assumed gain." : "Assumed independent Gaussian noise; not a measured noise model. One 512-bin realization.";
+      `<text x="${a.left}" y="13">Detector voltage (V)</text>`;
+    const explanation = mode === "raw" ? "Green: full circuit sweep. Dashed rust: physical Q-curve at zero susceptibility." : mode === "residual" ? "Green: circuit-coupled Pake doublet + noise. Dashed rust: clean signal, V(χ) − V(0)." : "White-Gaussian detector-noise reference scenario, not a fitted experimental covariance.";
     const c = s.configuration;
-    $("spectrum-caption").textContent = `${explanation} P = ${(100*s.p).toFixed(0)}%, cc = ${c.cc}, g = ${c.g.toFixed(3)}, η = ${c.eta.toFixed(3)}, noise SD ${s.noise_level.toExponential(1)}. Vertical scales change between views.`;
+    $("spectrum-caption").textContent = `${explanation} P = ${(100*s.p).toFixed(0)}%, g = ${c.g.toFixed(3)}, η = ${c.eta.toFixed(3)}, noise SD ${c.noise_rms_v.toExponential(1)} V. Vertical scales change between views.`;
   }
   $("spectrum-select").addEventListener("change", renderSpectrum);
   renderSpectrum();
@@ -100,7 +100,7 @@
     const hist = run.histogram;
     const hsvg = $("residual-chart");
     const b = axes(hsvg, hist.edges[0] * 100, hist.edges.at(-1) * 100, 0, Math.max(...hist.counts) * 1.12,
-                   "Residual (percentage points)", v => v.toFixed(1), v => String(Math.round(v)));
+                   "Residual (percentage points)", v => v.toPrecision(3), v => String(Math.round(v)));
     const bars = hist.counts.map((count, i) => `<rect x="${b.x(100 * hist.edges[i])}" y="${b.y(count)}" width="${Math.max(0, b.x(100 * hist.edges[i + 1]) - b.x(100 * hist.edges[i]) - 0.6)}" height="${b.bottom - b.y(count)}" fill="${green}" opacity=".8"/>`).join("");
     hsvg.innerHTML = `<title>Held-out residual histogram for ${escape(run.label)}</title>` + b.markup + bars +
       `<line x1="${b.x(0)}" x2="${b.x(0)}" y1="${b.top}" y2="${b.bottom}" stroke="${rust}" stroke-dasharray="4 3"/>
@@ -144,7 +144,7 @@
     pre.appendChild(button);
   });
 
-  const links = [...document.querySelectorAll(".sidebar nav a")];
+  const links = [...document.querySelectorAll('.sidebar nav a[href^="#"]')];
   const sections = links.map(link => document.querySelector(link.getAttribute("href")));
   let scheduled = false;
   function updateNav() {

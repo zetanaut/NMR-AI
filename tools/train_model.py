@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from analyze_predictions import summarize
 from lineshape import SIMULATOR
-from nmr_lab import build_model, group_split, make_features
+from nmr_lab import FREQUENCY, build_model, group_split, make_features
 
 
 def main():
@@ -42,14 +42,17 @@ def main():
         parser.error("CUDA is unavailable; use --device cpu")
     with np.load(args.data, allow_pickle=False) as data:
         if "simulator" not in data or str(data["simulator"].item()) != SIMULATOR:
-            parser.error("This trainer requires current Pake data; regenerate legacy datasets to a new path")
-        signals, cc, labels, groups = data["signals"], data["cc"], data["P"][:, None], data["configuration_id"]
+            parser.error("Simulator version mismatch: regenerate the dataset")
+        if "frequency_mhz" not in data or not np.array_equal(data["frequency_mhz"], FREQUENCY):
+            parser.error("Dataset frequency grid does not match the model contract")
+        signals, cc, labels, groups = data["signals"], data["calibration"], data["P"][:, None], data["configuration_id"]
+        baselines = data["baselines"]
     if signals.shape != (len(labels), 512) or cc.shape != (len(labels),) or groups.shape != (len(labels),):
-        parser.error("Dataset must have 512 signal bins and aligned label, cc, and group arrays")
-    if not all(np.isfinite(array).all() for array in [signals, cc, labels, groups]) or np.any(cc == 0):
+        parser.error("Dataset must have aligned signals, references, calibration, labels and groups")
+    if not all(np.isfinite(array).all() for array in [signals, baselines, cc, labels, groups]) or np.any(cc == 0):
         parser.error("Data must be finite, with nonzero known calibration")
     train, validation, test = group_split(groups, args.seed)
-    features = make_features(signals, cc)
+    features = make_features(signals, cc, baselines)
     mean = features[train].mean(axis=(0, 2), keepdims=True)
     std = features[train].std(axis=(0, 2), keepdims=True)
     std[std < 1e-8] = 1
@@ -116,7 +119,7 @@ def main():
         writer = csv.DictWriter(stream, fieldnames=list(history[0]))
         writer.writeheader()
         writer.writerows(history)
-    np.savetxt(args.output_dir / "test_predictions.csv", np.column_stack([truth, prediction, prediction - truth, groups[test]]),
+    np.savetxt(args.output_dir / "test_predictions.csv", np.column_stack([truth, prediction, truth - prediction, groups[test]]),
                delimiter=",", header="P_true,P_pred,P_residual,configuration_id", comments="")
     print(f"Saved best validation checkpoint and held-out metrics to {args.output_dir}; device={device}")
 

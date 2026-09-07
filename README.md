@@ -1,127 +1,111 @@
 # NMR / AI
 
-A self-contained student tutorial on extracting vector polarization from NMR spectra.
+A standalone student tutorial on extracting vector polarization from continuous-wave NMR spectra.
 
-**[Read the tutorial →](https://zetanaut.github.io/NMR-AI/)**
+**[Read the tutorial](https://zetanaut.github.io/NMR-AI/) · [Baseline-fitting practical](https://zetanaut.github.io/NMR-AI/baseline.html)**
 
-**Scientific review status:** the current lab's cubic baseline is not the physical Q-meter circuit model. Its displayed runs are unvalidated software prototypes, not a reproduction of the paper or experimentally grounded performance measurements. The Pake correction addressed only the nuclear lineshape; it did not validate the instrument response.
+The three phases are a physically grounded training-data generator, an efficient DNN/CNN, and validation with bias, residual width, and relative errors at a stated polarization scale.
 
-The complete [arXiv:2603.10146v5 paper](https://arxiv.org/abs/2603.10146v5) has now been reviewed, including Appendix A. Read the [detailed physics/electronics/theory notes](notes/physics-electronics-theory.md) and [implementation audit](notes/implementation-audit.md) before changing the generator. They distinguish sourced physics, derivations, code behavior, and unresolved conventions. The circuit replacement is pending those checks; missing values will not be filled with invented defaults.
+The generator couples a complex Dulya/Pake spin-1 susceptibility to a passive Q-meter circuit: coil and stray capacitance, RLGC transmission line, one tuning capacitor, finite-source/input loading, and a phase-sensitive detector. Baseline and signal are computed from the same circuit at χ=0 and χ(P). Independent reference subtraction and TE area calibration precede the networks.
 
-The three learning phases are:
+The scientific source is [Seay, Fernando, and Keller, arXiv:2603.10146v5](https://arxiv.org/abs/2603.10146v5). Read the [detailed physics/electronics notes](notes/physics-electronics-theory.md) and [baseline-fitting record](notes/baseline-fitting.md) for derivations, conventions, component assumptions, and measured-fit diagnostics.
 
-1. Build a training-data generator: match experimental spectra, characterize noise, vary physical parameters, and generate enough independent configurations and realizations.
-2. Design a DNN/CNN: build a compact CNN, explore a multiscale model with physical summary features, and measure inference cost.
-3. Train and evaluate: grouped splits, validation and stopping, bias, residual width, RMSE, and relative error at a stated polarization scale.
+## Set up
 
-The website includes an interactive bias/precision lab, training curves from its own teaching runs, residual histograms, local-band metrics near +5% P, runnable examples, and student assignments. It assumes basic Python and physics, with no prior neural-network experience. Everything needed to run the labs lives in this repository.
-
-## Preview
-
-From this repository:
-
-```bash
-python3 -m http.server 8000 --bind 127.0.0.1 --directory docs
-```
-
-Open [the local tutorial](http://127.0.0.1:8000). No build, JavaScript package manager, external font, or CDN is required. Opening `docs/index.html` directly also works; clipboard support depends on the browser. The print button expands optional examples for PDF export.
-
-## GitHub Pages
-
-Repository: [zetanaut/NMR-AI](https://github.com/zetanaut/NMR-AI). Website: [NMR / AI](https://zetanaut.github.io/NMR-AI/).
-
-The workflow in `.github/workflows/pages.yml` publishes **only `docs/`**, on a relevant push to `main` or a manual workflow run. GitHub Pages is configured with **GitHub Actions** as its source. For a fork, select that source in **Settings → Pages → Build and deployment**. See [GitHub's custom Pages workflow documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
-
-## Run the Python labs
-
-Use Python 3.10 or newer. From `NMR-AI/`:
+Use Python 3.10 or newer, from `NMR-AI/`:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
-
-python tools/generate_data.py \
-  --num-samples 2000 --num-configurations 100 \
-  --output local-results/smoke.npz
-
-python tools/train_model.py \
-  --data local-results/smoke.npz --output-dir local-results/smoke_model \
-  --epochs 20 --patience 8 --learning-rate 0.0001
-
-python tools/analyze_predictions.py \
-  local-results/smoke_model/test_predictions.csv \
-  --p0 0.05 --half-width 0.005
-
-python tools/benchmark_network.py \
-  --architecture physics_multiscale --device cpu --batch-size 1
+python -m unittest discover -s tests -v
 ```
 
-On Windows, activate with `.venv\Scripts\activate`. A CPU supports all labs; the trainer automatically uses CUDA when available, or accepts `--device cpu`. Use `--architecture compact` for the smaller CNN. Benchmarking times randomly initialized architecture forward passes, excluding preprocessing and transfers; it does not measure trained accuracy.
+On Windows activate with `.venv\Scripts\activate`. A CPU supports all labs; training automatically uses CUDA when available. No other repository, research data checkout, or pretrained model is required.
 
-Generated datasets, configuration lists, and checkpoints live under git-ignored `local-results/`. The commands protect existing outputs, so choose a new output name for each experiment. No external source checkout, experimental data, or pretrained model is required.
+## Fit a measured baseline
 
-## What the current prototype represents—and does not
+```bash
+python tools/fit_baseline.py /path/to/single_event_data.csv \
+  --start-mhz 212.6 --step-mhz 0.0015287 \
+  --starts 24 --output-dir local-results/baseline-fit
+```
 
-The Q-curve must come from a coil/tuning/transmission-line/loading/phase model. A cubic wing fit can be used during subtraction, but it is not the physical baseline generator. The current code has not yet been replaced with that circuit, and its gain, calibration, and noise assumptions are also under review. See the [audit](notes/implementation-audit.md) for the specific gaps.
+The input is a headerless timestamp plus 500-bin CSV. The fitter preserves the first row and identifies exact duplicates. It fits bounded physical shape parameters and solves detector quadratures/DC offset by linear least squares. The output includes measured/fitted overlays, residual CSVs, fitted and fixed parameters, all multi-start candidates, identifiability diagnostics, hashes, and library versions.
 
-`tools/lineshape.py` implements the supplied **spin-1 Dulya/Pake powder doublet**: the analytic broadened branch formula, weighted azimuthal averaging, and spin-temperature transition weights in the weak-quadrupole approximation. It is self-contained and requires only NumPy. The theoretical reference is [Dulya et al., *A line-shape analysis for spin-1 NMR signals*, NIM A 398 (1997) 109–125](https://doi.org/10.1016/S0168-9002(97)00317-3).
+Recorded values remain in **recorded units** until the DAQ voltage conversion is confirmed. Supply `--volts-per-unit` only with a known conversion. No reduced χ² or parameter uncertainties are fabricated without a measurement-error model. Raw measurements and local fit products are not published by the Pages workflow.
 
-Normalized frequency is `x = (f - center_mhz) / split_mhz`. In the axial, zero-broadening limit, horns lie at x = ±1 and outer shoulders at ±2. `g` is the dimensionless Lorentzian half-width, so the physical half-width is `g * split_mhz`; `eta` is quadrupole asymmetry. The central teaching settings are `split_mhz=0.080`, `g=0.080`, and `eta=0.030`. The two branch weights follow spin temperature, with `Q = 2 - sqrt(4 - 3P²)`; independent tensor polarization is not modeled. Negative P reverses polarity and exchanges the horn weights. The implementation is finite at P = 0 and ±1, without an artificial near-zero polarization floor.
+The supplied scans have five distinct Q-curves; the physical model closely follows their backgrounds. One has a localized residual near 212.91 MHz, and several have endpoint residuals. These features remain visible rather than being labeled white noise. A close fit does not uniquely determine every component or establish deuteron settings from proton-frequency scans.
 
-Before gain, the **discrete** convention is `sum(S) = P / cc` on the supplied grid, not an integral over frequency. `tools/nmr_lab.py` adds a linear gain curve, cubic baseline, and independent or AR(1) Gaussian noise. The single-site theory is physical, but default parameter distributions and instrument settings remain synthetic assumptions, not a validated instrument simulation. Broadened tails can enter the baseline-fitting wings; subtracting a fitted cubic is not identical to knowing the true baseline.
+## Run the learning labs
 
-The lessons explain how an experimental application would require fitting real scans, checking residuals and noise correlations, preserving parameter relationships, and validating against independent reference measurements. To experiment with configuration distributions, pass `--configurations configurations.json`; use the `configurations` list in a generated dataset's JSON metadata as the schema. Required keys are `center_mhz`, `split_mhz`, `g`, `eta`, `gain_slope`, `baseline` (four coefficients), and nonzero `cc`. The former Gaussian `width_mhz` parameter is not a Pake broadening parameter.
+```bash
+python tools/generate_data.py --num-samples 2000 --num-configurations 100 \
+  --output local-results/smoke.npz
+python tools/train_model.py --data local-results/smoke.npz \
+  --output-dir local-results/smoke_model --epochs 20 --patience 8 \
+  --learning-rate 0.0001
+python tools/analyze_predictions.py local-results/smoke_model/test_predictions.csv \
+  --p0 0.05 --half-width 0.005
+python tools/benchmark_network.py --architecture physics_multiscale --device cpu --batch-size 1
+```
 
-`tools/train_model.py` splits by `configuration_id`, fits input and target scaling only on training rows, trains with absolute normalized MSE, restores the best validation weights, and records held-out predictions. `tools/predict.py` uses the same preprocessing and loads only this tutorial's model architectures.
+The compact CNN has 3,889 parameters; the multiscale CNN with train-only physical summaries has 82,391. Use `--architecture compact` for the smaller model. Benchmarking measures architecture forward passes, not trained accuracy or end-to-end latency.
 
-## Data provenance and interpretation
+Generated data contain raw/reference voltages in V, an independent TE calibration per event, fractional P, configuration IDs, the frequency grid, and `qmeter-complex-pake-v2` provenance. Voltage storage is float64; network inputs are float32 after subtraction/calibration. Generation metadata retain all physical configurations and dataset hashes. Existing outputs are protected; use fresh paths.
 
-`docs/assets/results.js` contains three actual runs of this repository's **Pake-plus-polynomial prototype**, retained as software-workflow examples only: narrow variation with the multiscale model, broad variation with the same model, and the compact model on the same broad dataset. Each dataset has 6,000 spectra drawn from 300 synthetic configurations. The snapshot includes generation/training settings, split counts, histories, residual histograms, summary metrics, and prediction-CSV hashes. It also contains one simulated trace, with its configuration and seed, for the component viewer. These are not accepted physical Q-meter benchmarks.
+Training splits entire configurations 80/10/10. Scalers and the ridge estimate use training rows only. Validation selects the best checkpoint and early stopping; the test partition is evaluated afterward. Prediction uses the same saved preprocessing:
 
-These replace the original Gaussian-peak examples: both datasets were regenerated and all three networks retrained. Data, checkpoints, and published snapshots carry the `dulya-pake-v1` simulator identifier. Training, prediction, and export reject legacy artifacts so Gaussian-trained results cannot silently be presented as Pake results. Preserve older runs if needed and use fresh paths; do not add the new identifier to old artifacts.
+```bash
+python tools/generate_data.py --num-samples 500 --configuration-seed 91 --seed 99 \
+  --output local-results/new_spectra.npz
+python tools/predict.py --model-dir local-results/smoke_model \
+  --data local-results/new_spectra.npz --output local-results/new_predictions.csv
+```
 
-To regenerate all displayed examples, run these from this repository in an environment with its requirements installed. Use fresh output paths or preserve your existing runs elsewhere first:
+## Model scope
+
+The deuteron presets are controlled physical sensitivity studies, not experimentally fitted parameter distributions. They use a derived half-wave/tuned operating point near 32.68 MHz and a single-site spin-temperature powder response. Filling factor and susceptibility scale require independent signal calibration; a χ=0 baseline cannot determine them.
+
+Default detector noise is a white-Gaussian reference scenario with σ=10⁻⁹ V. Supply a validated 512×512 output covariance in V² using `--noise-covariance development_covariance_v2.npy`; provide supported joint physical configurations using `--configurations configurations.json`. The generator checks covariance symmetry and positive semidefiniteness. Non-Gaussian pickup and circuit drift need separate characterized extensions.
+
+Each configuration has an independently noisy baseline reference, with 16-sweep averaging by default. The benchmark assumes stable electronics between reference and signal and an ideal TE calibration. It does not include temperature/calibration uncertainty. These conditions make the area-based problem substantially easier than uncontrolled experimental extraction; a small simulated residual is not a complete polarimetry error budget.
+
+## Reproduce the published runs
+
+`docs/assets/results.js` contains three actual runs, their generation/training settings, histories, group counts, prediction hashes, residual histograms, and a reproducible spectrum. Each dataset has 6,000 events and 300 configurations. These are independent teaching networks, not the paper's training runs or accuracy claims.
 
 ```bash
 python tools/generate_data.py --num-samples 6000 --num-configurations 300 \
-  --coverage narrow --seed 42 --output local-results/pake/narrow.npz
+  --coverage narrow --output local-results/qmeter/narrow.npz
 python tools/generate_data.py --num-samples 6000 --num-configurations 300 \
-  --coverage broad --seed 42 --output local-results/pake/broad.npz
-python tools/train_model.py --data local-results/pake/narrow.npz \
-  --output-dir local-results/pake/narrow_multiscale --architecture physics_multiscale \
-  --epochs 25 --patience 8 --learning-rate 0.0001
-python tools/train_model.py --data local-results/pake/broad.npz \
-  --output-dir local-results/pake/broad_multiscale --architecture physics_multiscale \
-  --epochs 25 --patience 8 --learning-rate 0.0001
-python tools/train_model.py --data local-results/pake/broad.npz \
-  --output-dir local-results/pake/broad_compact --architecture compact \
-  --epochs 25 --patience 8 --learning-rate 0.0001
+  --coverage broad --output local-results/qmeter/broad.npz
+python tools/train_model.py --data local-results/qmeter/narrow.npz \
+  --output-dir local-results/qmeter/narrow_multiscale --architecture physics_multiscale \
+  --epochs 40 --patience 8 --learning-rate 0.0001
+python tools/train_model.py --data local-results/qmeter/broad.npz \
+  --output-dir local-results/qmeter/broad_multiscale --architecture physics_multiscale \
+  --epochs 40 --patience 8 --learning-rate 0.0001
+python tools/train_model.py --data local-results/qmeter/broad.npz \
+  --output-dir local-results/qmeter/broad_compact --architecture compact \
+  --epochs 40 --patience 8 --learning-rate 0.0001
 python tools/export_results.py
 ```
 
-The snapshot recomputes bias, population residual SD (`ddof=0`), RMSE, MAE, and the 95th-percentile absolute error from the prediction CSVs in float64. The identity `RMSE² = bias² + width²` uses the same events and population SD. Relative values use a fixed nonzero reference `P0`; local-band metrics select signed truth values before computation. No uncertainty intervals are inferred from residual width.
+The recorded runs used PyTorch 2.11.0 and CUDA; library/hardware changes can alter results. The compact run reaches the 40-epoch cap while validation is still improving. This is a fixed-budget comparison, not proof of its best achievable accuracy or a capacity limit.
 
-The tutorial residual is **prediction minus truth**, opposite to the paper's Eq. (38). Reverse the bias sign when comparing them. The paper's Eq. (45) defines SNR using peak noise, not noise SD. Its calibrated frequency integral is not automatically identical to this prototype's fixed-grid sum. These differences are documented in the notes and must be resolved explicitly in any reproduction.
+Residuals are **truth minus prediction**, matching the paper. Positive bias means underprediction. Width is population SD, so `RMSE² = bias² + width²`. Multiply fractional P by 100 for percentage points; relative percent at P0 is `100*error/abs(P0)`. Local signed bands and counts are reported separately from pooled conversions. Residual width is not a calibrated per-event confidence interval.
 
-The recorded examples used PyTorch 2.11.0 with CUDA. Hardware and library versions can change numerical training results. These measurements illustrate learning and generalization within the theoretical Pake model with simplified instrument settings. They do not establish experimental accuracy; `0.0005` fractional P is an example acceptance target for the lessons.
+## Website and code
 
-## Editing
+Preview with `python3 -m http.server 8000 --bind 127.0.0.1 --directory docs`. The static Pages workflow deploys only `docs/`. There is no build system, external font, or CDN. Lessons and the summary table remain readable without JavaScript.
 
-- `docs/index.html`: the complete lesson text, examples, and semantic structure.
-- `docs/assets/style.css`: responsive and print styles.
-- `docs/assets/tutorial.js`: interactive plots, error conversion, navigation, and code copying.
-- `notes/physics-electronics-theory.md`: versioned paper reference, physics and electronics derivations, calibration, noise, and uncertainty notes.
-- `notes/implementation-audit.md`: source-to-code checks and unresolved questions blocking a physical circuit replacement.
-- `tools/nmr_lab.py`: teaching simulator, preprocessing, grouped splitting, and both networks.
-- `tools/lineshape.py`: standalone Dulya/Pake branch formula, powder averaging, transition weights, and discrete normalization.
-- `tools/generate_data.py`, `tools/train_model.py`, `tools/predict.py`: complete standalone lab workflow.
-- `tools/analyze_predictions.py`, `tools/benchmark_network.py`, `tools/export_results.py`: evaluation, timing, and website snapshots.
+- `docs/index.html`, `docs/baseline.html`: three-phase guide and baseline practical.
+- `tools/circuit.py`, `tools/lineshape.py`: physical electronics and complex nuclear response.
+- `tools/fit_baseline.py`: measured Q-curve fitting and reproducible diagnostics.
+- `tools/nmr_lab.py`: generation, calibration, features, group split, networks.
+- `tools/generate_data.py`, `tools/train_model.py`, `tools/predict.py`: learning workflow.
+- `tools/analyze_predictions.py`, `tools/export_results.py`, `tools/benchmark_network.py`: evaluation, published aggregates, timing.
+- `tests/`: independent complex quadrature, circuit limits, fit reconstruction, calibration, split and metric checks.
 
-All website asset paths are relative, so the site works at the `/NMR-AI/` project URL. The content remains readable without JavaScript; interactive plots require it.
-
-## Validation
-
-The included runs exercise generation, grouped training, saved checkpoints, and error reporting. Both network benchmarks run independently on CPU. Before publishing changes, check inference on a separate generated dataset, group separation, finite outputs, internal links, interactive controls, and the mobile layout. Keep simulator validation distinct from website and software checks.
-
-Run the numerical and split checks with `python -m unittest discover -s tests -v`. The lineshape tests compare the analytic branch against independent numerical integration of the broadened orientation distribution, check powder horns/shoulders and reflection symmetry, and verify polarization weights, signed area, and finite endpoint behavior.
+Generated data, measurements, fit products, and checkpoints stay in git-ignored `local-results/`. The website is independent of the separate research pipeline.

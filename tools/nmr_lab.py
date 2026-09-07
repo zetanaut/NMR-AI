@@ -1,82 +1,132 @@
-"""Self-contained teaching models for the NMR-AI labs.
-
-UNVALIDATED PROTOTYPE: the polynomial baseline is not the physical Q-meter
-circuit in arXiv:2603.10146v5. See notes/implementation-audit.md before changes.
-The spin-1 Dulya/Pake powder lineshape is theoretical. Instrument gain, baseline,
-noise, and parameter distributions remain teaching assumptions, not fitted data.
-"""
-
+"""Standalone physical generator, calibrated inputs, and tutorial networks."""
+from dataclasses import asdict
 import numpy as np
 import torch
 from torch import nn
-from lineshape import pake_doublet
+from circuit import Circuit, detector_voltage, nominal_circuit
+from lineshape import pake_susceptibility
 
 FREQUENCY = np.linspace(32.3, 33.1, 512)
+FREQUENCY_HZ = FREQUENCY*1e6
 
 
-def sample_configurations(count, seed=17, coverage="narrow", cc=-1.39):
+def integration_weights(frequency_hz):
+    f = np.asarray(frequency_hz, dtype=float)
+    if f.ndim != 1 or len(f) < 2 or not np.isfinite(f).all() or np.any(f <= 0) or np.any(np.diff(f) <= 0):
+        raise ValueError("Need a finite, positive, increasing frequency grid")
+    weights = np.empty_like(f)
+    weights[0], weights[-1] = (f[1]-f[0])/2, (f[-1]-f[-2])/2
+    weights[1:-1] = (f[2:]-f[:-2])/2
+    return weights/f
+
+
+def thermal_polarization(frequency_hz, temperature_k=1.5):
+    if not np.isfinite([frequency_hz, temperature_k]).all() or min(frequency_hz, temperature_k) <= 0:
+        raise ValueError("Frequency and temperature must be positive")
+    t = np.tanh(6.62607015e-34*frequency_hz/(2*1.380649e-23*temperature_k))
+    return 4*t/(3+t*t)
+
+
+def sample_configurations(count, seed=17, coverage="narrow"):
+    """Controlled sensitivity study, not inferred hardware-parameter distributions.
+
+    All variation is through physical fields. Broad excursions are four times
+    narrow excursions. Fixed/varied choices and their provenance are in the notes.
+    """
+    if count < 1 or coverage not in ("narrow", "broad"):
+        raise ValueError("Require positive count and narrow/broad coverage")
     rng = np.random.default_rng(seed)
-    spread = 1.0 if coverage == "broad" else 0.25
-    return [{
-        "center_mhz": float(32.7 + rng.uniform(-0.025, 0.025) * spread),
-        "split_mhz": float(0.080 + rng.uniform(-0.01, 0.01) * spread),
-        "g": float(0.080 + rng.uniform(-0.02, 0.02) * spread),
-        "eta": float(0.030 + rng.uniform(-0.02, 0.02) * spread),
-        "gain_slope": float(rng.uniform(-0.15, 0.15) * spread),
-        "baseline": [float(-0.2 + rng.uniform(-0.03, 0.03) * spread),
-                     float(rng.uniform(-0.02, 0.02) * spread),
-                     float(rng.uniform(-0.02, 0.02) * spread),
-                     float(rng.uniform(-0.008, 0.008) * spread)],
-        "cc": float(cc),
-    } for _ in range(count)]
+    spread = 1 if coverage == "broad" else 0.25
+    reference = asdict(nominal_circuit())
+    configurations = []
+    for _ in range(count):
+        c = reference.copy()
+        for key, fractional_range in (
+            ("drive_v", .1), ("tune_capacitance_f", .03),
+            ("coil_inductance_h", .03), ("coil_resistance_ohm", .1),
+            ("damping_resistance_ohm", .05), ("cable_length_m", .01),
+            ("cable_resistance_ohm_per_m", .1), ("filling_factor", .1),
+            ("susceptibility_scale_cgs", .1)):
+            c[key] *= 1 + rng.uniform(-fractional_range, fractional_range)*spread
+        c["detector_phase_rad"] = float(rng.uniform(-.12, .12)*spread)
+        configurations.append({
+            "circuit": c, "center_mhz": float(32.68+rng.uniform(-.025, .025)*spread),
+            "split_mhz": float(.08+rng.uniform(-.01, .01)*spread),
+            "g": float(.08+rng.uniform(-.02, .02)*spread),
+            "eta": float(.03+rng.uniform(-.02, .02)*spread),
+            "noise_rms_v": 1e-9, "reference_averages": 16, "te_temperature_k": 1.5,
+        })
+    return configurations
 
 
 def validate_configurations(configurations):
     if not isinstance(configurations, list) or len(configurations) < 3:
-        raise ValueError("Supply a list of at least three configurations")
+        raise ValueError("Supply at least three configurations")
     for config in configurations:
-        required = ("center_mhz", "split_mhz", "g", "eta", "gain_slope", "cc", "baseline")
-        if not isinstance(config, dict) or any(key not in config for key in required):
-            raise ValueError("Pake configurations need center_mhz, split_mhz, g, eta, gain_slope, cc, baseline")
-        values = [config[key] for key in required[:-1]]
-        if not np.isfinite(values).all() or config["cc"] == 0:
-            raise ValueError("Configuration values must be finite, with nonzero cc")
-        if config["g"] <= 0 or config["split_mhz"] <= 0 or abs(config["gain_slope"]) >= 1:
-            raise ValueError("Widths and splitting must be positive; |gain_slope| must be below 1")
-        if not 0 <= config["eta"] <= 1:
-            raise ValueError("Quadrupole asymmetry eta must be between 0 and 1")
-        if len(config["baseline"]) != 4 or not np.isfinite(config["baseline"]).all():
-            raise ValueError("Each baseline needs four finite coefficients, constant through cubic")
+        Circuit(**config["circuit"])
+        values = [config[k] for k in ("center_mhz", "split_mhz", "g", "eta", "noise_rms_v",
+                                     "reference_averages", "te_temperature_k")]
+        if not np.isfinite(values).all():
+            raise ValueError("Configuration fields must be finite")
+        if min(config["center_mhz"], config["split_mhz"], config["g"], config["te_temperature_k"]) <= 0:
+            raise ValueError("Frequency, widths, and temperature must be positive")
+        if not 0 <= config["eta"] <= 1 or config["noise_rms_v"] < 0:
+            raise ValueError("Invalid EFG asymmetry or noise RMS")
+        if not isinstance(config["reference_averages"], int) or config["reference_averages"] < 1:
+            raise ValueError("Reference averages must be a positive integer")
 
 
-def simulate(p, config, rng, noise_level=2.7e-5, noise_correlation=0.0, center_jitter=0.0):
-    axis = np.linspace(-1.0, 1.0, len(FREQUENCY))
-    center = config["center_mhz"] + rng.uniform(-center_jitter, center_jitter)
-    x = (FREQUENCY - center) / config["split_mhz"]
-    lineshape, _, _ = pake_doublet(x, p, config["cc"], config["eta"], config["g"])
-    lineshape *= 1.0 + config["gain_slope"] * axis
-    baseline = np.polynomial.polynomial.polyval(axis, config["baseline"])
-    noise = rng.normal(0.0, noise_level, len(axis))
-    if noise_correlation:
-        for i in range(1, len(noise)):
-            noise[i] = noise_correlation * noise[i - 1] + np.sqrt(1 - noise_correlation**2) * noise[i]
-    return {"signal": lineshape + baseline + noise, "lineshape": lineshape,
+def clean_response(p, config, center_shift_mhz=0):
+    c = Circuit(**config["circuit"])
+    x = (FREQUENCY-config["center_mhz"]-center_shift_mhz)/config["split_mhz"]
+    chi = c.susceptibility_scale_cgs*pake_susceptibility(x, p, config["eta"], config["g"])[0]
+    baseline = detector_voltage(FREQUENCY_HZ, c)
+    return detector_voltage(FREQUENCY_HZ, c, chi)-baseline, baseline
+
+
+def te_calibration(config):
+    """Ideal independent TE reference; temperature/calibration uncertainty excluded."""
+    p_te = thermal_polarization(config["center_mhz"]*1e6, config["te_temperature_k"])
+    signal, _ = clean_response(p_te, config)
+    area = float(signal @ integration_weights(FREQUENCY_HZ))
+    if not np.isfinite(area) or abs(area) < 1e-20:
+        raise ValueError("TE response has no usable area calibration at this detector phase")
+    return p_te/area
+
+
+def noise_factor(covariance_v2):
+    covariance = np.asarray(covariance_v2, dtype=float)
+    if covariance.shape != (512, 512) or not np.isfinite(covariance).all():
+        raise ValueError("Noise covariance must be a finite 512x512 matrix in V²")
+    scale = max(float(np.max(np.abs(covariance))), 1e-30)
+    if not np.allclose(covariance, covariance.T, rtol=1e-10, atol=scale*1e-12):
+        raise ValueError("Noise covariance must be symmetric")
+    eigenvalues, vectors = np.linalg.eigh(covariance)
+    if eigenvalues.min() < -scale*1e-10:
+        raise ValueError("Noise covariance must be positive semidefinite")
+    return vectors*np.sqrt(np.maximum(eigenvalues, 0))
+
+
+def simulate(p, config, rng, center_jitter=0.0, covariance_factor=None):
+    if not np.isfinite(center_jitter) or center_jitter < 0:
+        raise ValueError("Center jitter must be finite and nonnegative")
+    shift = rng.uniform(-center_jitter, center_jitter) if center_jitter else 0.0
+    nuclear, baseline = clean_response(p, config, shift)
+    noise = (rng.normal(size=512)*config["noise_rms_v"] if covariance_factor is None
+             else covariance_factor @ rng.normal(size=512))
+    return {"signal": nuclear+baseline+noise, "lineshape": nuclear,
             "baseline": baseline, "noise": noise}
 
 
-def make_features(signals, cc):
-    """Cubic wing fit, followed by known-calibration scaling of the residual."""
-    signals = np.asarray(signals, dtype=np.float64)
-    cc = np.asarray(cc, dtype=np.float64)
-    if signals.ndim != 2 or signals.shape[1] != 512 or cc.shape != (len(signals),):
-        raise ValueError("Expected (events, 512) signals and one calibration value per event")
-    if not np.isfinite(signals).all() or not np.isfinite(cc).all() or np.any(cc == 0):
-        raise ValueError("Signals and calibrations must be finite, with nonzero cc")
-    axis = np.linspace(-1.0, 1.0, signals.shape[1])
-    design = np.stack([axis**power for power in range(4)], axis=1)
-    wings = np.abs(axis) >= 0.65
-    coefficients = signals[:, wings] @ np.linalg.pinv(design[wings]).T
-    residual = (signals - coefficients @ design.T) * cc[:, None]
+def make_features(signals, calibration, baselines):
+    """Independent reference subtraction and trapezoidal TE-calibrated area bins."""
+    signals, baselines = np.asarray(signals, dtype=float), np.asarray(baselines, dtype=float)
+    calibration = np.asarray(calibration, dtype=float)
+    if signals.ndim != 2 or signals.shape[1] != 512 or baselines.shape != signals.shape or calibration.shape != (len(signals),):
+        raise ValueError("Need aligned (events,512) raw/reference voltages and per-event calibration")
+    if not all(np.isfinite(a).all() for a in (signals, baselines, calibration)) or np.any(calibration == 0):
+        raise ValueError("Inputs must be finite with nonzero calibration")
+    residual = (signals-baselines)*calibration[:, None]*integration_weights(FREQUENCY_HZ)
     return np.stack([signals, residual], axis=1).astype(np.float32)
 
 

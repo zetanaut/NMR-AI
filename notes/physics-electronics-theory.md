@@ -1,388 +1,182 @@
-# Physics, electronics, and inference: working reference
+# Physics, electronics, and the measurement contract
 
-Read and prepared on 2026-09-07. Primary source: D. Seay, I. P. Fernando, and D. Keller, *Polarized target nuclear magnetic resonance measurements with deep neural networks*, [arXiv:2603.10146v5](https://arxiv.org/abs/2603.10146v5), [EPJ A 62, 153 (2026)](https://doi.org/10.1140/epja/s10050-026-01937-x). Page references below use the **28-page v5 PDF**, not the earlier preprint versions.
+Reference: D. Seay, I. P. Fernando, and D. Keller, *Polarized target nuclear magnetic resonance measurements with deep neural networks*, [arXiv:2603.10146v5](https://arxiv.org/abs/2603.10146v5), [EPJ A 62, 153 (2026)](https://doi.org/10.1140/epja/s10050-026-01937-x). Prepared 2026-09-07 after reading all 28 pages, including Appendix A. Page numbers below refer to that version. Key equations and the circuit diagram were also inspected visually. PDF SHA-256: `14977413a028f93120029729bfb4b895aa5eee2ad3e12e0560a814847db76331`.
 
-The complete paper, including Appendix A and references, was read. The circuit diagram and the typeset equations on pp. 4, 7, and 10 were inspected visually; extraction of PDF text alone is not reliable for these equations. The PDF SHA-256 is `14977413a028f93120029729bfb4b895aa5eee2ad3e12e0560a814847db76331`.
+These notes distinguish the paper's physics, explicit implementation conventions, and evidence from the supplied measurements. Equations below are restated/derived with unambiguous names. This independent educational implementation is not a reproduction of the paper's training runs or an experimentally calibrated deuteron instrument. The [baseline practical](../docs/baseline.html) explains the measured-fit workflow.
 
-These are explanatory notes, independent derivations, and an implementation review—not a reproduction of the paper's experiment. The published article identifies its text as [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) on p. 26. Attribution is given above; notation has been disambiguated and commentary added. No paper figures or experimental datasets are bundled here.
+## 1. Continuous-wave measurement and conventions
 
-Use alongside the [implementation audit and unresolved questions](implementation-audit.md). The existing tutorial's polynomial-baseline simulator is **not** an implementation of the paper's Q-meter model. Its results must not be described as a reproduction of this work.
+This is swept-frequency, continuous-wave, phase-sensitive NMR, not pulsed FID spectroscopy. An approximately constant-current RF source excites a coil coupled to the sample. The complex magnetic susceptibility changes the coil impedance; the tuning components, transmission line, input loading, and detector phase determine the recorded voltage. Analysis and calibration act on that response.
 
-## 1. What is being measured
+Internal units are Hz, rad/s, V, A, Ω, H, F, m, and radians. Input MHz is multiplied by 10⁶ once. Fit coordinates in pF are multiplied by 10⁻¹² once. The detector phase is distinct from the EFG azimuth; `filling_factor` is distinct from quadrupole `eta`. Vector and tensor polarization are fractions, not percent. Output polarity depends on the detector, not just the spin label.
 
-Reference: [§§2–2.1, pp. 2–5; §5.1, p. 10](https://arxiv.org/pdf/2603.10146v5#page=2).
+With time dependence exp(+iωt), use the paper's cgs convention:
 
-The instrument is a swept-frequency, continuous-wave NMR Q-meter used for polarized targets. It is not a pulsed-NMR free-induction-decay experiment. The RF coil couples to the target's magnetic susceptibility. The approximately constant-current drive converts the impedance response into a voltage, and phase-sensitive detection selects the intended channel.
-
-Keep three different objects separate:
-
-1. **Intrinsic nuclear response:** the complex susceptibility and the spin-dependent absorption lineshape.
-2. **Instrument response:** coil, parasitic capacitance, tuning components, transmission line, loading, gain, and detection phase.
-3. **Analysis:** baseline subtraction, residual-background fitting, integration or lineshape estimation, and calibration.
-
-The Q-curve is the instrument response without the NMR susceptibility contribution. A polynomial fitted to spectral wings is an estimator for a remaining background, not an equivalent circuit for that Q-curve.
-
-The spectrum can change at fixed polarization because instrument parameters change. Conversely, similar raw voltages need not imply identical polarizations if calibration or coupling changes. Experimental units and operating conditions are part of the inference problem, not optional metadata.
-
-## 2. Notation that must not be conflated
-
-| Symbol or field | Meaning in these notes | Important distinction |
-|---|---|---|
-| `f`, `omega = 2*pi*f` | Frequency in Hz, angular frequency in rad/s | MHz needs a factor of `1e6`; do not insert an extra `2*pi` into a frequency ratio |
-| `eta_fill` | Coil–sample filling/coupling factor | Not the quadrupole asymmetry |
-| `eta_efg` | Electric-field-gradient asymmetry in the Pake kernel | Not an electronic gain or phase |
-| `phi_efg` | Azimuthal orientation for the powder lineshape | Not the detector phase |
-| `phi_det` | Electronic phase relative to the RF reference | Units must be radians or explicitly converted from degrees |
-| `P`, `Q_tensor` | Vector and tensor polarization fractions | `0.05` is 5%; tensor polarization is not circuit quality factor |
-| `Q_cable` | Cable quality factor in the low-loss approximation | Not `Q_tensor` or the baseline Q-curve |
-| `R_detuning` | Dimensionless spectral detuning | Not a resistance |
-| `r_population` | Ratio of spin-transition branch areas | Not the series resistance named `r` in circuit code |
-| `A` or `g_broadening` | Dimensionless dipolar broadening | Not signal area or a nuclear g-factor |
-| `C_tune`, `C_stray` | Physical capacitances | Not polarization calibration `C_cal` or voltage scale `C_E` |
-| `C_E`, `C_cal`, `cc` | Setup/implementation-dependent scales | They cannot be interchanged without an explicit conversion |
-
-## 3. Susceptibility and the sensing coil
-
-Reference: [Eqs. (1), (4), pp. 3–4](https://arxiv.org/pdf/2603.10146v5#page=3).
-
-With the paper's convention,
-
-```text
-chi(omega) = chi_prime(omega) - i*chi_double_prime(omega)
-L_eff(omega) = L0 * [1 + 4*pi*eta_fill*chi(omega)]
+```
+χ = χ′ − iχ″
+L_eff = L0 (1 + 4π η_fill χ)
+Z_coil = R_coil + iω L_eff
+       = R_coil + 4π η_fill ω L0 χ″ + iω L0(1 + 4π η_fill χ′).
 ```
 
-An explicit algebraic consequence, using that convention, is
+Positive absorptive susceptibility increases real loss; dispersion changes reactance. Do not add a second `4π` if susceptibility has already been converted to SI. This implementation uses cgs susceptibility explicitly, with a named setup-dependent amplitude coefficient. [Paper Eqs. (1), (4), pp. 3–4](https://arxiv.org/pdf/2603.10146v5#page=3).
 
-```text
-Z_coil = R_coil + i*omega*L_eff
-       = [R_coil + 4*pi*eta_fill*omega*L0*chi_double_prime]
-         + i*omega*L0*[1 + 4*pi*eta_fill*chi_prime].
+## 2. Physical circuit implemented in circuit.py
+
+The topology follows Fig. 1 and the loaded-voltage relation in Eq. (2). The resonant leg contains ONE damping resistance, ONE tuning capacitor, and the line-transformed coil. The source resistance and finite amplifier input load the same node.
+
+The coil is shunted by stray capacitance in both the baseline and susceptibility-on cases:
+
+```
+Z_load = 1 / (1/Z_coil + iω C_stray).
 ```
 
-Thus absorption changes the real loss term; dispersion changes the reactive term. The sign of the plotted voltage also depends on detector phase, amplifier inversion, and calibration. Downward peaks by themselves do not determine the sign of P.
+This admittance form correctly tends to `Z_coil` when stray capacitance vanishes. Zero capacitance is an open capacitive branch, not a short. Retaining the same terminal topology for signal-on and signal-off avoids an artificial difference unrelated to nuclear response.
 
-The `4*pi` susceptibility normalization in Eq. (1) and the coupling notation in Eq. (4) require an explicit convention when translating to code. They should not be silently mixed with an SI susceptibility definition.
+For distributed cable R/L/G/C per meter, define
 
-For a coil branch with parallel stray capacitance, the convenient terminal-impedance expression is
-
-```text
-Z_terminal = 1 / [1/Z_coil + i*omega*C_stray].
+```
+γ = sqrt[(Rc + iωLc)(Gc + iωCc)]
+Z0 = sqrt[(Rc + iωLc)/(Gc + iωCc)]
+Z_line = Z0 (Z_load + Z0 tanh(γℓ)) / (Z0 + Z_load tanh(γℓ)).
 ```
 
-This has the correct `C_stray -> 0` limit: `Z_terminal -> Z_coil`. If susceptibility is included, compare signal-on and signal-off cases using the **same physical topology**. Changing the topology between those calculations would create an artificial signal.
+The passive square-root branch has nonnegative attenuation. Compute `γ` and `Z0` from the same RLGC parameters, not from inconsistent independent approximations. At zero length the line input equals the load. In the lossless half-wave limit, `βℓ=nπ` also reproduces the load; a quarter wave gives `Z0²/Z_load`. A fixed physical cable is not an exact half wave at every frequency in a sweep. Loss and frequency-dependent electrical length produce the Q-curve. [Paper Eqs. (3), (7), (8), p. 4](https://arxiv.org/pdf/2603.10146v5#page=4).
 
-For `chi = 0`, a fill factor that acts only through susceptibility cannot change the circuit-only baseline. This is an identifiability issue: fitting that parameter from a zero-susceptibility baseline alone provides no information about it.
+The circuit's remaining equations are
 
-## 4. Transmission line and the physical Q-curve
-
-Reference: [§2, pp. 2–3; Fig. 1 and Eqs. (2)–(8), p. 4](https://arxiv.org/pdf/2603.10146v5#page=4).
-
-### Distributed cable model
-
-For per-unit-length cable resistance, inductance, leakage conductance, and capacitance,
-
-```text
-gamma(omega) = sqrt[(R_c + i*omega*L_c)*(G_c + i*omega*C_c)]
-Z_char(omega) = sqrt[(R_c + i*omega*L_c)/(G_c + i*omega*C_c)]
-
-Z_line_in = Z_char * [Z_terminal + Z_char*tanh(gamma*length)]
-                      / [Z_char + Z_terminal*tanh(gamma*length)]
 ```
-
-Use the passive propagation convention, with attenuation nonnegative. Resistance and conductance are per length, not lumped values. The square-root branch, units, and voltage convention belong in the implementation contract.
-
-In the ideal lossless limit, `gamma = i*beta` and `beta = omega/v_phase`. At the reference frequency,
-
-```text
-length = n*lambda0/2  -> beta0*length = n*pi
-                     -> Z_line_in = Z_terminal.
-```
-
-At a quarter wave, the independent check is `Z_line_in = Z_char**2/Z_terminal`. At zero length, the input equals the load. These are useful tests of any circuit implementation.
-
-The half-wave identity is not exact throughout a sweep: the physical cable length stays fixed while `beta(omega)` changes. Loss and detuning therefore reshape the measured background. A fitted cubic cannot enforce these transmission-line relationships.
-
-### Tuning and electrical loading
-
-The tuning capacitor contributes `Z_cap = 1/(i*omega*C_tune)`. Series loss, the transformed coil impedance, and the tuning capacitor form a resonant leg. The source and amplifier load that leg.
-
-For the source/loading representation of Fig. 1 and Eq. (2), an independently useful derivation is
-
-```text
+Z_leg = R_D + 1/(iω C_tune) + Z_line
 I0 = U/R0
-Y_load = 1/R0 + 1/R_input
-u = I0 * Z_resonator/(1 + Y_load*Z_resonator).
+Y = 1/R0 + 1/R_input
+u = I0 / (1/Z_leg + Y).
 ```
 
-Taking the real part for real `Y_load` yields Eq. (2):
+Taking the real part yields Eq. (2):
 
-```text
-Re(u) = (U/R0) * [Re(Z) + Y_load*abs(Z)**2]
-                  / [(1 + Y_load*Re(Z))**2 + (Y_load*Im(Z))**2].
+```
+Re(u) = I0 [Re(Z_leg) + Y |Z_leg|²]
+              / [(1 + Y Re(Z_leg))² + (Y Im(Z_leg))²].
 ```
 
-This derivation specifies where source and amplifier loading enter. Do not cascade a loaded-impedance formula with another loading factor without checking whether it counts the same component twice.
+This exact nodal form includes finite-source loading. The ideal-current approximation drops `1/R0` from the loading admittance while retaining `I0`; the tutorial does not make that approximation.
 
-**Unresolved transcription issue:** Eq. (3) includes a tuning-capacitor term inside `Z_T`; Eq. (6) includes a tuning-capacitor term again outside `Z_T`. The supplied circuit implementation instead uses its `ZT` name for the transformed cable load alone. These definitions need reconciliation before claiming a literal implementation of both printed equations. See the audit; no circuit topology is silently selected here.
+**Printed-notation resolution:** Eq. (3) defines `ZT` including a capacitor, while Eq. (6) places a capacitor outside its own `ZT`. Literal substitution counts two capacitors. Here `line_input` denotes only the transformed load; `resonator_impedance` adds the single capacitor and damping resistor shown in Fig. 1. We derive the final loading from Eq. (2), rather than cascading Eq. (6) with another loading correction. The implementation is tied to the diagram, not to a claim that those overlapping printed names are internally consistent.
 
-### Detection phase and output
+The detector measures
 
-Reference: [Eqs. (9)–(14), p. 5](https://arxiv.org/pdf/2603.10146v5#page=5).
-
-The observed phase-sensitive output has the form
-
-```text
-V_detector = G_detector * Re[I0*Z_effective*exp(i*phi_det)] + V_DC.
+```
+V_det = G Re[u exp(iφ(f))] + V_DC
+φ(f) = φ0 + φ1(f−f_ref) + φ2(f−f_ref)².
 ```
 
-Here `G_detector` and `V_DC` are explicit instrumental/conversion terms, not universal constants. The paper uses a slowly varying phase plus a trim-dependent contribution. A numerically convenient, explicitly centered representation is
+`φ1` is in rad/Hz and `φ2` in rad/Hz². This centered polynomial parameterizes the electronics PHASE described in [Eqs. (10)–(14), p. 5](https://arxiv.org/pdf/2603.10146v5#page=5), not the baseline voltage. The first fitting exercise keeps the frequency-dependent phase terms fixed at zero. The detector gain may be negative to represent inversion. No grid-dependent minimum is subtracted. Magnitude/diode readout is a different observable and must not be substituted for a phase-sensitive trace.
 
-```text
-phi_det(omega) = phi0 + phi1*(omega-omega0) + phi2*(omega-omega0)**2.
-```
+## 3. What the measured baseline fit establishes
 
-That centered form is a reparameterization, not an additional claim from the paper. Coefficients must have the corresponding inverse-frequency units. Phase tuning acts on the **complex response**; it can mix absorption and dispersion. It is not generally represented by multiplying an absorption curve by an independently sampled real straight line.
+The supplied `single_event_data.csv` has six headerless timestamp-plus-500-bin records, with one exact duplicate. SHA-256: `255492046c57468f5098c6c7ba3cd53bf15c3d69da96c56ee41bc4aa55277f61`. The frequency mapping supplied with it is `212.6 + 0.0015287*j MHz`, `j=0…499`; it still needs acquisition-metadata confirmation. Recorded-unit to V conversion was not supplied. Neither the raw file nor a research data dependency is committed here.
 
-Keep phase-sensitive and diode/magnitude readout distinct. Figure 5 uses diode-mode examples; these do not define the same observable as `Re(V)`. Document the recorded channel before reproducing a figure or fitting data.
+The replacement fitter was implemented from the circuit equations above. It does not execute or import the supplied old script. Positive component entries provide nominal fixed engineering scales: coil 30 nH and 0.35 Ω; source 619 Ω; input 50 Ω; damping 10 Ω; cable inductance 2.542×10⁻⁷ H/m and capacitance 1.027×10⁻¹⁰ F/m. Its cable resistance seed is 3.43 Ω/m, obtained from the low-loss relation `Rc≈2 Z_nom α` using 50 Ω and 0.0343/m; `Gc=0` is an explicit initial approximation. These fixed values are not independently established by a narrow-sweep fit. The new exact RLGC propagation replaces an independently specified propagation slope.
 
-## 5. Building a spectrum without double-counting its physics
+The nonlinear variables are tuning capacitance (0.2–600 pF), cable length (3–5 m), and stray capacitance (0–400 pF). These bounds define the search, not hardware confidence intervals. Detector amplitude, phase, and offset are eliminated by linear least squares on the columns `[Re(u), Im(u), 1]`. From coefficients `(a,b,d)`, the equivalent phase is `atan2(-b,a)` and the recorded-unit gain is `hypot(a,b)`. RF drive and detector gain are not independently identifiable from this product. Filling factor and susceptibility scale are inactive at χ=0 and are not fitted.
 
-Reference: [§2.1, Eq. (20), and Eqs. (32)–(34)](https://arxiv.org/pdf/2603.10146v5#page=10).
+Twenty-four starts with seed 42 are used; every candidate is saved. All 500 bins enter the unweighted objective. No error covariance is known, so no reduced χ², calibrated parameter errors, or noise covariance is claimed. `fitted_curve` reconstructs the exact saved mapping in recorded units; a confirmed `--volts-per-unit` additionally enables a circuit export in V.
 
-For a full susceptibility-coupled response, use the conceptual decomposition
+All five distinct Q-curves are closely followed. Four whole-scan residual RMS values are approximately 1.4–1.5×10⁻⁵ recorded units. A fifth is about 1.1×10⁻⁴ and has a localized structure near 212.91 MHz. Endpoint residuals occur in several traces. These observations are fit diagnostics, not identification of the physical origin of each feature. The scaled Jacobian and competing solutions expose weakly constrained component combinations. Do not turn these five effective fits into five precisely measured hardware configurations.
 
-```text
-B(f; theta) = detector_output(chi=0, theta)
-S(f; P, theta) = detector_output(chi(P), theta) - B(f; theta)
-V_measured(f) = B(f; theta) + S(f; P, theta) + noise(f).
-```
+The local report records source/code hashes, versions, seed, starts, fixed fields, bounds, all-bin policy, duplicate count, readout coefficients, residual RMS/correlation, and a scaled shape-Jacobian condition. Its CSVs and PNG retain measured overlays and residuals. See [baseline-fitting.md](baseline-fitting.md) for the exact workflow and output interpretation.
 
-The same instrument configuration `theta` appears in both terms. This gives a clear definition of baseline, nuclear response, and readout channel.
+## 4. Complex spin-1 powder response
 
-The paper also describes an additive benchmark generator: a circuit-derived Q-curve plus a scaled physical lineshape and noise. That is distinct from propagating the full complex susceptibility through every component. For that construction, the signal scale and distortions still need experimental support.
-
-Do not both insert susceptibility into the circuit and add the same nuclear signal again. Conversely, do not describe an absorption-only additive model as a full complex circuit simulation. When using a first-order approximation, state it as such and verify it over the intended operating range.
-
-## 6. Spin-1 populations and the Pake doublet
-
-Reference: [§3.1, Eqs. (15)–(26), pp. 7–8](https://arxiv.org/pdf/2603.10146v5#page=7); [Dulya et al. (1997)](https://doi.org/10.1016/S0168-9002(97)00317-3) is the paper's underlying lineshape reference.
+The single-site, weak-quadrupole, spin-temperature model follows [Dulya et al., NIM A 398 (1997) 109–125](https://doi.org/10.1016/S0168-9002(97)00317-3) and [paper §3.1, pp. 7–8](https://arxiv.org/pdf/2603.10146v5#page=7).
 
 For normalized populations,
 
-```text
-n_plus + n_zero + n_minus = 1
-P = n_plus - n_minus
-Q_tensor = 1 - 3*n_zero
-
-n_plus  = (2 + Q_tensor + 3*P)/6
-n_zero  = (1 - Q_tensor)/3
-n_minus = (2 + Q_tensor - 3*P)/6.
+```
+P = n_plus − n_minus; Q = 1 − 3 n_zero
+n_plus = (2+Q+3P)/6; n_zero = (1−Q)/3; n_minus = (2+Q−3P)/6
+Q = 2 − sqrt(4−3P²) = 3P² / [2+sqrt(4−3P²)]
+w_plus = (P+Q)/2; w_minus = (P−Q)/2.
 ```
 
-The last three expressions are algebraic inversions, useful for checking physical labels. Nonnegative populations imply `-2 <= Q_tensor <= 1` and `3*abs(P) <= 2 + Q_tensor`.
+The rational expression avoids cancellation near zero. Weights are finite at P=0 and ±1 without a polarization floor. Their sum is P. The branch-area ratio obeys `P=(r²−1)/(r²+r+1)` under spin temperature; it is not automatically the ratio of two peak heights after circuit distortion. Independent tensor polarization would require a different population contract.
 
-For the spin-temperature/Boltzmann model used for vector extraction,
+Let `x=(f−f_center)/split`, where `split=3ωQ/(2π)`, and `g` is Lorentzian HWHM divided by `split`. For EFG asymmetry η and azimuth φ,
 
-```text
-Q_tensor = 2 - sqrt(4 - 3*P**2)
-r_population = I_plus_area/I_minus_area
-P = (r_population**2 - 1)/(r_population**2 + r_population + 1).
+```
+Y = sqrt(3 − η cos(2φ))
+x_res(t) = eps [1 − η cos(2φ) − Y² t²],  0 ≤ t ≤ 1
+K_eps(x,φ) = (1/π) integral_0^1 dt / [x_res(t) − x + i g].
 ```
 
-The ratio refers to transition-family **areas**, not automatically to the heights of two overlapping extrema. Instrumental false asymmetry can imitate a change in that ratio. Independent tensor enhancement breaks the one-parameter Boltzmann restriction and needs a different labeling/modeling problem.
+The orientation variable t is the absolute polar cosine. Absorption is `−Im(K)` and integrates to one over the infinite x axis. The analytic integral uses `z=1−eps*x−η*cos(2φ)+i*g` and `atanh(Y/sqrt(z))/sqrt(z)`. For the positive branch divide by `πY`; for the negative branch take the negative complex conjugate before that division. This ensures the physically correct dispersion reflection as well as positive absorption. Independent complex quadrature tests verify both real and imaginary parts.
 
-### Powder kernel and broadening
+The azimuthal average uses Gauss–Legendre quadrature on `[0,π/2]`. This is a convergent uniform powder average rather than an endpoint-biased unweighted sample mean. The total normalized kernel is `w_plus*K_plus + w_minus*K_minus`. At η=0 and small g, one transition spans −2…+1 with a horn at +1; its partner is reflected. Broadening gives extended tails, not two isolated Gaussian peaks.
 
-Use `R_detuning = (omega - omega0)/(3*omega_Q)`. The two transition branches are indexed by `eps = +1, -1`. The branch shape comes from the distribution of quadrupolar orientations and broadening, not from two freely chosen Gaussian peaks.
+The real absorption integral is equivalent to the Dulya broadened branch with distinct `rho=sqrt(g²+b²)` and `c=sqrt(rho)`. This avoids ambiguous square-root naming in the printed Eqs. (16)–(19); the orientation integral, not a guessed interpretation of `X`, defines the code.
 
-In the axial, unbroadened limit, the `+1` branch has support from −2 to +1 and a horn at +1; the other is reflected. Finite broadening rounds the singularities and extends the tails. Nonzero EFG asymmetry requires treatment of azimuthal orientation.
+`susceptibility_scale_cgs` multiplies this dimensionless normalized kernel. The 0.11133 nominal coefficient is a supplied setup-scale seed, not a universal material susceptibility or an experimental calibration. A real application must fit/calibrate the signal scale with the filling factor and detector response. Normalization is never forced to a discrete finite-scan sum; truncated tails remain truncated.
 
-To avoid ambiguous square-root names, the supplied kernel can be written using
+## 5. Full-spectrum generation and calibration
 
-```text
-b = 1 - eps*R_detuning - eta_efg*cos(2*phi_efg)
-rho = sqrt(A**2 + b**2)
-c = sqrt(rho)
-Y = sqrt(3 - eta_efg*cos(2*phi_efg))
-alpha = atan2(A, b)
+Define the baseline and nuclear detector signal by
 
-F = {2*cos(alpha/2)*[pi/2 + atan((Y**2-rho)/(2*Y*c*sin(alpha/2)))]
-     + sin(alpha/2)*log[(Y**2+rho+2*Y*c*cos(alpha/2))
-                       /(Y**2+rho-2*Y*c*cos(alpha/2))]} / (2*pi*c).
+```
+B(f;θ) = V_det(f,χ=0;θ)
+S(f;P,θ) = V_det(f,χ(P);θ) − B(f;θ)
+V_measured = B + S + noise.
 ```
 
-This expression is independently checked by the convolution integral
+This is full complex-susceptibility propagation. The paper also uses an additive circuit-baseline benchmark; that does not justify independently adding the nuclear response a second time here. A single-site kernel does not cover multi-site materials, contaminants, or RF-modified populations. Spin-1/2 and unresolved-quadrupole Voigt problems in §3.2 require their own response model.
 
-```text
-F = (2*A/pi) * integral_0^Y dy / [(y**2 - b)**2 + A**2].
+The deuteron demonstration uses a fixed 512-bin, 32.3–33.1 MHz sweep. Starting from the explicit nominal passive components, `nominal_circuit` derives a one-half-wave cable at 32.68 MHz and chooses the tuning capacitance to cancel the line's imaginary impedance there. Zero stray admittance and zero phase slope/curvature are reference idealizations. They are not inferred from the 213 MHz data. Those proton-frequency fits do not calibrate a deuteron apparatus.
+
+For temperature T, with `t=tanh(h*f0/(2*kB*T))`, spin-1 TE polarization is `4t/(3+t²)`; spin-1/2 is `t`. At 1.5 K, 32.7 MHz gives 0.06974899% for spin 1 and 213 MHz gives 0.34074494% for spin 1/2. A 5% training example is not a 0.05% TE example. [Paper §5.1, Eqs. (28)–(34), p. 10](https://arxiv.org/pdf/2603.10146v5#page=10).
+
+Area calibration is
+
+```
+C_cal = P_TE / integral [S_TE(f)/f] df
+P_area = C_cal * integral [S(f)/f] df.
 ```
 
-The tutorial's existing branch function includes a factor `1/10`; that overall factor cancels in its normalized doublet. Its powder average uses a weighted azimuthal mean with weight `sqrt(3/(3-eta_efg*cos(2*phi_efg)))`. Those are implementation conventions, not additional fitted experimental inputs.
+Changing from angular frequency gives `dω/ω=df/f`, with no extra `2π`. `integration_weights` supplies trapezoidal `df/f` weights on the actual grid. `make_features` uses raw voltage plus per-bin calibrated contributions from an independent reference-subtracted sweep. Their sum is the conventional area estimate. Circuit nonlinearity and shape-dependent weighting can make that estimate differ from P away from TE; the generator never normalizes it to the unknown label.
 
-**Do not silently copy the printed X notation:** the typeset v5 Eqs. (16)–(19) use X in a way that does not map consistently onto `rho` and `c` above. The audit records the issue. The existing kernel is supported by the supplied code and independent integration; this is not a claim that the inconsistency in the printed definitions has been resolved with the authors.
+Each configuration has one independent noisy baseline reference, averaged over 16 sweeps by default and shared by its events. The TE calibration is ideal/noiseless in this benchmark. Voltage storage is float64 to retain tiny signals during subtraction; network inputs are float32 after preprocessing. A real model requires measured references and independently established calibration, including their uncertainty and any reference-to-signal drift.
 
-### Single-site versus material-specific spectra
+## 6. Noise and physical parameter coverage
 
-A single-site model is the benchmark starting point. Multiple chemically inequivalent sites, different splittings and broadenings, contaminant resonances, and RF-modified populations require explicit components and supported weights. A d-butanol spectrum with O–D structure cannot be validated solely by matching a single ideal doublet.
+[Paper §2.2, §6.4, and Eq. (45)](https://arxiv.org/pdf/2603.10146v5#page=5) distinguish Gaussian electronic noise, coherent pickup, microphonics, and tuning drift. A full noise model is more than a histogram width. Characterize repeat differences, covariance, autocorrelation, spectral density, tails, and sweep-to-sweep coherence using development measurements.
 
-For cubic or approximately cubic environments with unresolved quadrupole structure, do not force a Pake shape onto the data. The paper's [§3.2](https://arxiv.org/pdf/2603.10146v5#page=8) uses Voigt-type single-line models for the area-oriented problem.
+The generator supports a finite symmetric positive-semidefinite 512×512 covariance in V² and draws `noise=L*z`, where `LLᵀ=Σ` and z is standard normal. Singular positive-semidefinite covariances are supported. A covariance measured on 500 bins is not silently relabeled as a 512-bin covariance. The default diagonal case has σ=10⁻⁹ V, corresponding to the nominal 10⁻⁶ mV scale discussed in the paper. It is a reference noise scenario, not the noise inferred from the supplied traces. Circuit filtering can be represented by a measured output covariance; thermal resistances and amplifier/filter bandwidths are not fabricated to claim a first-principles absolute noise level.
 
-## 7. Thermal equilibrium, calibration, and units
+For independent repeats of an unchanged signal, `(scan1−scan2)/sqrt(2)` has single-scan noise variance. Shared drift, repeated duplicate rows, or evolving signals violate that interpretation. Coherent pickup does not generally disappear as `1/sqrt(N)`. Non-Gaussian structured processes need a validated extension beyond Gaussian covariance.
 
-Reference: [§5.1, Eqs. (28)–(34), p. 10](https://arxiv.org/pdf/2603.10146v5#page=10).
+Use `SNR_peak=max(abs(S))/max(abs(noise))`, excluding B, to match Eq. (45). Peak-noise and noise-SD denominators are not equivalent. Keep residual-background mismatch separate from additive noise.
 
-An unambiguous way to evaluate the Boltzmann expressions is to use the Zeeman spacing `DeltaE = h*f0` and define `x = DeltaE/(k_B*T)`. Then
+The narrow/broad presets are controlled physical sensitivity studies, not empirical distributions. Broad fractional half-ranges are 10% for RF voltage, coil resistance, cable resistance, filling factor, and susceptibility coefficient; 3% for tuning capacitance and coil inductance; 5% for damping; 1% for cable length. Detector phase varies ±0.12 rad, center ±0.025 MHz, splitting ±0.01 MHz around 0.08, g ±0.02 around 0.08, and EFG η ±0.02 around 0.03. Narrow excursions are one quarter of these. Independent center jitter is ±0.002 MHz by default. Other circuit fields are held fixed explicitly.
 
-```text
-P_TE(spin 1/2) = tanh(x/2)
-P_TE(spin 1)   = 2*sinh(x)/(1 + 2*cosh(x))
-              = 4*tanh(x/2)/(3 + tanh(x/2)**2).
+These distributions are intentionally inspectable numerical experiments. For experimental training, infer supported joint ranges from independent hardware constraints and development fits. Varying every fit coordinate independently can violate correlations; increasing event count cannot fix an unidentifiable calibration. A low baseline RMS alone cannot validate nuclear amplitude, noise, or a family of operating configurations.
+
+## 7. Networks, validation, and metric conventions
+
+The compact CNN (3,889 parameters) and ridge-summary-plus-multiscale CNN (82,391) are independent teaching architectures, not the paper's residual/Inception/SE model. Both see the same two-channel preprocessing. The multiscale model combines filters of widths 5/15/31, dilated residual blocks, pooling, and a correction head with a train-only frozen ridge estimate from 25 summaries. Network size is not a substitute for measured inference latency.
+
+Configuration IDs define disjoint 80/10/10 train/validation/test groups. Scalers, target normalization, and ridge coefficients are fitted only on training rows. AdamW optimizes normalized absolute MSE; validation selects the checkpoint and early stopping. Test scores must not be reused to optimize the final estimator. Forward-pass benchmarking excludes preprocessing, IO, and transfers; measure end-to-end cost before deployment. The tutorial saves inference checkpoints, not a complete optimizer-resume state.
+
+Following [Eqs. (38)–(45), pp. 13–14](https://arxiv.org/pdf/2603.10146v5#page=13):
+
+```
+error = P_true − P_pred
+bias = mean(error)
+width = population SD(error), ddof=0
+RMSE² = bias² + width²
+percentage-point error = 100 * fractional-P error
+relative error percent at P0 = 100 * fractional-P error / abs(P0).
 ```
 
-Using `f0` avoids inadvertently multiplying by a nuclear g-factor twice when a variable named magnetic moment already includes it. This is a derivation from level populations, not a replacement calibration measurement.
+Positive bias means underprediction. A fractional error 0.0005 is 0.05 percentage points and 1% relative at P0=0.05. Pooled metrics converted at P0 are not conditional performance at that P. Use signed local bands or fixed-P pseudo-experiments, state counts, and evaluate tails. Residual width is neither the standard error on mean bias nor automatically a calibrated per-event confidence interval.
 
-At 1.5 K, evaluating these expressions at 213 MHz for spin 1/2 and 32.7 MHz for spin 1 gives approximately **0.340745%** and **0.069749%**, respectively, consistent with the rounded examples in the paper. These values depend on frequency/field and temperature. A **5%** tutorial example is not a **0.05%** TE example.
+The paper constructs conditional intervals by inversion of fixed-estimator residual quantiles. Its DAE uncertainty study propagates replicas through a fixed network and downstream analysis, retaining the full output covariance. Pointwise one-SD bands are not simultaneous coverage bands; treating denoised bins as independent can understate fit uncertainty. Appendix A uses sample SD across replicas, whereas the scalar RMSE identity uses population SD.
 
-The paper's exact area convention is
-
-```text
-P = C_cal * integral S(omega)/omega d(omega)
-C_cal = P_TE / integral S_TE(omega)/omega d(omega)
-S = Re[V(omega, chi) - V(omega, 0)].
-```
-
-On changing variable from angular frequency to ordinary frequency, `d(omega)/omega = df/f`. A numerical implementation therefore needs its frequency grid and quadrature weights. For a narrow scan, replacing `1/f` by `1/f0` can be an explicit approximation absorbed into an area calibration; it is not an identity across arbitrary grids and windows.
-
-The current tutorial's `sum(S) = P/cc` is a **discrete fixed-grid normalization**. It has not been shown equivalent to the paper's calibrated voltage-area convention. Changing bin count, sweep width, detector gain, or output units requires checking the conversion. Never label `cc` universally as frequency calibration or amplitude calibration based only on its name.
-
-Calibration uncertainty remains part of the measurement. Improving extraction does not independently determine the TE temperature, coil filling, spatial polarization, or a drifting electronics gain.
-
-## 8. Noise is a measured stochastic process
-
-Reference: [§2.2, pp. 5–7; §6.4, pp. 17–18; Eq. (45)](https://arxiv.org/pdf/2603.10146v5#page=5).
-
-Separate at least these mechanisms:
-
-| Mechanism | How it enters the measurement | Required evidence |
-|---|---|---|
-| Thermal/electronic noise | Additive fluctuations shaped by filtering and the circuit | Marginal variance and frequency-bin covariance |
-| RF pickup, supply ripple, interference | Coherent or quasi-coherent structure | Frequencies, amplitudes, phases, stability across repeated sweeps |
-| Cable motion, contacts, microphonics | Changes to impedance and phase | Correlated drift or jump distributions, not merely a wider white-noise term |
-| Tuning/temperature drift | Changed circuit response | Joint distributions and time/period dependence of physical parameters |
-| Baseline subtraction error | An analysis-induced residual | Matched subtraction tests; not automatically statistical noise |
-
-For a Gaussian part, use `epsilon ~ Normal(0, Sigma_NMR)`. The white-noise special case is `Sigma_NMR = sigma**2 * I`. AR(1) noise is one possible demonstration, not evidence that a measured instrument has AR(1) covariance.
-
-The paper defines
-
-```text
-SNR_peak = max(abs(clean nuclear signal))/max(abs(noise realization)).
-```
-
-It excludes the baseline. The tutorial previously discussed `max(abs(signal))/noise_SD`, a different quantity. Record both names explicitly if both are needed. Peak-noise SNR depends on the realization and the number/correlation of bins; it cannot be converted by a universal constant.
-
-The paper gives a nominal Gaussian scale of order `1e-6 mV` in its convention. That is `1e-9 V` before any additional calibration/gain scaling. The tutorial's `2.7e-5` generator-unit noise is **not** established as that same noise level. Figure axes involving `C_E` must not be compared as absolute voltages without identifying `C_E`.
-
-Independent repeated-sweep noise averages down as `1/sqrt(N)`. This statement does not apply unchanged to correlated drift or a coherent sinusoid that has the same phase in every sweep: such a sinusoid survives averaging. Repetition statistics and phase coherence must be checked; bin-to-bin covariance and sweep-to-sweep covariance are different objects.
-
-For two independent repeats of the same underlying signal, `(scan1-scan2)/sqrt(2)` estimates single-scan fluctuations. Drift, signal evolution, or shared noise invalidate that simple interpretation. Estimate noise from development measurements, not from a final evaluation set repeatedly consulted during design.
-
-## 9. What training data must demonstrate
-
-Reference: [§5.3 and §6.4](https://arxiv.org/pdf/2603.10146v5#page=11).
-
-The paper's augmentation is parameter-based: vary the circuit and lineshape within experimentally constrained conditions. Merely drawing unrelated random polynomial coefficients, gains, or widths does not establish that coverage.
-
-For a defensible standalone dataset, retain:
-
-- The circuit version, topology, detection channel, frequency grid, units, and sign convention.
-- Physical parameters, their joint sampling distribution, provenance, bounds, and any fixed values.
-- Lineshape model, material/site assumptions, vector/tensor constraints, and signal normalization.
-- Measured noise model and covariance, structured-noise parameters, and averaging conditions.
-- Configuration/period identifiers, labels, independent seeds, and partition assignments.
-- Overlay and residual checks against development data, plus independent measurements reserved for evaluation.
-
-Vary every relevant encoded parameter, but do not mistake an inactive parameter for useful augmentation. Do not treat repeated copies of a fitted reference configuration as independent configuration coverage. A small fit residual also does not prove that fitted component values describe a passive physical circuit.
-
-The paper reports 500-bin spectra and an 80/10/10 split. The current tutorial uses 512 bins and grouped configurations. These can be separate design choices, but they must not be represented as exact reproduction settings. Noise realizations alone do not protect against leakage across shared physical configurations.
-
-## 10. Networks, stopping, and task boundaries
-
-Reference: [§§5.3, 6–6.4, pp. 12–18](https://arxiv.org/pdf/2603.10146v5#page=12).
-
-The paper separates high-polarization regression, low-polarization regression, area prediction, and denoising. These are different estimands and may need different input scaling and capacity.
-
-- The polarization CNN includes residual connections, multiscale convolutions, and squeeze-and-excitation. The current tutorial's ridge-plus-CNN estimator is a separate architecture, not that paper model.
-- The area study motivates simpler estimators when global area is sufficient; adding a large CNN is not automatically useful.
-- Low-P extraction relies on small signals and weak asymmetry. A tightly matched voltage scale can improve inference while reducing transfer to other operating conditions.
-- A DAE predicts a clean spectrum. It does not directly output calibrated polarization or automatically supply uncertainty.
-
-The paper reports AdamW, hyperparameter searches, cosine warm restarts, and validation-selected checkpoints. The tutorial's scheduler, epoch budget, sample count, and architectures differ. Paper settings are recorded experimental choices, not guaranteed optimal defaults for a new lab.
-
-Preserve optimizer and scheduler state for a true training resume. Select preprocessing, architecture, stopping, and hyperparameters with development/validation data. Then freeze the entire estimator and use independent pseudo-experiments for the final extraction-error study. Do not continue tuning against final test metrics.
-
-A sample-count-to-parameter-count heuristic is not a proof of sufficient training data. Test learning curves versus both event count and independent configuration coverage. Measure end-to-end latency, including preprocessing and transfers, on the intended hardware.
-
-## 11. Bias, precision, relative error, and confidence intervals
-
-Reference: [§5.4, Eqs. (38)–(45), pp. 13–14](https://arxiv.org/pdf/2603.10146v5#page=13).
-
-The paper defines `Delta = P_true - P_pred`. The current tutorial defines `e = P_pred - P_true`. Consequently,
-
-```text
-Delta = -e
-mu_paper = -bias_tutorial
-sigma_paper = width_tutorial
-RMSE = sqrt(bias**2 + width**2).
-```
-
-The last identity uses population SD (`ddof=0`) and the same events. A positive paper residual means underprediction; a positive tutorial residual means overprediction. Do not reverse only the prose while leaving stored residual columns unchanged.
-
-For fractional-P error `dP`:
-
-```text
-absolute percentage-point error = 100*dP
-relative error percent at P0    = 100*dP/abs(P0).
-```
-
-For example, `dP=0.0005` is `0.05` percentage points and 1% relative at `P0=0.05`. The same absolute error would be 100% relative at `P0=0.0005`. These are unit conversions, not measured performance claims.
-
-A pooled residual width over a wide P range does not establish performance at a chosen P. Use fixed-P trials or a sufficiently narrow signed P bin with relevant operating conditions. Quote event counts and finite-Monte-Carlo uncertainty. Width is not the standard error on mean bias and is not automatically a confidence interval for one prediction.
-
-The paper constructs intervals by inverting conditional residual quantiles for a fixed estimator. In its residual convention, candidate P is accepted when
-
-```text
-q_alpha/2(P) <= P - P_pred_observed <= q_1-alpha/2(P).
-```
-
-Locally Gaussian residuals give `P_pred + mu_paper +/- z*sigma`, equivalently `P_pred - bias_tutorial +/- z*width`. This is a local approximation requiring validated calibration; heteroscedastic or non-Gaussian residuals require conditional quantiles and coverage checks.
-
-## 12. Denoising uncertainty and what improved fits do not establish
-
-Reference: [§7.4, pp. 22–23; Appendix A, pp. 26–27](https://arxiv.org/pdf/2603.10146v5#page=26).
-
-Hold the DAE fixed and propagate replicas drawn from the experimental input-error model. Each replica yields a reconstructed spectrum. The ensemble provides a mean, pointwise SD, and a full output covariance matrix. Appendix A uses sample SD (`N_MC-1`), unlike the population residual width used for the scalar benchmark identity.
-
-A pointwise one-SD band is not a simultaneous confidence band over all frequency bins. Smoothing also induces output-bin correlations; fitting a denoised curve as if its bins had independent original noise can make fit uncertainties misleadingly small.
-
-Pass each reconstructed replica through the fixed downstream estimator to propagate the same input uncertainty through the whole chain. Reconstruction bias and simulation mismatch remain separate contributions. Resampling around an already noisy observation is an uncertainty-propagation prescription, not evidence that the unknown clean curve has been recovered without bias.
-
-The experimental comparisons in the paper are useful consistency checks, but do not provide exact truth or independently validate a much smaller extraction uncertainty. Displaced-coil data are explicitly a different coupling/noise condition requiring dedicated quantitative validation. The paper's concluding deployment proposal includes prospective comparisons and coverage checks; the tutorial must not imply those have already been completed here.
-
-## 13. Error-budget boundary and implementation gate
-
-Reference: [§7.5 and §9, pp. 23–25](https://arxiv.org/pdf/2603.10146v5#page=23).
-
-Extraction error is only part of total polarimetry uncertainty. TE calibration, temperature, field homogeneity, Q-meter nonlinearity, coil coupling, target polarization gradients, and beam-weighted versus coil-weighted sampling do not disappear when a synthetic-data residual becomes small. The quoted hardware accuracy is specific to the instrument context, not a mathematical lower bound for every NMR apparatus.
-
-Before replacing the tutorial generator or publishing new physics-performance results:
-
-1. Resolve the circuit topology and unit issues in the audit with an authoritative reference configuration.
-2. Implement a self-contained physical circuit with documented units and detector channel.
-3. Verify passive-circuit limits, phase behavior, normalization, and source-code comparisons.
-4. Fit/check representative measured baselines and signal-to-baseline scales; establish noise statistics separately.
-5. Define supported joint parameter variation and keep independent evaluation conditions aside.
-6. Regenerate data, retrain, and republish only results carrying the new full-model provenance.
-
-Do not fill a missing calibration, component value, covariance, or convention with a plausible-looking number and call it experimentally grounded.
+Extraction error is only one term in polarimetry uncertainty. TE temperature/calibration, gain drift, coil coupling, field homogeneity, nonlinearity, and coil-weighted versus beam-weighted polarization remain. The paper's area-to-P numerical table cannot safely define a universal calibration: displayed bias/width conversion factors are not uniformly consistent with one scalar. Derive and measure the actual calibration instead. No paper accuracy claim is inherited by these smaller teaching runs.

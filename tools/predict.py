@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from lineshape import SIMULATOR
-from nmr_lab import build_model, make_features
+from nmr_lab import FREQUENCY, build_model, make_features
 
 
 def main():
@@ -22,14 +22,16 @@ def main():
     torch.set_num_threads(2)
     checkpoint = torch.load(args.model_dir / "model.pt", map_location="cpu", weights_only=True)
     if checkpoint.get("simulator") != SIMULATOR:
-        parser.error("Legacy checkpoint: regenerate Pake data and retrain into a new model directory")
+        parser.error("Simulator version mismatch: train a current model")
     model = build_model(checkpoint["architecture"])
     model.load_state_dict(checkpoint["model_state"])
     model.eval()
     with np.load(args.data, allow_pickle=False) as data:
         if "simulator" not in data or str(data["simulator"].item()) != SIMULATOR:
-            parser.error("Input must be a current Pake tutorial dataset; regenerate legacy data to a new path")
-        features = make_features(data["signals"], data["cc"])
+            parser.error("Simulator version mismatch: regenerate the dataset")
+        if "frequency_mhz" not in data or not np.array_equal(data["frequency_mhz"], FREQUENCY):
+            parser.error("Dataset frequency grid does not match the model contract")
+        features = make_features(data["signals"], data["calibration"], data["baselines"])
         truth = data["P"] if "P" in data.files else None
     with np.load(args.model_dir / "scaler.npz", allow_pickle=False) as scaler:
         x = ((features - scaler["feature_mean"]) / scaler["feature_std"]).astype(np.float32)

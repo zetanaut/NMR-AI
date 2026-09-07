@@ -9,7 +9,7 @@ import numpy as np
 
 def summarize(truth, prediction, p0):
     """Use population SD so empirical RMSE² = bias² + width² exactly."""
-    error = np.asarray(prediction, dtype=float) - np.asarray(truth, dtype=float)
+    error = np.asarray(truth, dtype=float) - np.asarray(prediction, dtype=float)
     if error.size == 0:
         return {"n": 0, "bias": None, "width": None, "rmse": None}
     bias = float(error.mean())
@@ -55,7 +55,7 @@ def main():
     low, high = args.p0 - args.half_width, args.p0 + args.half_width
     selected = (truth >= low) & (truth < high)
     report = {
-        "residual_definition": "P_pred - P_true; all absolute metrics use fractional P",
+        "residual_definition": "P_true - P_pred; all absolute metrics use fractional P",
         "reference_p0": args.p0,
         "pooled": summarize(truth, prediction, args.p0),
         "signed_p_band": {"low_inclusive": low, "high_exclusive": high,
