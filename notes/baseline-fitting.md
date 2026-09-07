@@ -53,4 +53,25 @@ This establishes that the physical circuit can closely track the observed Q-curv
 
 The next experiment should confirm frequency/voltage metadata, constrain weakly identified hardware fields, and provide independent baseline acquisitions. A deuteron generator additionally needs its own 32.7 MHz baseline/signal/calibration data; the supplied proton-region scans must not be transferred by relabeling the frequency.
 
-The raw CSV and local fit outputs remain outside version control. Public documentation records the method and aggregate diagnostics, not the experimental sample arrays.
+## Publish the measured example
+
+```bash
+python tools/export_baseline_example.py --fit-dir local-results/baseline-fit
+```
+
+This explicit export selects the median whole-scan residual RMS among the five
+distinct sweeps (trace 5 in the supplied set). It verifies the saved curves against
+the circuit coefficients and the stored statistics, then publishes a vector
+overlay with all 500 measured points and a separately scaled residual panel.
+No refitting, smoothing, bin exclusion, or voltage-unit inference is performed.
+
+The displayed RMS is 15.303 × 10⁻⁶ recorded units, or 0.0275% of the measured
+peak-to-peak range. This is a baseline-fit metric, not polarization error. The
+largest absolute residual is 237.38 × 10⁻⁶ recorded units; the endpoint deviations
+remain visible. A comparison table includes all five whole-scan RMS values.
+
+The exporter writes `docs/assets/baseline-example.svg` and a companion JSON with
+selection criteria, source/code/figure hashes, circuit/readout coefficients, and
+statistics. It synchronizes the example section in `docs/baseline.html`. The
+figure and statistics work without JavaScript. The original CSV, timestamps,
+and full local fit outputs remain outside version control.

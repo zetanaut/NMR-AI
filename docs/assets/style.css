@@ -958,6 +958,45 @@ input[type=range] {
   font-size: 11px
 }
 
+.baseline-figure-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 18px 0 12px
+}
+
+.baseline-fit-image {
+  display: block;
+  width: 100%;
+  min-width: 560px;
+  height: auto
+}
+
+.baseline-fit-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 20px;
+  padding: 22px 0;
+  margin: 22px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line)
+}
+
+.baseline-fit-stats span,
+.baseline-fit-stats small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px
+}
+
+.baseline-fit-stats strong {
+  display: block;
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--green);
+  margin: 7px 0
+}
+
 .chart-caption,
 figcaption {
   font-size: 11px;

@@ -33,7 +33,9 @@ python tools/fit_baseline.py /path/to/single_event_data.csv \
 
 The input is a headerless timestamp plus 500-bin CSV. The fitter preserves the first row and identifies exact duplicates. It fits bounded physical shape parameters and solves detector quadratures/DC offset by linear least squares. The output includes measured/fitted overlays, residual CSVs, fitted and fixed parameters, all multi-start candidates, identifiability diagnostics, hashes, and library versions.
 
-Recorded values remain in **recorded units** until the DAQ voltage conversion is confirmed. Supply `--volts-per-unit` only with a known conversion. No reduced χ² or parameter uncertainties are fabricated without a measurement-error model. Raw measurements and local fit products are not published by the Pages workflow.
+Recorded values remain in **recorded units** until the DAQ voltage conversion is confirmed. Supply `--volts-per-unit` only with a known conversion. No reduced χ² or parameter uncertainties are fabricated without a measurement-error model. The page shows one explicitly exported measured-fit illustration; the original CSV, timestamps, and full local fit products remain local.
+
+The [measured example](https://zetanaut.github.io/NMR-AI/baseline.html#example) contains a data/fit overlay, separately scaled residuals, and full-scan statistics. It selects the median-RMS trace among the five distinct sweeps, retaining all 500 bins. Regenerate it with `python tools/export_baseline_example.py --fit-dir local-results/baseline-fit`.
 
 The supplied scans have five distinct Q-curves; the physical model closely follows their backgrounds. One has a localized residual near 212.91 MHz, and several have endpoint residuals. These features remain visible rather than being labeled white noise. A close fit does not uniquely determine every component or establish deuteron settings from proton-frequency scans.
 
@@ -108,4 +110,4 @@ Preview with `python3 -m http.server 8000 --bind 127.0.0.1 --directory docs`. Th
 - `tools/analyze_predictions.py`, `tools/export_results.py`, `tools/benchmark_network.py`: evaluation, published aggregates, timing.
 - `tests/`: independent complex quadrature, circuit limits, fit reconstruction, calibration, split and metric checks.
 
-Generated data, measurements, fit products, and checkpoints stay in git-ignored `local-results/`. The website is independent of the separate research pipeline.
+Generated datasets, original measurements, full fit products, and checkpoints stay in git-ignored `local-results/`. The baseline lesson publishes an explicitly exported measured illustration and its provenance. The website is independent of the separate research pipeline.

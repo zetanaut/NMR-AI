@@ -1,0 +1,103 @@
+{
+  "selection": "Median whole-scan residual RMS among distinct traces (upper median for even counts)",
+  "selected_trace_number": 5,
+  "source_sha256": "255492046c57468f5098c6c7ba3cd53bf15c3d69da96c56ee41bc4aa55277f61",
+  "fit_report_sha256": "91b69b52aba2298de709b2c4b0b08716975b3f46f4d89415ecaa1ddab3237790",
+  "fit_code_sha256": {
+    "fit_baseline.py": "59c282d75c351a30852a6e0eb3bd689cb927d437535e41effcacdffa38c4312e",
+    "circuit.py": "e9fe63030e1a6356f4f4ebf565d56bfc506ad06efedecfb68b652dbd14946368"
+  },
+  "exporter_sha256": "8b9a19429b0b19a574b73e71dee9f281695a46850b5c134609684e75efa13031",
+  "source_rows": 6,
+  "unique_rows": 5,
+  "voltage_unit": "recorded units; DAQ conversion not assumed",
+  "residual_sign": "recorded minus fitted",
+  "fitted_bin_mask": "All 500 bins; no exclusions",
+  "starts": 24,
+  "seed": 42,
+  "summaries": [
+    {
+      "trace_number": 1,
+      "bins": 500,
+      "rms_recorded_units": 0.00010972804134190739,
+      "peak_to_peak_recorded_units": 0.06293069,
+      "rms_percent_of_peak_to_peak": 0.1743633215238978,
+      "max_absolute_residual_recorded_units": 0.0004183756216177559,
+      "trace_csv_sha256": "02362cb0307201fbe2307c9d596161f08976f539ca16b349862d24ba653aa23f"
+    },
+    {
+      "trace_number": 2,
+      "bins": 500,
+      "rms_recorded_units": 1.4076467768176419e-05,
+      "peak_to_peak_recorded_units": 0.03878823,
+      "rms_percent_of_peak_to_peak": 0.036290564865105776,
+      "max_absolute_residual_recorded_units": 0.00018319964621148557,
+      "trace_csv_sha256": "70726235b5e219e6b2b1657185bb1e2548ec76a95fa4e82413fc73f74d74dad9"
+    },
+    {
+      "trace_number": 3,
+      "bins": 500,
+      "rms_recorded_units": 1.5295125769752602e-05,
+      "peak_to_peak_recorded_units": 0.06322441,
+      "rms_percent_of_peak_to_peak": 0.024191804668090386,
+      "max_absolute_residual_recorded_units": 0.00021554550955793852,
+      "trace_csv_sha256": "85bd3bb1e2fad631c26ea5bbd3e4bea486f07e6b4e5c323caa172df0e7170095"
+    },
+    {
+      "trace_number": 4,
+      "bins": 500,
+      "rms_recorded_units": 1.5378774022272326e-05,
+      "peak_to_peak_recorded_units": 0.054792352,
+      "rms_percent_of_peak_to_peak": 0.02806737338501608,
+      "max_absolute_residual_recorded_units": 0.00022694777081335576,
+      "trace_csv_sha256": "0779dcb41e0915c88f9ed8703b8f396d172587691c2aaf19e3ae90034c764b29"
+    },
+    {
+      "trace_number": 5,
+      "bins": 500,
+      "rms_recorded_units": 1.5302728471047583e-05,
+      "peak_to_peak_recorded_units": 0.05573027,
+      "rms_percent_of_peak_to_peak": 0.02745855792740208,
+      "max_absolute_residual_recorded_units": 0.00023738202461202895,
+      "trace_csv_sha256": "8290e36d3895924ee80564cd2a0c6e7511a6f87f00893e4a458889db1f1abd06"
+    }
+  ],
+  "selected_fit": {
+    "circuit": {
+      "reference_hz": 213000000.0,
+      "drive_v": 0.382652652,
+      "drive_resistance_ohm": 619.0,
+      "input_resistance_ohm": 50.0,
+      "damping_resistance_ohm": 10.0,
+      "coil_resistance_ohm": 0.35,
+      "coil_inductance_h": 3e-08,
+      "tune_capacitance_f": 4.6974037386231084e-12,
+      "stray_capacitance_f": 2.7965073916907734e-11,
+      "cable_resistance_ohm_per_m": 3.43,
+      "cable_inductance_h_per_m": 2.542e-07,
+      "cable_conductance_s_per_m": 0.0,
+      "cable_capacitance_f_per_m": 1.027e-10,
+      "cable_length_m": 3.0787490866325853,
+      "filling_factor": 0.098563235,
+      "susceptibility_scale_cgs": 0.11133,
+      "detector_gain": -1.0,
+      "detector_phase_rad": 0.0,
+      "detector_phase_slope_rad_per_hz": 0.0,
+      "detector_phase_curvature_rad_per_hz2": 0.0,
+      "dc_offset_v": 0.0
+    },
+    "quadrature_coefficients": [
+      -193.1179447699802,
+      -69.68219520867217,
+      2.980530279963946
+    ],
+    "scaled_shape_jacobian_condition": 56441.49604050642,
+    "active_bounds": [
+      0,
+      0,
+      0
+    ]
+  },
+  "note": "Measured-fit illustration, not a synthetic trace or held-out accuracy test. Timestamps and original CSV are not included. All 500 measured bins appear in the figure. Fit agreement does not establish unique hardware parameters or electronic-noise variance.",
+  "svg_sha256": "157ddffa64b3c8f70e658f89c3ea13c61f60b072c377c57a36e1b65ca215c4c9"
+}
