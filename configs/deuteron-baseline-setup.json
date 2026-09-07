@@ -4,7 +4,7 @@
     "half_wave_multiple": 1,
     "reference_hz": 32700000,
     "half_wave_length_m": 3.58,
-    "source": "Owner's setup information: n=1, lambda/2=358.0 cm, installed length very close to this. Paper Sec. 2 supports integer half-wave tuning and velocity factor approximately 0.78."
+    "source": "experimental set up details"
   },
   "parameters": {
     "reference_hz": {

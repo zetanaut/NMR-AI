@@ -7,7 +7,7 @@
   "start_mhz": 32.3,
   "step_mhz": 0.0015287,
   "frequency_source": "Repository owner: every baseline is timestamp plus 500 bins; retain the original proton sweep's bin offsets and spacing, replacing its nominal 213 MHz center with 32.7 MHz.",
-  "fit_report_sha256": "1e0293535dc095eca616ac172592905eb311b6628516cf7cab9fc9f3169ab8fe",
+  "fit_report_sha256": "2694aec4c4e2c19c27874fb9e0c078c7af5b632ed27ec1a5654c91900a122637",
   "fit_code_sha256": {
     "fit_tuned_baseline.py": "a7261f40c5c7ea62f82846b0997af350a9ed7456768326ac07061d870fc4c6df",
     "circuit.py": "e9fe63030e1a6356f4f4ebf565d56bfc506ad06efedecfb68b652dbd14946368",
@@ -725,7 +725,7 @@
         "half_wave_multiple": 1,
         "reference_hz": 32700000,
         "half_wave_length_m": 3.58,
-        "source": "Owner's setup information: n=1, lambda/2=358.0 cm, installed length very close to this. Paper Sec. 2 supports integer half-wave tuning and velocity factor approximately 0.78."
+        "source": "experimental set up details"
       },
       "parameters": {
         "reference_hz": {
