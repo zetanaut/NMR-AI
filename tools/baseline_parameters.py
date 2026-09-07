@@ -28,6 +28,24 @@ CATALOG = {
 }
 
 
+def parameter_reference_html():
+    """Parameter meanings without displaying invalid or unmeasured fit values."""
+    rows = []
+    for name, (symbol, scale, unit, meaning) in CATALOG.items():
+        rows.append(f'<tr><td><strong>{escape(symbol)}</strong><br><code>{escape(name)}</code></td>'
+                    f'<td>{escape(unit)}</td><td>{escape(meaning)}</td></tr>')
+    return ('<div id="fit-parameters"><h3>Every active baseline parameter</h3>'
+            '<p>The deuteron reference is approximately 32.68 MHz. The table lists physical meanings and display units, '
+            'not new component measurements. The setup file records each parameter as fixed or fitted, with its source, '
+            'supported bounds, and any measurement constraint. Internal units follow the code names; readout phase is stored in radians.</p>'
+            '<div class="table-wrap"><table><caption>Physical parameter reference; no measured-fit values are claimed</caption>'
+            '<thead><tr><th>Parameter</th><th>Display units</th><th>Physical meaning</th></tr></thead><tbody>'
+            + ''.join(rows) + '</tbody></table></div>'
+            '<p>Use either physical cable length ℓ or the known integer half-wave branch plus δℓ, not two independent lengths. '
+            'Filling factor and susceptibility scale multiply χ = 0 and cannot be determined from a baseline. '
+            'Pake splitting, broadening, asymmetry, and polarization belong to the nuclear signal model.</p></div>')
+
+
 def parameter_table_html(metadata):
     fit = metadata["selected_fit"]
     values = dict(fit["circuit"])

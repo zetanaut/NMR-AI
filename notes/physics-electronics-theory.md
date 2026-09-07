@@ -72,21 +72,51 @@ V_det = G Re[u exp(iφ(f))] + V_DC
 
 `φ1` is in rad/Hz and `φ2` in rad/Hz². This centered polynomial parameterizes the electronics PHASE described in [Eqs. (10)–(14), p. 5](https://arxiv.org/pdf/2603.10146v5#page=5), not the baseline voltage. The first fitting exercise keeps the frequency-dependent phase terms fixed at zero. The detector gain may be negative to represent inversion. No grid-dependent minimum is subtracted. Magnitude/diode readout is a different observable and must not be substituted for a phase-sensitive trace.
 
-## 3. What the measured baseline fit establishes
+## 3. Deuteron baseline: frequency provenance and fit status
 
-The supplied `single_event_data.csv` has six headerless timestamp-plus-500-bin records, with one exact duplicate. SHA-256: `255492046c57468f5098c6c7ba3cd53bf15c3d69da96c56ee41bc4aa55277f61`. The frequency mapping supplied with it is `212.6 + 0.0015287*j MHz`, `j=0…499`; it still needs acquisition-metadata confirmation. Recorded-unit to V conversion was not supplied. Neither the raw file nor a research data dependency is committed here.
+All tutorial work concerns deuterons near 32.68 MHz, including the supplied
+`single_event_data.csv`, as confirmed by the user. The file contains six
+headerless timestamp-plus-500-bin records, one exact duplicate, and no frequency
+column. SHA-256: `255492046c57468f5098c6c7ba3cd53bf15c3d69da96c56ee41bc4aa55277f61`.
 
-The replacement fitter was implemented from the circuit equations above. It does not execute or import the supplied old script. Positive component entries provide nominal fixed engineering scales: coil 30 nH and 0.35 Ω; source 619 Ω; input 50 Ω; damping 10 Ω; cable inductance 2.542×10⁻⁷ H/m and capacitance 1.027×10⁻¹⁰ F/m. Its cable resistance seed is 3.43 Ω/m, obtained from the low-loss relation `Rc≈2 Z_nom α` using 50 Ω and 0.0343/m; `Gc=0` is an explicit initial approximation. These fixed values are not independently established by a narrow-sweep fit. The new exact RLGC propagation replaces an independently specified propagation slope.
+The old script's proton-frequency grid was incorrectly assigned to these data.
+That invalidates the corresponding fit parameters, cable-branch interpretation,
+overlay, and residual claims as a deuteron example. Those published results have
+been withdrawn; they are not converted by relabeling the axis. A fresh fit needs
+the actual start and spacing/endpoints. An approximate center alone does not
+establish scan width. DAQ conversion to volts also remains unknown.
 
-For the published exploratory illustration, nonlinear variables are tuning capacitance (0.2–600 pF), cable length (3–5 m), and stray capacitance (0–400 pF). These broad bounds define that search, not hardware confidence intervals or confirmed tuning records. Detector amplitude, phase, and offset are eliminated by linear least squares on the columns `[Re(u), Im(u), 1]`. From coefficients `(a,b,d)`, the equivalent phase is `atan2(-b,a)` and the recorded-unit gain is `hypot(a,b)`. RF drive and detector gain are not independently identifiable from this product. Filling factor and susceptibility scale are inactive at χ=0 and are not fitted.
+The circuit implementation does not execute or import the supplied old script.
+Its positive component entries supply nominal engineering seeds: coil 30 nH and
+0.35 Ω; source 619 Ω; input 50 Ω; damping 10 Ω; cable L = 2.542×10⁻⁷ H/m,
+C = 1.027×10⁻¹⁰ F/m. Cable R = 3.43 Ω/m follows the low-loss seed
+Rc≈2 Z_nom α using 50 Ω and 0.0343/m; Gc=0 is an explicit approximation.
+These are not independently confirmed deuteron hardware measurements.
+Exact RLGC propagation replaces an independently specified propagation slope.
 
-The preferred hardware-specific workflow is `fit_tuned_baseline.py`: supply independent capacitance, cable branch/length, component, and readout information, and declare only the remaining unknowns as fitted. Fixed values are removed from optimization; bounded unknowns stay within supported limits; optional Gaussian hardware constraints require a consistent measured data-noise scale. The optional known integer half-wave branch uses `length = n*pi/beta(f_tune) + delta_length` with an explicitly supported trim correction. Do not use vacuum wavelength for a cable, confuse an initial guess with a prior, or derive an alleged independent branch from the unconstrained solution. See [the tuning-informed procedure](baseline-fitting.md#use-independent-tuning-information-first).
+Use `fit_tuned_baseline.py` with the actual acquisition grid and independent
+capacitance, cable branch/length, component and readout records. Fixed inputs are
+excluded from optimization. Bounded unknowns remain within supported ranges.
+Independent Gaussian constraints require a measured data-noise scale.
+A known half-wave branch gives `length = n*pi/beta(f_tune) + delta_length`,
+evaluated at the deuteron tuning frequency. Do not use vacuum wavelength,
+infer a branch from the fit and call it independent, or mistake a starting guess
+for a measurement constraint.
 
-Twenty-four starts with seed 42 are used; every candidate is saved. All 500 bins enter the unweighted objective. No error covariance is known, so no reduced χ², calibrated parameter errors, or noise covariance is claimed. `fitted_curve` reconstructs the exact saved mapping in recorded units; a confirmed `--volts-per-unit` additionally enables a circuit export in V.
+The pedagogical variable-projection fitter `fit_baseline.py` uses a 32.68 MHz
+reference and requires explicit start/spacing and their source. Its built-in
+bounds are only numerical search assumptions. For known hardware, use the
+setup-driven fitter instead. Detector coefficients (a,b,d) correspond to
+`atan2(-b,a)` phase and `hypot(a,b)` recorded-unit gain. Unknown RF voltage and
+gain cannot both be identified from their product. Filling factor and
+susceptibility scale are inactive at χ=0.
 
-All five distinct Q-curves are closely followed. Four whole-scan residual RMS values are approximately 1.4–1.5×10⁻⁵ recorded units. A fifth is about 1.1×10⁻⁴ and has a localized structure near 212.91 MHz. Endpoint residuals occur in several traces. These observations are fit diagnostics, not identification of the physical origin of each feature. The scaled Jacobian and competing solutions expose weakly constrained component combinations. Do not turn these five effective fits into five precisely measured hardware configurations.
-
-The local report records source/code hashes, versions, seed, starts, fixed fields, bounds, all-bin policy, duplicate count, readout coefficients, residual RMS/correlation, and a scaled shape-Jacobian condition. Its CSVs and PNG retain measured overlays and residuals. See [baseline-fitting.md](baseline-fitting.md) for the exact workflow and output interpretation.
+The reports retain acquisition provenance, code/source hashes, versions, seeds,
+all candidates, fixed/fitted status, supported constraints, duplicate count,
+all-bin policy, reconstruction information, residual metrics and scaled-Jacobian
+diagnostics. A corrected fit must regenerate these quantities, inspect structure
+and parameter degeneracies, and be checked on independent acquisitions.
+See [the fitting record](baseline-fitting.md).
 
 ## 4. Complex spin-1 powder response
 
@@ -131,9 +161,9 @@ V_measured = B + S + noise.
 
 This is full complex-susceptibility propagation. The paper also uses an additive circuit-baseline benchmark; that does not justify independently adding the nuclear response a second time here. A single-site kernel does not cover multi-site materials, contaminants, or RF-modified populations. Spin-1/2 and unresolved-quadrupole Voigt problems in §3.2 require their own response model.
 
-The deuteron demonstration uses a fixed 512-bin, 32.3–33.1 MHz sweep. Starting from the explicit nominal passive components, `nominal_circuit` derives a one-half-wave cable at 32.68 MHz and chooses the tuning capacitance to cancel the line's imaginary impedance there. Zero stray admittance and zero phase slope/curvature are reference idealizations. They are not inferred from the 213 MHz data. Those proton-frequency fits do not calibrate a deuteron apparatus.
+The deuteron demonstration uses a fixed 512-bin, 32.3–33.1 MHz sweep. Starting from the explicit nominal passive components, `nominal_circuit` derives a one-half-wave cable at 32.68 MHz and chooses the tuning capacitance to cancel the line's imaginary impedance there. Zero stray admittance and zero phase slope/curvature are reference idealizations. They are not inferred from the supplied baseline data, whose exact acquisition grid still needs confirmation.
 
-For temperature T, with `t=tanh(h*f0/(2*kB*T))`, spin-1 TE polarization is `4t/(3+t²)`; spin-1/2 is `t`. At 1.5 K, 32.7 MHz gives 0.06974899% for spin 1 and 213 MHz gives 0.34074494% for spin 1/2. A 5% training example is not a 0.05% TE example. [Paper §5.1, Eqs. (28)–(34), p. 10](https://arxiv.org/pdf/2603.10146v5#page=10).
+For temperature T, with `t=tanh(h*f0/(2*kB*T))`, spin-1 TE polarization is `4t/(3+t²)`; spin-1/2 is `t`. At 1.5 K, 32.7 MHz gives 0.06974899% for spin 1 for this deuteron-scale example. A 5% training example is not a 0.05% TE example. [Paper §5.1, Eqs. (28)–(34), p. 10](https://arxiv.org/pdf/2603.10146v5#page=10).
 
 Area calibration is
 

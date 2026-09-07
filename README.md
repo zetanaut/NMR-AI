@@ -23,33 +23,44 @@ python -m unittest discover -s tests -v
 
 On Windows activate with `.venv\Scripts\activate`. A CPU supports all labs; training automatically uses CUDA when available. No other repository, research data checkout, or pretrained model is required.
 
-## Fit a measured baseline
+## Fit a measured deuteron baseline
 
-Use independent tuning information first. The [parameter and tuning guide](https://zetanaut.github.io/NMR-AI/baseline.html#known-tuning) lists physical meanings, the displayed fit values, and how to fix known quantities or constrain approximate ones. Complete `configs/baseline-setup.template.json` from actual component/tuning records, then run:
+All tutorial work, including the supplied baseline, concerns **deuterons near
+32.68 MHz**. The CSV contains amplitudes and timestamps, not a frequency axis.
+Its actual scan start and bin spacing still need confirmation. The former
+proton-grid fit illustration and derived values have been withdrawn; a corrected
+fit must be recomputed, not relabeled.
+
+The [parameter and tuning guide](https://zetanaut.github.io/NMR-AI/baseline.html#known-tuning)
+lists the physical meanings and how to fix known quantities or constrain
+approximate ones. Complete `configs/baseline-setup.template.json` from actual
+deuteron component/tuning records. After confirming the acquisition grid,
+replace the uppercase placeholders with its values:
 
 ```bash
 python tools/fit_tuned_baseline.py /path/to/single_event_data.csv \
-  --setup my-known-setup.json --start-mhz 212.6 --step-mhz 0.0015287 \
-  --starts 12 --output-dir local-results/tuned-baseline-fit
+  --setup my-known-setup.json \
+  --start-mhz START_MHZ --step-mhz STEP_MHZ \
+  --frequency-source "Acquisition record identifying this scan and its grid" \
+  --starts 12 --output-dir local-results/deuteron-baseline-fit
 ```
 
-Every active parameter is explicitly fixed or fitted. Known cable half-wave multiple n is supported through `length = n*pi/beta + delta_length`; only the justified correction need be fitted. Gaussian hardware constraints require a supplied data-noise standard deviation. The template refuses to run with its missing tuning values. No constrained refit of the supplied experimental scans is claimed until those records are available.
+Every active parameter is explicitly fixed or fitted. A known cable half-wave
+multiple uses `length = n*pi/beta + delta_length`, evaluated near 32.68 MHz;
+only the supported correction need be fitted. Gaussian hardware constraints
+require a supplied data-noise standard deviation. Missing tuning inputs in the
+template deliberately prevent fitting with invented values.
 
-To reproduce the published **exploratory** comparison, whose broad ranges are not confirmed tuning information:
+The fitter preserves every CSV row and identifies exact duplicates. It saves
+measured/fitted overlays, residuals, all parameter declarations, candidate
+solutions, acquisition and code/source provenance, and reconstruction details.
+Recorded values remain in recorded units until the DAQ conversion is confirmed.
 
-```bash
-python tools/fit_baseline.py /path/to/single_event_data.csv \
-  --start-mhz 212.6 --step-mhz 0.0015287 \
-  --starts 24 --output-dir local-results/baseline-fit
-```
-
-The input is a headerless timestamp plus 500-bin CSV. The fitter preserves the first row and identifies exact duplicates. It fits bounded physical shape parameters and solves detector quadratures/DC offset by linear least squares. The output includes measured/fitted overlays, residual CSVs, fitted and fixed parameters, all multi-start candidates, identifiability diagnostics, hashes, and library versions.
-
-Recorded values remain in **recorded units** until the DAQ voltage conversion is confirmed. Supply `--volts-per-unit` only with a known conversion. No reduced χ² or parameter uncertainties are fabricated without a measurement-error model. The page shows one explicitly exported measured-fit illustration; the original CSV, timestamps, and full local fit products remain local.
-
-The [measured example](https://zetanaut.github.io/NMR-AI/baseline.html#example) contains a data/fit overlay, separately scaled residuals, and full-scan statistics. It selects the median-RMS trace among the five distinct sweeps, retaining all 500 bins. Regenerate it with `python tools/export_baseline_example.py --fit-dir local-results/baseline-fit`.
-
-The supplied scans have five distinct Q-curves; the physical model closely follows their backgrounds. One has a localized residual near 212.91 MHz, and several have endpoint residuals. These features remain visible rather than being labeled white noise. A close fit does not uniquely determine every component or establish deuteron settings from proton-frequency scans.
+After a fresh fit with correct frequency metadata, publish with
+`python tools/export_baseline_example.py --fit-dir local-results/deuteron-baseline-fit`.
+This verifies saved curves and publishes all 500 bins with residuals and the
+parameter table. Original measurements, timestamps and full fit products stay
+local. No current measured-fit accuracy is claimed while the grid is unresolved.
 
 ## Run the learning labs
 
@@ -117,11 +128,11 @@ Preview with `python3 -m http.server 8000 --bind 127.0.0.1 --directory docs`. Th
 - `docs/index.html`, `docs/baseline.html`: three-phase guide and baseline practical.
 - `tools/circuit.py`, `tools/lineshape.py`: physical electronics and complex nuclear response.
 - `tools/fit_tuned_baseline.py`, `configs/baseline-setup.template.json`: fit only declared unknowns using independent tuning information.
-- `tools/fit_baseline.py`: reproduce the exploratory measured Q-curve comparison.
+- `tools/fit_baseline.py`: pedagogical variable projection on an explicitly supplied deuteron grid.
 - `tools/baseline_parameters.py`, `tools/export_baseline_example.py`: physical parameter catalogue and verified measured-fit publication.
 - `tools/nmr_lab.py`: generation, calibration, features, group split, networks.
 - `tools/generate_data.py`, `tools/train_model.py`, `tools/predict.py`: learning workflow.
 - `tools/analyze_predictions.py`, `tools/export_results.py`, `tools/benchmark_network.py`: evaluation, published aggregates, timing.
 - `tests/`: independent complex quadrature, circuit limits, fit reconstruction, calibration, split and metric checks.
 
-Generated datasets, original measurements, full fit products, and checkpoints stay in git-ignored `local-results/`. The baseline lesson publishes an explicitly exported measured illustration and its provenance. The website is independent of the separate research pipeline.
+Generated datasets, original measurements, full fit products, and checkpoints stay in git-ignored `local-results/`. The baseline lesson publishes a verified measured fit only after acquisition metadata are established. The website is independent of the separate research pipeline.

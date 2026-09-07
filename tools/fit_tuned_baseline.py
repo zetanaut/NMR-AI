@@ -184,9 +184,12 @@ def main():
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--start-mhz", type=float, required=True)
     parser.add_argument("--step-mhz", type=float, required=True)
+    parser.add_argument("--frequency-source", required=True, help="Acquisition record establishing the supplied deuteron grid")
     parser.add_argument("--starts", type=int, default=12)
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
+    if not args.frequency_source.strip():
+        parser.error("Record the source of the actual deuteron frequency grid")
     setup = json.loads(args.setup.read_text())
     validate_setup(setup)
     if args.output_dir.exists():
@@ -198,6 +201,8 @@ def main():
         parser.error("Expected headerless timestamp + 500-bin finite records")
     _, first = np.unique(data, axis=0, return_index=True)
     f = (args.start_mhz + np.arange(500)*args.step_mhz)*1e6
+    if not f[0] <= 32.68e6 <= f[-1]:
+        parser.error("The acquisition grid must bracket the approximate 32.68 MHz deuteron reference")
     args.output_dir.mkdir(parents=True)
     import matplotlib
     matplotlib.use("Agg")
@@ -221,7 +226,9 @@ def main():
     fig.tight_layout()
     fig.savefig(args.output_dir/"baseline_fits.png", dpi=160)
     import scipy
-    report = {"fit_mode": "tuning-informed", "setup": setup,
+    report = {"fit_mode": "tuning-informed", "setup": setup, "nucleus": "deuteron",
+              "reference_hz": setup["parameters"]["reference_hz"]["value"],
+              "frequency_source": args.frequency_source,
               "source_sha256": hashlib.sha256(args.data.read_bytes()).hexdigest(),
               "setup_sha256": hashlib.sha256(args.setup.read_bytes()).hexdigest(),
               "code_sha256": {name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()

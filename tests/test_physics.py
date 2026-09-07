@@ -128,10 +128,10 @@ class Physics(unittest.TestCase):
 
     def test_baseline_fit_recovers_detector_trace(self):
         from fit_baseline import fit_trace, fitted_curve
-        c = replace(Circuit(), reference_hz=213e6, tune_capacitance_f=100e-12,
+        c = replace(Circuit(), reference_hz=32.68e6, tune_capacitance_f=100e-12,
                     cable_length_m=4, stray_capacitance_f=50e-12,
                     detector_gain=30, detector_phase_rad=.7, dc_offset_v=-.02)
-        f = (212.6+np.arange(500)*.0015287)*1e6
+        f = np.linspace(32.28, 33.08, 500)*1e6  # synthetic, not acquisition metadata
         truth = detector_voltage(f, c)
         prediction, report = fit_trace(f, truth, starts=1)
         np.testing.assert_allclose(prediction, truth, atol=1e-11)

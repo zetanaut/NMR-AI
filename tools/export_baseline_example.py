@@ -20,6 +20,10 @@ ROOT = Path(__file__).resolve().parents[1]
 def load_example(folder):
     report_file = folder/"fit_report.json"
     report = json.loads(report_file.read_text())
+    if report.get("nucleus") != "deuteron" or not report.get("frequency_source", "").strip():
+        raise ValueError("Require a fresh deuteron fit with an explicit acquisition frequency source; do not relabel an old fit")
+    if not report["start_mhz"] <= 32.68 <= report["start_mhz"] + 499*report["step_mhz"]:
+        raise ValueError("The saved sweep does not bracket the deuteron reference; check acquisition metadata")
     for name, expected in report["code_sha256"].items():
         if hashlib.sha256((ROOT/"tools"/name).read_bytes()).hexdigest() != expected:
             raise ValueError(f"{name} changed since fitting; verify and regenerate the fit report")
@@ -51,6 +55,9 @@ def load_example(folder):
         "selection": "Median whole-scan residual RMS among distinct traces (upper median for even counts)",
         "selected_trace_number": selected+1,
         "source_sha256": report["source_sha256"],
+        "nucleus": report["nucleus"], "reference_hz": report["reference_hz"],
+        "start_mhz": report["start_mhz"], "step_mhz": report["step_mhz"],
+        "frequency_source": report["frequency_source"],
         "fit_report_sha256": hashlib.sha256(report_file.read_bytes()).hexdigest(),
         "fit_code_sha256": report["code_sha256"],
         "exporter_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
@@ -150,7 +157,7 @@ def example_html(metadata):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--fit-dir", type=Path, default=ROOT/"local-results/baseline-fit")
+    parser.add_argument("--fit-dir", type=Path, required=True, help="Fresh fit directory with confirmed deuteron acquisition mapping")
     args = parser.parse_args()
     data, metadata = load_example(args.fit_dir)
     page = ROOT/"docs/baseline.html"

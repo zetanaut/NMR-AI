@@ -15,8 +15,11 @@ Fig. 1 / Eq. (2) circuit. Preserve its single-capacitor topology, explicit units
 finite-source loading, passive cable, and phase-sensitive detector convention.
 Do not invent component measurements, voltage conversions, calibration, noise
 covariance, or empirical parameter distributions. Keep controlled sensitivity
-presets distinct from experimental fits. The 213 MHz baseline data do not
-establish 32.7 MHz deuteron calibration or parameter distributions.
+presets distinct from experimental fits. All tutorial work concerns deuterons
+near 32.68 MHz, including the supplied baseline CSV. The old fit script's proton
+frequency grid is not valid acquisition metadata. Require the actual scan start
+and bin spacing; do not infer a sweep width from the approximate center frequency.
+A baseline fit alone does not establish signal calibration or parameter distributions.
 
 NMR-AI is a standalone educational repository. Do not add runtime dependencies,
 imports, links, workflow integrations, or automatic data/checkpoint transfers to

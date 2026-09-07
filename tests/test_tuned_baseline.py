@@ -12,7 +12,7 @@ from fit_tuned_baseline import (CIRCUIT_NAMES, validate_setup, resolved_circuit,
 
 
 def known_setup():
-    c = asdict(Circuit(reference_hz=213e6, tune_capacitance_f=270e-12,
+    c = asdict(Circuit(reference_hz=32.68e6, tune_capacitance_f=270e-12,
                        stray_capacitance_f=15e-12, cable_length_m=3.68))
     parameters = {k: {"value": c[k], "source": "Synthetic test truth, not an experimental measurement"} for k in CIRCUIT_NAMES}
     parameters.update({k: {"value": v, "source": "Synthetic test truth"} for k, v in
@@ -22,7 +22,8 @@ def known_setup():
 
 class TunedBaseline(unittest.TestCase):
     def setUp(self):
-        self.f = (212.6 + np.arange(500)*.0015287)*1e6
+        # Explicit synthetic grid, not the supplied CSV's acquisition mapping.
+        self.f = (32.28 + np.arange(500)*(.8/499))*1e6
         self.setup = known_setup()
 
     def test_fixed_means_no_optimization_or_hidden_unknowns(self):
@@ -48,12 +49,12 @@ class TunedBaseline(unittest.TestCase):
 
     def test_known_half_wave_branch_and_small_unknown_trim(self):
         self.setup["parameters"].pop("cable_length_m")
-        self.setup["cable_tuning"] = {"half_wave_multiple": 8, "reference_hz": 213e6, "source": "Synthetic tuning record"}
+        self.setup["cable_tuning"] = {"half_wave_multiple": 1, "reference_hz": 32.68e6, "source": "Synthetic tuning record"}
         self.setup["parameters"]["cable_delta_length_m"] = {"value": .002, "source": "Synthetic trim truth"}
         truth = validate_setup(self.setup)
         c = resolved_circuit(truth, self.setup)
-        beta = cable_parameters(213e6, c)[1].imag
-        self.assertAlmostEqual(c.cable_length_m, 8*np.pi/beta+.002)
+        beta = cable_parameters(32.68e6, c)[1].imag
+        self.assertAlmostEqual(c.cable_length_m, np.pi/beta+.002)
         data = setup_voltage(self.f, truth, self.setup)
         self.setup["parameters"]["cable_delta_length_m"] = {
             "initial": 0, "bounds": [-.01, .01], "source": "Synthetic connector/trim tolerance"}
@@ -90,7 +91,8 @@ class TunedBaseline(unittest.TestCase):
             np.savetxt(folder/"scan.csv", np.concatenate([[1], data])[None], delimiter=",")
             subprocess.run([sys.executable, str(root/"tools/fit_tuned_baseline.py"), str(folder/"scan.csv"),
                             "--setup", str(folder/"setup.json"), "--output-dir", str(folder/"fit"),
-                            "--start-mhz", "212.6", "--step-mhz", ".0015287", "--starts", "1"],
+                            "--start-mhz", "32.28", "--step-mhz", str(.8/499), "--starts", "1",
+                            "--frequency-source", "Explicit synthetic test grid, not experimental acquisition metadata"],
                            check=True, capture_output=True, text=True)
             _, metadata = load_example(folder/"fit")
             html = parameter_table_html(metadata)
@@ -130,7 +132,7 @@ class TunedBaseline(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unknown"):
             validate_setup(invalid)
         invalid = deepcopy(self.setup)
-        invalid["cable_tuning"] = {"half_wave_multiple": 8, "reference_hz": 213e6, "source": "Test"}
+        invalid["cable_tuning"] = {"half_wave_multiple": 1, "reference_hz": 32.68e6, "source": "Test"}
         with self.assertRaisesRegex(ValueError, "missing"):
             validate_setup(invalid)  # cannot supply both physical length and derived length
 
