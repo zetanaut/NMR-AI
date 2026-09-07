@@ -20,6 +20,9 @@ near 32.68 MHz, including the supplied baseline CSV. The old fit script's proton
 frequency grid is not valid acquisition metadata. Require the actual scan start
 and bin spacing; do not infer a sweep width from the approximate center frequency.
 A baseline fit alone does not establish signal calibration or parameter distributions.
+The owner explicitly authorized publishing `examples/deuteron-baseline.csv`
+as a student test example. Use the shared `baseline_data.py` loader to report its
+decimal-spacing repairs; do not silently rewrite values or assume a scan width.
 
 NMR-AI is a standalone educational repository. Do not add runtime dependencies,
 imports, links, workflow integrations, or automatic data/checkpoint transfers to

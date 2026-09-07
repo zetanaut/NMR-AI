@@ -14,6 +14,7 @@ from pathlib import Path
 import numpy as np
 from scipy.optimize import least_squares
 from circuit import Circuit, node_voltage, resonator_impedance
+from baseline_data import load_baseline_csv
 
 
 def fit_trace(frequency_hz, values, starts=24, seed=42):
@@ -102,9 +103,7 @@ def main():
         parser.error("Require positive starts, frequency step, and any supplied unit conversion")
     if args.output_dir.exists():
         parser.error("Choose a new output directory")
-    records = np.loadtxt(args.data, delimiter=",", ndmin=2)
-    if records.shape[1] != 501 or not np.isfinite(records).all():
-        parser.error("Expected finite rows: timestamp followed by 500 values, no header")
+    records, input_parsing = load_baseline_csv(args.data)
     frequency = (args.start_mhz + np.arange(500)*args.step_mhz)*1e6
     if not frequency[0] <= 32.68e6 <= frequency[-1]:
         parser.error("The acquisition grid must bracket the approximate 32.68 MHz deuteron reference")
@@ -140,9 +139,9 @@ def main():
     fig.tight_layout()
     fig.savefig(args.output_dir/"baseline_fits.png", dpi=160)
     import scipy
-    output = {"source_sha256": hashlib.sha256(args.data.read_bytes()).hexdigest(),
+    output = {"source_sha256": input_parsing["source_sha256"], "input_parsing": input_parsing,
               "code_sha256": {name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
-                              for name in ("fit_baseline.py", "circuit.py")},
+                              for name in ("fit_baseline.py", "circuit.py", "baseline_data.py")},
               "paper": "https://arxiv.org/abs/2603.10146v5", "starts": args.starts, "seed": 42,
               "numpy_version": np.__version__, "scipy_version": scipy.__version__,
               "loss": "Unweighted least squares; no verified measurement-error covariance supplied",

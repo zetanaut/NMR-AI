@@ -6,12 +6,21 @@ see the [physics notes](physics-electronics-theory.md) for topology and conventi
 
 ## Establish acquisition metadata first
 
-All work in this tutorial concerns **deuterons near 32.68 MHz**, including the
-supplied `single_event_data.csv`. The user confirmed this operating frequency.
-The CSV has six headerless timestamp-plus-500-bin rows, one exact duplicate, and
-no frequency column. The old script's proton grid is invalid for these scans.
-The former fit overlay, parameter estimates, and residual metrics have been
-withdrawn, not relabeled as deuteron results. They must be recomputed.
+The public example is now [`examples/deuteron-baseline.csv`](../examples/deuteron-baseline.csv),
+provided by the repository owner specifically for student use and publication.
+It contains one headerless record: timestamp plus 500 amplitudes. This is a
+deuteron baseline near **32.68 MHz**; no frequency column is present.
+
+The CSV preserves every supplied field and space, with only a final newline
+added. Published SHA-256: `dac7c4598c6ec32250ab763ab1bf99e2a7aa7346de4e452ce00e80f0e2b1eb28`.
+`load_baseline_csv` in `tools/baseline_data.py` repairs 35 spaces-before-decimal
+artifacts in memory and records every repaired token. Ambiguous numbers,
+nonfinite values, and wrong field counts are rejected. All 500 samples and the
+timestamp are preserved; neither fitter interprets the first row as a header.
+See [the example README](../examples/README.md) for source provenance and loading.
+
+`python tools/preview_baseline.py` produces the website's measured-data preview
+against sample index and its provenance. It does not fit a circuit or assume Hz.
 
 The actual start frequency and bin spacing (or equivalent endpoints) are still
 needed. The approximate reference frequency alone does not specify the width,
@@ -31,7 +40,7 @@ After establishing the grid, replace the uppercase placeholders below with
 actual values; they are not runnable defaults:
 
 ```bash
-python tools/fit_tuned_baseline.py /path/to/single_event_data.csv \
+python tools/fit_tuned_baseline.py examples/deuteron-baseline.csv \
   --setup my-known-setup.json \
   --start-mhz START_MHZ --step-mhz STEP_MHZ \
   --frequency-source "Acquisition record identifying this scan and its grid" \
@@ -85,7 +94,8 @@ A phase-sensitive voltage maximum need not mark zero resonator reactance.
 
 ## Fitting and validation
 
-1. Read every CSV row and identify only exact duplicates.
+1. Use `load_baseline_csv` to read all records and report formatting repairs;
+   identify only exact duplicates before fitting.
 2. Construct the actual frequency grid from confirmed acquisition metadata.
 3. Build the χ=0 coil with parallel stray admittance, transform it through the
    passive RLGC cable, and add one series tuning capacitor and damping resistor.
@@ -132,7 +142,9 @@ The exporter requires deuteron acquisition provenance, rejects a grid that does
 not bracket the approximate deuteron reference, checks code hashes and exact
 saved-curve reconstruction, and selects the median whole-scan RMS among distinct
 traces. It publishes all measured bins, residuals, parameter meanings/values,
-and provenance, without raw timestamps. No current measured-fit accuracy is
+and provenance. The public CSV includes its timestamp with the owner's explicit
+authorization; the fit metadata does not need to repeat it. Other raw data are
+not automatically published. No current measured-fit accuracy is
 claimed while the acquisition grid remains unresolved.
 
 The main training generator already uses a 32.68 MHz circuit reference. Its

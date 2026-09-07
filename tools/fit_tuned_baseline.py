@@ -14,6 +14,7 @@ from pathlib import Path
 import numpy as np
 from scipy.optimize import least_squares
 from circuit import Circuit, cable_parameters, node_voltage, resonator_impedance
+from baseline_data import load_baseline_csv
 
 INACTIVE = {"filling_factor", "susceptibility_scale_cgs"}
 READOUT_INTERNAL = {"detector_gain", "detector_phase_rad", "dc_offset_v"}
@@ -196,9 +197,7 @@ def main():
         parser.error("Choose a new output directory")
     if not np.isfinite([args.start_mhz, args.step_mhz]).all() or min(args.start_mhz, args.step_mhz) <= 0 or args.starts < 1:
         parser.error("Require positive scan mapping and starts")
-    data = np.loadtxt(args.data, delimiter=",", ndmin=2)
-    if data.shape[1] != 501 or not np.isfinite(data).all():
-        parser.error("Expected headerless timestamp + 500-bin finite records")
+    data, input_parsing = load_baseline_csv(args.data)
     _, first = np.unique(data, axis=0, return_index=True)
     f = (args.start_mhz + np.arange(500)*args.step_mhz)*1e6
     if not f[0] <= 32.68e6 <= f[-1]:
@@ -229,10 +228,10 @@ def main():
     report = {"fit_mode": "tuning-informed", "setup": setup, "nucleus": "deuteron",
               "reference_hz": setup["parameters"]["reference_hz"]["value"],
               "frequency_source": args.frequency_source,
-              "source_sha256": hashlib.sha256(args.data.read_bytes()).hexdigest(),
+              "source_sha256": input_parsing["source_sha256"], "input_parsing": input_parsing,
               "setup_sha256": hashlib.sha256(args.setup.read_bytes()).hexdigest(),
               "code_sha256": {name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
-                              for name in ("fit_tuned_baseline.py", "circuit.py")},
+                              for name in ("fit_tuned_baseline.py", "circuit.py", "baseline_data.py")},
               "numpy_version": np.__version__, "scipy_version": scipy.__version__,
               "starts": args.starts, "seed": args.seed, "start_mhz": args.start_mhz, "step_mhz": args.step_mhz,
               "rows": len(data), "unique_rows": len(first), "fitted_bin_mask": "All 500 bins; no exclusions",

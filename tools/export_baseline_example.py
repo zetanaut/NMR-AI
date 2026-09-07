@@ -70,9 +70,12 @@ def load_example(folder):
         "selected_fit": {key: report["fits"][selected][key] for key in
                          ("circuit", "quadrature_coefficients", "scaled_shape_jacobian_condition", "active_bounds")},
         "note": "Measured-fit illustration, not a synthetic trace or held-out accuracy test. "
-                "Timestamps and original CSV are not included. All 500 measured bins appear in the figure. "
+                "This metadata omits timestamps; source-CSV publication is handled separately. All 500 measured bins appear in the figure. "
                 "Fit agreement does not establish unique hardware parameters or electronic-noise variance.",
     }
+    public_csv = ROOT/"examples/deuteron-baseline.csv"
+    if public_csv.exists() and hashlib.sha256(public_csv.read_bytes()).hexdigest() == report["source_sha256"]:
+        metadata["source_csv_url"] = "https://github.com/zetanaut/NMR-AI/blob/main/examples/deuteron-baseline.csv"
     chosen = report["fits"][selected]
     if chosen.get("fit_mode") == "tuning-informed":
         metadata["selected_fit"].update({key: chosen[key] for key in
@@ -131,6 +134,8 @@ def example_html(metadata):
     duplicates = metadata["source_rows"] - count
     optimization = ("All inputs are fixed; no optimizer is run." if metadata["selected_fit"].get("free_parameters") == []
                     else f'The fit uses {metadata["starts"]} starting points.')
+    source_link = ('<a href="'+metadata['source_csv_url']+'">Public test CSV</a> (published with the owner’s authorization).'
+                   if "source_csv_url" in metadata else 'Source-CSV publication is separate from this figure export.')
     rows = "".join(f'<tr><td>Trace {s["trace_number"]}{" · shown" if s is m else ""}</td>'
                    f'<td>{s["rms_recorded_units"]*1e6:.3f}</td><td>{s["rms_percent_of_peak_to_peak"]:.4f}%</td></tr>'
                    for s in metadata["summaries"])
@@ -150,7 +155,7 @@ def example_html(metadata):
 <p>This example is selected by the median whole-scan residual RMS, not the minimum. The largest absolute residual is {m["max_absolute_residual_recorded_units"]*1e6:.2f} × 10⁻⁶ recorded units; the endpoint deviations have not been cropped out. {optimization} It uses the same circuit implementation used by the generator.</p>
 {parameter_table_html(metadata)}
 <details><summary>Compare all {count} distinct measured sweeps</summary><div class="details-body"><div class="table-wrap"><table><caption>Whole-scan residuals; {duplicates} exact duplicate records omitted</caption><thead><tr><th>Sweep</th><th>RMS (10⁻⁶ recorded units)</th><th>RMS / peak-to-peak</th></tr></thead><tbody>{rows}</tbody></table></div><p>The <a href="#diagnostics">diagnostics section</a> explains why residual structure must not automatically be treated as electronic noise.</p></div></details>
-<p class="provenance">Computed directly from the saved measured-fit CSVs; the fitted curve is checked against its stored circuit and detector coefficients before export. <a href="assets/baseline-example.json">Download the figure provenance, fit settings, and statistics</a>. The original CSV and acquisition timestamps remain local. A close baseline fit does not uniquely measure each component or establish polarization accuracy.</p>
+<p class="provenance">Computed directly from the saved measured-fit CSVs; the fitted curve is checked against its stored circuit and detector coefficients before export. <a href="assets/baseline-example.json">Download the figure provenance, fit settings, and statistics</a>. {source_link} A close baseline fit does not uniquely measure each component or establish polarization accuracy.</p>
 </div>
 </section>'''
 

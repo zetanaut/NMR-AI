@@ -25,11 +25,15 @@ On Windows activate with `.venv\Scripts\activate`. A CPU supports all labs; trai
 
 ## Fit a measured deuteron baseline
 
-All tutorial work, including the supplied baseline, concerns **deuterons near
-32.68 MHz**. The CSV contains amplitudes and timestamps, not a frequency axis.
-Its actual scan start and bin spacing still need confirmation. The former
-proton-grid fit illustration and derived values have been withdrawn; a corrected
-fit must be recomputed, not relabeled.
+The public [deuteron-baseline.csv](examples/deuteron-baseline.csv) contains one
+measured deuteron baseline near **32.68 MHz**, supplied by the repository owner
+for student use. Its timestamp and 500 amplitudes are included in GitHub.
+The actual scan start and bin spacing still need confirmation.
+
+See [the data README](examples/README.md) for provenance and a runnable loading
+example. The shared reader documents and repairs 35 decimal-spacing artifacts
+in memory while preserving all samples. Run `python tools/preview_baseline.py`
+to reproduce the measured-data preview against sample index; it is not a fit.
 
 The [parameter and tuning guide](https://zetanaut.github.io/NMR-AI/baseline.html#known-tuning)
 lists the physical meanings and how to fix known quantities or constrain
@@ -38,7 +42,7 @@ deuteron component/tuning records. After confirming the acquisition grid,
 replace the uppercase placeholders with its values:
 
 ```bash
-python tools/fit_tuned_baseline.py /path/to/single_event_data.csv \
+python tools/fit_tuned_baseline.py examples/deuteron-baseline.csv \
   --setup my-known-setup.json \
   --start-mhz START_MHZ --step-mhz STEP_MHZ \
   --frequency-source "Acquisition record identifying this scan and its grid" \
@@ -59,8 +63,9 @@ Recorded values remain in recorded units until the DAQ conversion is confirmed.
 After a fresh fit with correct frequency metadata, publish with
 `python tools/export_baseline_example.py --fit-dir local-results/deuteron-baseline-fit`.
 This verifies saved curves and publishes all 500 bins with residuals and the
-parameter table. Original measurements, timestamps and full fit products stay
-local. No current measured-fit accuracy is claimed while the grid is unresolved.
+parameter table. This public test CSV is the explicitly authorized raw-data
+exception; other measurements and full fit products remain local. No current
+measured-fit accuracy is claimed while the grid is unresolved.
 
 ## Run the learning labs
 
@@ -129,10 +134,11 @@ Preview with `python3 -m http.server 8000 --bind 127.0.0.1 --directory docs`. Th
 - `tools/circuit.py`, `tools/lineshape.py`: physical electronics and complex nuclear response.
 - `tools/fit_tuned_baseline.py`, `configs/baseline-setup.template.json`: fit only declared unknowns using independent tuning information.
 - `tools/fit_baseline.py`: pedagogical variable projection on an explicitly supplied deuteron grid.
+- `examples/`, `tools/baseline_data.py`, `tools/preview_baseline.py`: public measured CSV, audited parser, and sample-index preview.
 - `tools/baseline_parameters.py`, `tools/export_baseline_example.py`: physical parameter catalogue and verified measured-fit publication.
 - `tools/nmr_lab.py`: generation, calibration, features, group split, networks.
 - `tools/generate_data.py`, `tools/train_model.py`, `tools/predict.py`: learning workflow.
 - `tools/analyze_predictions.py`, `tools/export_results.py`, `tools/benchmark_network.py`: evaluation, published aggregates, timing.
 - `tests/`: independent complex quadrature, circuit limits, fit reconstruction, calibration, split and metric checks.
 
-Generated datasets, original measurements, full fit products, and checkpoints stay in git-ignored `local-results/`. The baseline lesson publishes a verified measured fit only after acquisition metadata are established. The website is independent of the separate research pipeline.
+The public test CSV lives in `examples/`. Other measurements, generated datasets, full fit products, and checkpoints stay in git-ignored `local-results/`. The baseline lesson publishes a verified measured fit only after acquisition metadata are established. The website is independent of the separate research pipeline.

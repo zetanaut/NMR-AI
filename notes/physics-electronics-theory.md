@@ -74,17 +74,23 @@ V_det = G Re[u exp(iφ(f))] + V_DC
 
 ## 3. Deuteron baseline: frequency provenance and fit status
 
-All tutorial work concerns deuterons near 32.68 MHz, including the supplied
-`single_event_data.csv`, as confirmed by the user. The file contains six
-headerless timestamp-plus-500-bin records, one exact duplicate, and no frequency
-column. SHA-256: `255492046c57468f5098c6c7ba3cd53bf15c3d69da96c56ee41bc4aa55277f61`.
+The current public example is `examples/deuteron-baseline.csv`, supplied by the
+repository owner for student use and explicit publication. It contains one
+headerless timestamp-plus-500-amplitude record and no frequency column. The
+nucleus is deuteron, with approximate reference 32.68 MHz. Published SHA-256:
+`dac7c4598c6ec32250ab763ab1bf99e2a7aa7346de4e452ce00e80f0e2b1eb28`.
 
-The old script's proton-frequency grid was incorrectly assigned to these data.
-That invalidates the corresponding fit parameters, cable-branch interpretation,
-overlay, and residual claims as a deuteron example. Those published results have
-been withdrawn; they are not converted by relabeling the axis. A fresh fit needs
-the actual start and spacing/endpoints. An approximate center alone does not
-establish scan width. DAQ conversion to volts also remains unknown.
+The raw fields are preserved; only a final newline was added. The shared loader
+repairs 35 spaces-before-decimal formatting artifacts in memory, records each
+repair, and rejects ambiguous or nonfinite numbers. No smoothing, missing-bin
+interpolation, or voltage conversion is performed. The website preview plots
+all 500 amplitudes against sample index, not an assumed frequency axis.
+
+The actual start and spacing/endpoints are still needed for a physical fit.
+An approximate reference alone does not establish scan width. DAQ conversion
+to volts also remains unknown. No previous fit on another file or an invalid
+frequency mapping supplies these missing inputs. The parameter guide and
+physical circuit remain usable; measured-fit metrics await acquisition metadata.
 
 The circuit implementation does not execute or import the supplied old script.
 Its positive component entries supply nominal engineering seeds: coil 30 nH and
