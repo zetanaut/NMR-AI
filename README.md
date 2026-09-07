@@ -2,6 +2,8 @@
 
 A student tutorial on extracting vector polarization from NMR spectra, based on the [gen-NMR research pipeline](https://github.com/zetanaut/gen-NMR).
 
+**[Read the tutorial →](https://zetanaut.github.io/NMR-AI/)**
+
 The three learning phases are:
 
 1. Build a training-data generator: match experimental spectra, characterize noise, vary physical parameters, and generate enough independent configurations and realizations.
@@ -22,9 +24,9 @@ Open [the local tutorial](http://127.0.0.1:8000). No build, JavaScript package m
 
 ## GitHub Pages
 
-Intended repository: `zetanaut/NMR-AI`. Intended website address once deployed: `https://zetanaut.github.io/NMR-AI/`.
+Repository: [zetanaut/NMR-AI](https://github.com/zetanaut/NMR-AI). Website: [NMR / AI](https://zetanaut.github.io/NMR-AI/).
 
-The workflow in `.github/workflows/pages.yml` publishes **only `docs/`**, on a relevant push to `main` or a manual workflow run. In repository **Settings → Pages → Build and deployment**, select **GitHub Actions** as the source. See [GitHub's custom Pages workflow documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages). This README does not imply that the repository or site has already been published.
+The workflow in `.github/workflows/pages.yml` publishes **only `docs/`**, on a relevant push to `main` or a manual workflow run. GitHub Pages is configured with **GitHub Actions** as its source. For a fork, select that source in **Settings → Pages → Build and deployment**. See [GitHub's custom Pages workflow documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
 
 ## Run the Python labs
 
