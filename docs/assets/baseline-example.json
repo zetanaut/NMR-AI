@@ -7,7 +7,9 @@
     "fit_baseline.py": "59c282d75c351a30852a6e0eb3bd689cb927d437535e41effcacdffa38c4312e",
     "circuit.py": "e9fe63030e1a6356f4f4ebf565d56bfc506ad06efedecfb68b652dbd14946368"
   },
-  "exporter_sha256": "8b9a19429b0b19a574b73e71dee9f281695a46850b5c134609684e75efa13031",
+  "exporter_sha256": "a3fd443c86a1e93b0c4a368da7af7810c1a77e612fe56235e8be958d9531dd18",
+  "parameter_catalog_sha256": "c9d189df049aa74bcd4cce3949ffffe24d6bb3ee9a21981ed58672defcc49178",
+  "fit_mode": "exploratory; tuning records not supplied",
   "source_rows": 6,
   "unique_rows": 5,
   "voltage_unit": "recorded units; DAQ conversion not assumed",

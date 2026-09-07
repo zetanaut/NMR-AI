@@ -2,10 +2,12 @@
 import hashlib
 import json
 from pathlib import Path
+import sys
 import unittest
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT/"tools"))
 
 
 class BaselineExample(unittest.TestCase):
@@ -26,6 +28,8 @@ class BaselineExample(unittest.TestCase):
             self.assertEqual(hashlib.sha256((ROOT/"tools"/name).read_bytes()).hexdigest(), digest)
         self.assertEqual(hashlib.sha256((ROOT/"tools/export_baseline_example.py").read_bytes()).hexdigest(),
                          metadata["exporter_sha256"])
+        self.assertEqual(hashlib.sha256((ROOT/"tools/baseline_parameters.py").read_bytes()).hexdigest(),
+                         metadata["parameter_catalog_sha256"])
 
     def test_vector_figure_retains_all_measured_points(self):
         metadata = json.loads((ROOT/"docs/assets/baseline-example.json").read_text())
@@ -41,6 +45,11 @@ class BaselineExample(unittest.TestCase):
         self.assertIn('id="example"', page)
         self.assertIn("0.0275%", page)
         self.assertIn('src="assets/baseline-example.svg"', page)
+        self.assertIn('id="fit-parameters"', page)
+        self.assertIn('id="known-tuning"', page)
+        from baseline_parameters import CATALOG
+        for name in CATALOG.keys()-{"cable_delta_length_m"}:
+            self.assertIn(f"<code>{name}</code>", page)
 
 
 if __name__ == "__main__":

@@ -25,6 +25,18 @@ On Windows activate with `.venv\Scripts\activate`. A CPU supports all labs; trai
 
 ## Fit a measured baseline
 
+Use independent tuning information first. The [parameter and tuning guide](https://zetanaut.github.io/NMR-AI/baseline.html#known-tuning) lists physical meanings, the displayed fit values, and how to fix known quantities or constrain approximate ones. Complete `configs/baseline-setup.template.json` from actual component/tuning records, then run:
+
+```bash
+python tools/fit_tuned_baseline.py /path/to/single_event_data.csv \
+  --setup my-known-setup.json --start-mhz 212.6 --step-mhz 0.0015287 \
+  --starts 12 --output-dir local-results/tuned-baseline-fit
+```
+
+Every active parameter is explicitly fixed or fitted. Known cable half-wave multiple n is supported through `length = n*pi/beta + delta_length`; only the justified correction need be fitted. Gaussian hardware constraints require a supplied data-noise standard deviation. The template refuses to run with its missing tuning values. No constrained refit of the supplied experimental scans is claimed until those records are available.
+
+To reproduce the published **exploratory** comparison, whose broad ranges are not confirmed tuning information:
+
 ```bash
 python tools/fit_baseline.py /path/to/single_event_data.csv \
   --start-mhz 212.6 --step-mhz 0.0015287 \
@@ -104,7 +116,9 @@ Preview with `python3 -m http.server 8000 --bind 127.0.0.1 --directory docs`. Th
 
 - `docs/index.html`, `docs/baseline.html`: three-phase guide and baseline practical.
 - `tools/circuit.py`, `tools/lineshape.py`: physical electronics and complex nuclear response.
-- `tools/fit_baseline.py`: measured Q-curve fitting and reproducible diagnostics.
+- `tools/fit_tuned_baseline.py`, `configs/baseline-setup.template.json`: fit only declared unknowns using independent tuning information.
+- `tools/fit_baseline.py`: reproduce the exploratory measured Q-curve comparison.
+- `tools/baseline_parameters.py`, `tools/export_baseline_example.py`: physical parameter catalogue and verified measured-fit publication.
 - `tools/nmr_lab.py`: generation, calibration, features, group split, networks.
 - `tools/generate_data.py`, `tools/train_model.py`, `tools/predict.py`: learning workflow.
 - `tools/analyze_predictions.py`, `tools/export_results.py`, `tools/benchmark_network.py`: evaluation, published aggregates, timing.

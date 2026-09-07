@@ -8,7 +8,72 @@ The supplied CSV is headerless, with a timestamp followed by 500 values per row.
 
 The supplied grid is `212.6 + j*0.0015287 MHz`, j=0…499. Voltage conversion remains a separately confirmed acquisition input. The fitter therefore reports residuals in recorded units, not guessed V or mV. It preserves both source files and does not execute the supplied old script.
 
-## Execute from NMR-AI/
+## Use independent tuning information first
+
+The published illustration is an **exploratory** fit: approximate capacitance,
+the intended half-wave integer, cable characterization, and tolerances have not
+been independently supplied for these scans. The fitted length is about 6.7014
+half-waves in the nominal cable model, not a known integer tuning setting.
+Do not infer the branch from this fit and then claim it as independent evidence.
+
+For a hardware-specific fit, complete `configs/baseline-setup.template.json` from
+the tuning/component record and run:
+
+```bash
+python tools/fit_tuned_baseline.py /path/to/single_event_data.csv \
+  --setup my-known-setup.json \
+  --start-mhz 212.6 --step-mhz 0.0015287 \
+  --starts 12 --output-dir local-results/tuned-baseline-fit
+```
+
+Every active parameter requires an explicit declaration and source/assumption:
+
+- `value`: fixed, excluded from optimization.
+- `initial` and `bounds`: unknown, fitted only within supported limits.
+- Optional `prior` with `mean` and positive `sigma`: independent Gaussian
+  measurement constraint, in the parameter's physical units. This requires
+  `noise_sigma_recorded` so the spectrum and hardware constraints are weighted
+  consistently. A starting guess alone carries no prior information.
+
+The noise scale is a positive scalar or 500-bin array in recorded units. The
+objective uses diagonal data errors and independent Gaussian constraints; no
+full covariance or correlated hardware-constraint treatment is implied. Without
+noise estimates, use fixed values and bounds with unweighted SSE. No parameter
+uncertainties are fabricated from that objective.
+
+For known half-wave integer n at f_tune, the optional `cable_tuning` block records
+`half_wave_multiple`, `reference_hz`, and `source`. Replace `cable_length_m` with
+`cable_delta_length_m` in the parameter declarations. At each evaluation,
+
+```
+beta0 = Im[gamma(2*pi*f_tune)]
+length = n*pi/beta0 + delta_length.
+```
+
+The integer is fixed from the independent tuning record; only the supported
+correction may vary. Alternatively supply physical length directly and omit the
+branch block. Cable wavelength depends on propagation velocity, not vacuum c.
+Known velocity factor and impedance imply consistent low-loss L_c/C_c values:
+`L_c ≈ Z0/(VF*c)`, `C_c ≈ 1/(Z0*VF*c)`. Use measured RLGC when available.
+
+Record the calibrated capacitor setting and its tolerance; `1/(omega²L0)` is
+only the isolated-coil estimate. The full zero-reactance relation is
+`C_tune = 1/[omega*Im(Z_line)]` when the denominator is positive. A detector
+voltage maximum alone does not prove that this reactance condition holds.
+
+The new report includes all parameter sources, fixed/fitted status, values,
+bounds, Gaussian constraints, derived length, free-parameter names/count,
+starting-point solutions and separated data/constraint objectives. Reconstruct
+with `fit_tuned_baseline.reconstruct_fit(f_hz, fit)`. Both free RF amplitude and
+free readout gain are rejected because their product is what the baseline sees.
+Inactive susceptibility/filling parameters cannot be made baseline unknowns.
+
+The template deliberately contains nulls for missing tuning records. Numerical
+tests use explicitly synthetic hardware settings to verify fixed values,
+single-unknown recovery, known-branch trim, and constraint weighting. They do not
+supply missing experimental information for a new constrained fit.
+
+## Reproduce the exploratory example from NMR-AI/
 
 ```bash
 python -m pip install -r requirements.txt
@@ -69,6 +134,13 @@ The displayed RMS is 15.303 × 10⁻⁶ recorded units, or 0.0275% of the measur
 peak-to-peak range. This is a baseline-fit metric, not polarization error. The
 largest absolute residual is 237.38 × 10⁻⁶ recorded units; the endpoint deviations
 remain visible. A comparison table includes all five whole-scan RMS values.
+
+The exporter also lists every fitted and fixed parameter on the page with its
+physical meaning and value. The three readout quantities A, phase, and offset
+are derived from the saved quadratures rather than unused circuit defaults.
+Linear coefficients a, b, d are the same three degrees of freedom, not additional
+parameters. The actual exploratory solution and nominal fixed components are
+explicitly distinguished from independent hardware measurements.
 
 The exporter writes `docs/assets/baseline-example.svg` and a companion JSON with
 selection criteria, source/code/figure hashes, circuit/readout coefficients, and

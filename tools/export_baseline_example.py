@@ -12,6 +12,7 @@ import re
 
 import numpy as np
 from fit_baseline import fitted_curve
+from baseline_parameters import parameter_table_html
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -31,7 +32,12 @@ def load_example(folder):
         frequency, measured, prediction, residual = data.T
         np.testing.assert_allclose(frequency, report["start_mhz"]+np.arange(500)*report["step_mhz"], atol=1e-10, rtol=0)
         np.testing.assert_allclose(residual, measured-prediction, atol=1e-14, rtol=1e-10)
-        np.testing.assert_allclose(prediction, fitted_curve(frequency*1e6, fit), atol=1e-12, rtol=1e-10)
+        if fit.get("fit_mode") == "tuning-informed":
+            from fit_tuned_baseline import reconstruct_fit
+            reconstructed = reconstruct_fit(frequency*1e6, fit)
+        else:
+            reconstructed = fitted_curve(frequency*1e6, fit)
+        np.testing.assert_allclose(prediction, reconstructed, atol=1e-12, rtol=1e-10)
         rms = float(np.sqrt(np.mean(residual**2)))
         span = float(np.ptp(measured))
         np.testing.assert_allclose(rms, fit["rmse_recorded_units"], rtol=1e-10)
@@ -48,6 +54,8 @@ def load_example(folder):
         "fit_report_sha256": hashlib.sha256(report_file.read_bytes()).hexdigest(),
         "fit_code_sha256": report["code_sha256"],
         "exporter_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "parameter_catalog_sha256": hashlib.sha256(Path(__file__).with_name("baseline_parameters.py").read_bytes()).hexdigest(),
+        "fit_mode": report.get("fit_mode", "exploratory; tuning records not supplied"),
         "source_rows": report["rows"], "unique_rows": report["unique_rows"],
         "voltage_unit": "recorded units; DAQ conversion not assumed",
         "residual_sign": "recorded minus fitted", "fitted_bin_mask": report["fitted_bin_mask"],
@@ -58,6 +66,10 @@ def load_example(folder):
                 "Timestamps and original CSV are not included. All 500 measured bins appear in the figure. "
                 "Fit agreement does not establish unique hardware parameters or electronic-noise variance.",
     }
+    chosen = report["fits"][selected]
+    if chosen.get("fit_mode") == "tuning-informed":
+        metadata["selected_fit"].update({key: chosen[key] for key in
+                                         ("fit_mode", "resolved_parameters", "setup", "free_parameters", "parameter_manifest")})
     return traces[selected], metadata
 
 
@@ -108,24 +120,29 @@ def draw_example(data, output):
 def example_html(metadata):
     m = metadata["summaries"][metadata["selected_trace_number"]-1]
     rms_millionths = m["rms_recorded_units"]*1e6
+    count = metadata["unique_rows"]
+    duplicates = metadata["source_rows"] - count
+    optimization = ("All inputs are fixed; no optimizer is run." if metadata["selected_fit"].get("free_parameters") == []
+                    else f'The fit uses {metadata["starts"]} starting points.')
     rows = "".join(f'<tr><td>Trace {s["trace_number"]}{" · shown" if s is m else ""}</td>'
                    f'<td>{s["rms_recorded_units"]*1e6:.3f}</td><td>{s["rms_percent_of_peak_to_peak"]:.4f}%</td></tr>'
                    for s in metadata["summaries"])
     return f'''<section id="example" class="chapter">
 <p class="eyebrow">Measured example · the physical circuit in action</p>
 <h2>See how closely the fit follows a real baseline.</h2>
-<p>The green points are an experimental sweep; the dashed rust curve is the saved physical Q-meter fit. Their agreement is close enough that the curves nearly coincide. The lower panel expands the residual scale so the remaining differences stay visible.</p>
+<p>The green points are an experimental sweep; the dashed rust curve is the saved physical Q-meter fit. Compare them in the upper panel; the lower panel expands the residual scale so the remaining differences stay visible.</p>
 <div class="results-panel baseline-example">
-<div class="panel-heading"><div><p class="eyebrow">Trace {m["trace_number"]} · median residual RMS among five distinct sweeps</p><h3>Measured data → circuit fit → residuals</h3></div><span class="badge">All {m["bins"]} bins</span></div>
+<div class="panel-heading"><div><p class="eyebrow">Trace {m["trace_number"]} · median residual RMS among {count} distinct sweeps</p><h3>Measured data → circuit fit → residuals</h3></div><span class="badge">All {m["bins"]} bins</span></div>
 <figure>
 <div class="baseline-figure-scroll" tabindex="0" role="region" aria-label="Measured baseline plot; scroll horizontally on narrow screens">
-<img class="baseline-fit-image" src="assets/baseline-example.svg" width="950" height="720" alt="Five hundred measured points closely overlap the physical Q-curve fit. A separately scaled residual panel retains endpoint deviations. Residual RMS is {rms_millionths:.3f} millionths of one recorded unit.">
+<img class="baseline-fit-image" src="assets/baseline-example.svg" width="950" height="720" alt="Five hundred measured points and the physical Q-curve fit. A separately scaled residual panel retains endpoint deviations. Residual RMS is {rms_millionths:.3f} millionths of one recorded unit.">
 </div>
 <figcaption class="chart-caption">Upper: measured points and fitted circuit response in the original recorded units. Lower: recorded minus fitted, in 10⁻⁶ recorded units—not microvolts. All bins, including both endpoints, enter the fit, plot, and statistics. On a narrow screen, scroll the plot or <a href="assets/baseline-example.svg">open it full-size</a>.</figcaption>
 </figure>
 <div class="baseline-fit-stats"><div><span>Residual RMS</span><strong>{rms_millionths:.3f} × 10⁻⁶</strong><small>recorded units</small></div><div><span>RMS / peak-to-peak range</span><strong>{m["rms_percent_of_peak_to_peak"]:.4f}%</strong><small>shape-fit error, not polarization error</small></div><div><span>Fitted samples</span><strong>{m["bins"]} / {m["bins"]}</strong><small>no smoothing or excluded bins</small></div></div>
-<p>This example is selected by the median whole-scan residual RMS, not the minimum. The largest absolute residual is {m["max_absolute_residual_recorded_units"]*1e6:.2f} × 10⁻⁶ recorded units; the endpoint deviations have not been cropped out. The fit uses 24 starting points and the same circuit implementation used by the generator.</p>
-<details><summary>Compare all five distinct measured sweeps</summary><div class="details-body"><div class="table-wrap"><table><caption>Whole-scan residuals; one exact duplicate omitted from the five distinct records</caption><thead><tr><th>Sweep</th><th>RMS (10⁻⁶ recorded units)</th><th>RMS / peak-to-peak</th></tr></thead><tbody>{rows}</tbody></table></div><p>Trace 1 has a localized residual near 212.91 MHz. The <a href="#diagnostics">diagnostics section</a> explains why such structure must not automatically be treated as electronic noise.</p></div></details>
+<p>This example is selected by the median whole-scan residual RMS, not the minimum. The largest absolute residual is {m["max_absolute_residual_recorded_units"]*1e6:.2f} × 10⁻⁶ recorded units; the endpoint deviations have not been cropped out. {optimization} It uses the same circuit implementation used by the generator.</p>
+{parameter_table_html(metadata)}
+<details><summary>Compare all {count} distinct measured sweeps</summary><div class="details-body"><div class="table-wrap"><table><caption>Whole-scan residuals; {duplicates} exact duplicate records omitted</caption><thead><tr><th>Sweep</th><th>RMS (10⁻⁶ recorded units)</th><th>RMS / peak-to-peak</th></tr></thead><tbody>{rows}</tbody></table></div><p>The <a href="#diagnostics">diagnostics section</a> explains why residual structure must not automatically be treated as electronic noise.</p></div></details>
 <p class="provenance">Computed directly from the saved measured-fit CSVs; the fitted curve is checked against its stored circuit and detector coefficients before export. <a href="assets/baseline-example.json">Download the figure provenance, fit settings, and statistics</a>. The original CSV and acquisition timestamps remain local. A close baseline fit does not uniquely measure each component or establish polarization accuracy.</p>
 </div>
 </section>'''
