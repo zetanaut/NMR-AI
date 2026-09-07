@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A student field guide to physics-based NMR data generation, efficient convolutional networks, and honest evaluation of polarization bias and precision.">
+  <meta name="theme-color" content="#173c3a">
+  <title>NMR / AI — From spectra to predictions</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <script defer src="assets/results.js"></script>
+  <script defer src="assets/tutorial.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to the tutorial</a>
+<header class="topbar">
+  <a class="brand" href="#start" aria-label="NMR AI home"><svg viewBox="0 0 40 28" aria-hidden="true"><path d="M0 14h8l3-5 4 15 5-24 5 19 4-5h11"/></svg>NMR <span>/</span> AI</a>
+  <span class="topbar-note">A student field guide</span>
+  <a class="repo-link" href="https://github.com/zetanaut/NMR-AI">View on GitHub <span aria-hidden="true">↗</span></a>
+</header>
+<div class="layout">
+<aside class="sidebar">
+  <p class="eyebrow">The learning path</p>
+  <nav aria-label="Tutorial chapters">
+    <a href="#start" class="active">Before you begin</a>
+    <a href="#generator"><span>01</span> Build the generator</a>
+    <a href="#network"><span>02</span> Design the network</a>
+    <a href="#training"><span>03</span> Train &amp; evaluate</a>
+    <a href="#error-lab" class="subnav">Bias &amp; precision lab</a>
+    <a href="#results" class="subnav">Our experiment notebook</a>
+    <a href="#assignment">Your investigation</a>
+    <a href="#resources">Code &amp; references</a>
+  </nav>
+  <div class="sidebar-target"><span class="eyebrow">Our research target</span><strong>0.05 <small>pp</small></strong><p>Absolute polarization error.<br>At 5% polarization, that is<br><b>1% relative error.</b></p><a href="#metrics">Understand the units →</a></div>
+  <p class="sidebar-footer">Based on the RGC NMR project<br>Research snapshot · September 2026</p>
+</aside>
+<main id="main">
+<section id="start" class="hero">
+  <p class="eyebrow"><span class="status-dot"></span> Physics → simulation → machine learning</p>
+  <h1>From a measured spectrum to a <em>trusted prediction.</em></h1>
+  <p class="lede">Learn to extract vector polarization from nuclear magnetic resonance spectra. Build realistic training data, choose a capable but efficient network, and measure what its predictions get right—and where they fail.</p>
+  <div class="hero-actions"><a class="button" href="#generator">Start with the data <span aria-hidden="true">↓</span></a><a class="text-link" href="#setup">Set up your workspace →</a></div>
+  <div class="route" aria-label="Three phases and their deliverables">
+    <a href="#generator"><span class="route-number">01</span><strong>Simulate</strong><span>A defensible dataset</span></a>
+    <a href="#network"><span class="route-number">02</span><strong>Design</strong><span>An efficient estimator</span></a>
+    <a href="#training"><span class="route-number">03</span><strong>Validate</strong><span>An honest error budget</span></a>
+  </div>
+  <div class="intro-grid"><div><h2>What you are measuring</h2><p>A polarized target has unequal populations of nuclear spin states. Its NMR spectrum contains information about that imbalance. We train a network to map a measured voltage sweep to the vector polarization, <i>P</i>.</p><p>For a spin-1 system, <i>P = n<sub>+</sub> − n<sub>−</sub></i>, where the populations sum to one. Our labels are fractions: <code>P = 0.05</code> means <strong>5% polarization</strong>.</p></div><div class="note"><h3>Who this is for</h3><p>You know basic Python, arrays, and introductory physics. You can start without prior neural-network experience. The reading is self-contained; the coding labs use Python, NumPy, and PyTorch.</p><p>These three <em>learning phases</em> all concern vector extraction. In the research notes, “Phase B” instead means tensor extraction; that extension and RF manipulation are outside this tutorial.</p></div></div>
+  <details id="setup" class="setup"><summary>Set up the two repositories and Python environment</summary><div class="details-body"><p>The reading, charts, and standalone examples are available here. The full coding labs also require instructor-provided access to the <code>gen-NMR</code> research repository or an equivalent source bundle. Keep the tutorial and research code next to one another. Once you have access, run the following in a parent directory where neither clone exists yet; reuse your existing checkouts otherwise.</p>
+<pre><code>git clone https://github.com/zetanaut/NMR-AI.git
+git clone https://github.com/zetanaut/gen-NMR.git
+cd gen-NMR
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -c "import torch; print(torch.__version__); print('CUDA:', torch.cuda.is_available())"</code></pre>
+  <p>Use Python 3.10 or newer. On Windows, activation is <code>.venv\Scripts\activate</code>. A CPU is enough to inspect data and run a small example; larger training runs benefit from a GPU. Use the <a href="https://pytorch.org/get-started/locally/">official PyTorch installer</a> for your hardware.</p><p>Unless a block says otherwise, run all lab commands from <code>gen-NMR/</code>. The tutorial helpers are in <code>../NMR-AI/tools/</code>. The source snapshot for the recorded experiments is <code>496f70a</code>; verify that your research checkout includes it. If a flag below is missing, obtain that revision from your instructor.</p><p>The large Parquet datasets and trained weights are not committed. Generate your own data, or obtain the matching artifacts from your instructor. The charts on this page include small, published aggregates and work without those files.</p></div></details>
+</section>
+
+<section id="generator" class="chapter">
+  <div class="chapter-label"><span>01</span><p>Phase one · Data generation</p></div>
+  <h2>A network can only learn the experiment you give it.</h2>
+  <p class="lede">The generator is a model of the measurement process. Its job is to produce realistic spectra with known answers, including the variations a trained model will encounter later.</p>
+  <div class="equation">V(f) = S(f; P, θ<sub>line</sub>, cc) × G(f; θ<sub>gain</sub>) + B(f; θ<sub>circuit</sub>) + ε(f)</div>
+  <p>Here <i>S</i> is the spin-dependent lineshape, <i>G</i> is the Q-meter gain, <i>B</i> is the circuit baseline, and <i>ε</i> is noise. The symbols <i>θ</i> collect the extra parameters—widths, centers, tuning, and so on—that affect a spectrum even when <i>P</i> stays the same. These are often called <em>nuisance parameters</em>.</p>
+  <div class="results-panel"><div class="panel-heading"><div><p class="eyebrow">Look inside a generated spectrum</p><label class="select-label" for="spectrum-select">View</label><select id="spectrum-select"><option value="raw">Raw sweep + true baseline</option><option value="residual">Signal + noise, baseline removed</option><option value="noise">Noise only</option></select></div><span class="badge">Simulator output</span></div><svg id="spectrum-chart" class="chart" viewBox="0 0 850 290" role="img" aria-label="An example from the RGC simulator showing the components of a voltage spectrum"></svg><p class="chart-caption" id="spectrum-caption">One generated example at P = 5%, with cc = −1.39 and Gaussian noise SD 2.7e−5. Vertical scales change between views.</p><p class="provenance">This decomposition uses the simulator's true baseline to explain the components. Experimental extraction must estimate its baseline; the network's residual input instead uses a cubic wing fit. The synthetic trace is included in the page snapshot.</p></div>
+  <h3>1. Match the generator to experimental data</h3>
+  <p>Begin with representative real scans across acquisition periods, tuning conditions, and polarization values. Check the frequency grid, voltage units, baseline convention, and calibration. Fit the circuit response and spectral shape, then inspect overlays and residuals. A visually plausible average trace does not establish that the generator covers the real experiment.</p>
+  <p>Our code uses fitted Dulya lineshapes and Q-meter baselines stored in YAML pools. <code>rgc_ranges.py</code> samples those configurations; <code>signal_generator_rgc.py</code> builds 512 voltage bins from 32.3 to 33.1 MHz. The fitting scripts are in <code>data_creation/fitting/</code>. Their input paths and fit settings must be adapted to your experimental files.</p>
+  <div class="checklist"><h4>Before generating thousands of events</h4><ul><li>Compare peak positions, widths, asymmetry, amplitudes, and baseline curvature.</li><li>Inspect fit residuals against frequency and operating conditions; structured residuals can indicate missing physics.</li><li>Hold out acquisition periods for later checks. Reusing a scan to tune the simulator and claim final accuracy weakens the claim.</li></ul></div>
+  <h3>2. Learn the noise, too</h3>
+  <p>Start with baseline-only or repeated scans under stable conditions. Estimate the residual mean and standard deviation, but also inspect autocorrelation, the power spectrum, tails, and how noise changes with frequency or time. For two independent repeats with the same underlying signal, their difference divided by √2 has the single-scan noise variance. Drift or correlated repeats violate that assumption.</p>
+  <div class="two-up"><div><h4>What is implemented</h4><p>Independent, zero-mean Gaussian noise with one standard deviation per generation run:</p><div class="equation small">ε<sub>j</sub> ∼ Normal(0, σ<sub>noise</sub>²)</div><p><code>--noise_level 2.7e-5</code> is the historical example in the generator’s voltage units. It is not a universal experimental constant. Here SNR is peak absolute signal divided by the realized noise standard deviation.</p></div><div><h4>What students should investigate</h4><p>If residuals show correlated electronics noise, drift, interference, or heavy tails, a scalar Gaussian model will miss them. Compare measured and simulated residual distributions and correlations before extending <code>_noise()</code>.</p><p>Estimate noise settings using development data. Keep the experimental evaluation set separate.</p></div></div>
+  <details><summary>Small Python experiment: equal noise width, different correlation</summary><div class="details-body"><p>This standalone teaching example produces two noise models with similar marginal standard deviation. It does not change the research generator.</p>
+<pre><code>import numpy as np
+import matplotlib.pyplot as plt
+
+rng = np.random.default_rng(42)
+sigma, rho = 2.7e-5, 0.85
+white = rng.normal(0, sigma, 512)
+correlated = np.empty(512)
+correlated[0] = rng.normal(0, sigma)
+for j in range(1, 512):
+    correlated[j] = (rho * correlated[j-1]
+                     + rng.normal(0, sigma * np.sqrt(1-rho**2)))
+for name, noise in [('white', white), ('correlated', correlated)]:
+    lag1 = np.corrcoef(noise[:-1], noise[1:])[0, 1]
+    print(name, 'SD:', noise.std(), 'lag-1 correlation:', lag1)
+    plt.plot(noise, label=name, alpha=0.8)
+plt.xlabel('Frequency bin')
+plt.ylabel('Noise voltage')
+plt.legend()
+plt.show()</code></pre><p>Explain why matching only the histogram or SNR cannot distinguish these cases. The AR(1) process above is an illustration, not a claim about measured RGC noise.</p></div></details>
+  <h3>3. Vary parameters within physical constraints</h3>
+  <p>Audit <em>every</em> encoded parameter: what is known, what varies, what is fixed, and which parameters are correlated? Robust training needs coverage of plausible combinations. Independently randomizing every knob can create impossible spectra and destroy real correlations.</p>
+  <div class="table-wrap"><table><caption>Variation in the current RGC generator</caption><thead><tr><th>Quantity</th><th>How it varies now</th><th>What to check</th></tr></thead><tbody>
+  <tr><td>Vector polarization <i>P</i></td><td>Uniform over an explicit range</td><td>Include the signs and small magnitudes relevant to deployment.</td></tr>
+  <tr><td>Lineshape and circuit parameters</td><td>Sample fitted configurations together</td><td>Some fitted values are fixed; sampling a pool does not vary every parameter.</td></tr>
+  <tr><td>Peak center</td><td>Optional uniform jitter about each fit</td><td>Match observed drift; keep peaks inside the sweep.</td></tr>
+  <tr><td>Noise</td><td>A new Gaussian realization per spectrum</td><td>Noise width is fixed within a CLI run; correlated noise is not implemented.</td></tr>
+  <tr><td>Calibration <code>cc</code></td><td>Empirical value or a known common override</td><td>Provide known calibration when it varies.</td></tr>
+  </tbody></table></div>
+  <aside class="callout"><span class="eyebrow">A lesson from our experiments</span><h4>More variability can reveal missing information.</h4><p>The simulator’s amplitude scale contains <code>P / cc</code>. Letting <code>cc</code> vary without supplying it leaves a polarization–calibration ambiguity. Any remaining shape information did not rescue our spectrum-only benchmark. We therefore use a known common <code>cc</code> for controlled comparisons, or pass measured <code>cc</code> to a calibrated network. A larger network cannot manufacture a missing calibration measurement.</p></aside>
+  <h3>4. Produce enough data—and enough distinct configurations</h3>
+  <p>Start with a small pipeline check. Then increase both the number of noise realizations and the number of distinct physical configurations. A million spectra generated from a handful of configurations are not a million independent examples of experimental variability.</p>
+  <p class="code-label">Lab 01 · 2,000-event pipeline check · from gen-NMR/</p>
+<pre><code>python data_creation/Create_Training_Data_RGC.py \
+  --num_samples 2000 --label_mode vector \
+  --p_min -0.25 --p_max 0.25 \
+  --add_noise 1 --noise_level 2.7e-5 \
+  --fit_pool restricted --cc_override -1.39 \
+  --center_jitter_mhz 0.02 --seed 42 \
+  --output_dir data_creation/Training_Data_tutorial_smoke</code></pre>
+  <p>This creates <code>Sample_vector.parquet</code>: signal columns <code>0</code>–<code>511</code>, targets, and metadata including <code>fit_event_id</code>. The extra Q/population metadata does not make this an independent-tensor training exercise.</p>
+  <details><summary>Scale up to a 100,000-event broad-pool pilot</summary><div class="details-body"><p>Run this only after the small pipeline works. It intentionally presents a harder distribution than the restricted-pool pilot. The deterministic <code>fit_pool_size</code> selects the first configurations in sorted source/event order; it is not a random representative subset.</p>
+<pre><code>python data_creation/Create_Training_Data_RGC.py \
+  --num_samples 100000 --label_mode vector \
+  --p_min -0.25 --p_max 0.25 \
+  --add_noise 1 --noise_level 2.7e-5 \
+  --fit_pool full --fit_pool_size 2000 --cc_override -1.39 \
+  --center_jitter_mhz 0.02 --seed 42 \
+  --output_dir data_creation/Training_Data_tutorial_broad</code></pre><p>Expect hundreds of MB for a 100k dataset; runtime depends on hardware. For larger jobs, generate shards with distinct seeds and <code>--job_id</code> values, then pass all shards to <code>--data</code>. Use the same pool definition across shards so configuration IDs remain meaningful. A new seed alone does not guarantee new physical configurations.</p></div></details>
+  <div class="checkpoint"><span>Phase 01 deliverable</span><p>A documented generator with experimental comparisons, a noise justification, a parameter-variation inventory, and a dataset with provenance and configuration IDs.</p></div>
+</section>
+
+<section id="network" class="chapter">
+  <div class="chapter-label"><span>02</span><p>Phase two · Network design</p></div>
+  <h2>Enough capacity to learn.<br>Small enough to use.</h2>
+  <p class="lede">Choose the simplest model that captures the relevant spectral structure and meets your measured inference-time budget. Parameter count alone tells you neither.</p>
+  <p>A neural network is a sequence of adjustable transformations. Training chooses its weights so that predicted <i>P</i> agrees with known labels. A deep neural network (DNN) has multiple layers; a convolutional neural network (CNN) is a DNN whose filters share weights across positions.</p>
+  <p>For a one-dimensional voltage sweep, a 1D CNN is a natural candidate. Nearby bins jointly describe peaks and shoulders, while broader patterns describe the baseline. Shared filters can detect a feature in different parts of a sweep. This helps with shifts, but does not make the full estimator perfectly shift-invariant.</p>
+  <div class="table-wrap"><table><caption>Models worth comparing</caption><thead><tr><th>Candidate</th><th>What it contributes</th><th>Tradeoff to measure</th></tr></thead><tbody><tr><td>Linear / analytic estimator</td><td>A simple reference and physical interpretability</td><td>How much do baseline and shape assumptions limit accuracy?</td></tr><tr><td>Dense MLP</td><td>Global interactions between input bins</td><td>Does it need more examples to learn shifts and local structure?</td></tr><tr><td>Compact 1D CNN</td><td>Local filters shared across the sweep</td><td>Is its receptive field large enough?</td></tr><tr><td>Physics-guided multiscale CNN</td><td>Several spectral scales plus explicit summary features</td><td>Does its validation gain justify its measured cost?</td></tr></tbody></table></div>
+  <h3>Inside the network we actually built</h3>
+  <details><summary>Code your first small 1D CNN</summary><div class="details-body"><p>This standalone example shows the essential PyTorch structure. <code>__init__</code> defines the layers; <code>forward</code> defines how a batch flows through them. Two input channels correspond to raw and detrended spectra. Start here before reading the larger research model.</p>
+<pre><code>import torch
+from torch import nn
+
+class SmallPolarizationCNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.encoder = nn.Sequential(
+            nn.Conv1d(2, 16, kernel_size=7, padding=3),
+            nn.GELU(),
+            nn.AvgPool1d(2),
+            nn.Conv1d(16, 32, kernel_size=7, padding=3),
+            nn.GELU(),
+            nn.AdaptiveAvgPool1d(1),
+        )
+        self.head = nn.Linear(32, 1)
+
+    def forward(self, x):
+        features = self.encoder(x).squeeze(-1)
+        return self.head(features)
+
+model = SmallPolarizationCNN()
+example_batch = torch.randn(8, 2, 512)
+print(model(example_batch).shape)  # torch.Size([8, 1])
+print(sum(p.numel() for p in model.parameters()))</code></pre><p>The numbers are untrained outputs, not polarization estimates you can use. This teaching model is not a selectable architecture in the existing trainer. To integrate a new architecture, update both training and checkpoint loading, keep identical preprocessing and splits, and compare validation error and latency. A sophisticated model earns its extra layers through those measurements.</p></div></details>
+  <p>The vector trainer uses <code>JointRGCNet(n_outputs=1)</code>, despite the shared class name. Preprocessing builds a raw channel and a residual channel after subtracting a cubic fit to the outer wings. The code selects <code>|x| ≥ 0.65</code> on a normalized axis: about 17.5% at each end.</p>
+  <figure class="architecture"><div class="arch-input">512 measured voltage bins</div><div class="arch-arrow" aria-hidden="true">↓</div><div class="arch-input">Raw + wing-detrended channels · shape (batch, 2, 512)</div><div class="arch-branches"><div><span class="eyebrow">Learned spectral branch</span><strong>Filters of width 5, 15, 31</strong><span>Dilated residual blocks · channel attention</span><span>Mean, maximum &amp; SD pooling</span><strong>Small dense correction head</strong></div><div><span class="eyebrow">Physics feature branch</span><strong>25 spectral summaries</strong><span>Centered moments · amplitudes · spread</span><span>Calibrated on training data only</span><strong>Frozen linear estimate</strong></div></div><div class="arch-arrow" aria-hidden="true">↓ &nbsp; add the two estimates &nbsp; ↓</div><div class="arch-output">Predicted vector polarization P̂</div><figcaption>The default physics-guided model. “Residual” in a residual block means a skip connection; the input residual channel is a baseline-subtracted spectrum.</figcaption></figure>
+  <p>Different filter widths see different spectral scales. Dilation expands the context without proportionally increasing weights. Pooling compresses the frequency axis before the dense head. The physics estimate gives the CNN a useful starting point, and the correction head learns what the summaries miss.</p>
+  <div class="two-up"><div class="note"><h4>Keep physical information</h4><p>Feature means and standard deviations are fitted on the training partition and reused later. Independently rescaling every spectrum to unit amplitude could erase the amplitude information needed to recover polarization.</p></div><div class="note"><h4>Keep inference measurable</h4><p>The vector multiscale model has <strong>377,651 parameters</strong>; the legacy CNN has <strong>131,169</strong>. Both counts include all weights, including frozen ones. Neither count is a latency measurement.</p></div></div>
+  <h3>Lab 02 · Measure the cost of your architecture</h3>
+  <p>Decide the required response time and target hardware first. Measure batch size one for a live scan, and a larger batch for offline throughput. The helper uses PyTorch’s benchmark timer, evaluation mode, and disabled gradient tracking.</p>
+<pre><code>python ../NMR-AI/tools/benchmark_network.py \
+  --architecture physics_multiscale --device cpu --batch-size 1
+python ../NMR-AI/tools/benchmark_network.py \
+  --architecture legacy --device cpu --batch-size 1</code></pre>
+  <p>The helper times randomly initialized versions of the exact architectures. It measures forward-pass cost, not accuracy. It excludes file loading, baseline preprocessing, transfers, and startup; measure those too before making a deployment claim. Divide batch time by batch size to report throughput cost per event, not single-event latency. See the <a href="https://docs.pytorch.org/tutorials/recipes/recipes/benchmark.html">PyTorch benchmarking guide</a>.</p>
+  <details><summary>When calibration varies between events</summary><div class="details-body"><p>For a dataset with a known <code>cc</code> column, train with <code>--cc-column cc</code>. This selects a separate calibrated architecture, multiplies the residual channel by the known calibration, and supplies a standardized calibration feature. At inference, provide the same column or <code>--cc-value</code>. Obtain this value from calibration, never from the answer you are trying to predict.</p><p>This path is implemented, but the recorded broad-pool calibration experiments did not reach the accuracy target. Treat it as a controlled experiment.</p></div></details>
+  <div class="checkpoint"><span>Phase 02 deliverable</span><p>An architecture diagram, a fair comparison against a simpler model, and measured latency/throughput on the intended hardware—with a stated timing scope.</p></div>
+</section>
+
+<section id="training" class="chapter">
+  <div class="chapter-label"><span>03</span><p>Phase three · Training &amp; evaluation</p></div>
+  <h2>Learn when to stop.<br>Then learn what the errors mean.</h2>
+  <p class="lede">Training reduces a loss. Validation chooses a model. A held-out evaluation measures how that choice generalizes. These are different jobs.</p>
+  <h3>Split by the source of variation</h3>
+  <p>Several simulated spectra can share the same fitted experimental configuration. If those near-relatives appear in both training and test data, a random row split can give an optimistic estimate of performance on unfamiliar configurations.</p>
+  <div class="split-diagram" aria-label="80 percent training, 10 percent validation, 10 percent test"><div><strong>80%</strong><span>Train weights &amp; scalers</span></div><div><strong>10%</strong><span>Choose checkpoint</span></div><div><strong>10%</strong><span>Evaluate</span></div></div>
+  <p>Pass <code>--group-column fit_event_id</code> to keep each configuration entirely in one partition. The 80/10/10 proportions apply to groups; row proportions can differ. Check <code>split.json</code>. For stronger tests, also hold out acquisition periods or parameter families. A group split cannot test a missing noise process or repair an unrealistic simulator.</p>
+  <h3>Match the training objective to the scientific target</h3>
+  <div class="equation">L = mean [ (P̂ − P) / s<sub>train</sub> ]²</div>
+  <p>The default is mean squared error normalized by the training-label standard deviation <i>s<sub>train</sub></i>. For a single P output, this constant rescaling preserves the absolute-MSE objective. A relative-error loss weights small polarizations more strongly, which can conflict with an absolute-error target. In our pilot, switching from relative loss to absolute MSE improved held-out RMSE from about <code>0.000851</code> to <code>0.000661</code>.</p>
+  <p class="code-label">Lab 03 · Train on the dataset from Lab 01</p>
+<pre><code>python ml/train_rgc_vector.py \
+  --data data_creation/Training_Data_tutorial_smoke/Sample_vector.parquet \
+  --output-dir ml/Models/tutorial_smoke \
+  --group-column fit_event_id --epochs 20 --patience 8 \
+  --batch-size 256 --max-shift-bins 0 \
+  --relative-loss-weight 0 --seed 42</code></pre>
+  <p>This small run checks the pipeline; it is not expected to reproduce the 100k-event result. For a serious pilot, use the larger dataset, a suitable batch size, and a larger epoch cap. Change one factor at a time. The recorded restricted-pool checkpoint used shift augmentation; the strongest broad-pool comparison disabled it.</p>
+  <h3>Train long enough without chasing the training set</h3>
+  <p>An epoch is one pass through the training data. A batch is the subset used for one optimizer update. The learning rate controls the step size. Our trainer uses AdamW with weight decay, dropout in the correction head, and a scheduler that reduces the learning rate when validation loss stalls.</p>
+  <p>Track both curves. Falling training loss with persistently rising validation loss suggests overfitting. If both remain high, consider underfitting, optimization trouble, or missing information. Early stopping limits training after a specified number of epochs without a new best validation value; it does not prove the model is correct. The trainer restores and saves the best validation checkpoint, not simply the last epoch.</p>
+  <aside class="note"><h4>Read the curves in context</h4><p>Training includes dropout and may include augmentation; validation does not. Training loss can therefore exceed validation loss. For default single-output absolute MSE, <code>sqrt(val_loss) × target_scale</code> converts validation loss back to RMSE in fractional P. This conversion is not valid unchanged for the optional weighted or mixed losses.</p></aside>
+  <p>The trainer saves <code>model.pt</code>, <code>scaler.npz</code>, <code>config.json</code>, <code>split.json</code>, <code>history.csv</code>, <code>metrics.json</code>, <code>polarization_bins.json</code>, and <code>test_predictions.csv</code>. Keep them together. This version writes the completed run’s checkpoint at the end; an interrupted run may leave no checkpoint.</p>
+
+  <div id="metrics" class="subsection">
+  <h3>Accuracy and precision need separate numbers</h3>
+  <p>Define the residual as <strong>prediction minus truth</strong>: <i>e<sub>i</sub> = P̂<sub>i</sub> − P<sub>i</sub></i>. Bias measures a systematic offset; width measures the spread around that offset. In this tutorial we use bias to quantify systematic accuracy and residual width to quantify precision. Accuracy more broadly concerns closeness to truth, so also report total error.</p>
+  <div class="metric-definitions"><div><span class="eyebrow">Bias · systematic offset</span><div class="formula">b = mean(e)</div><p>A positive value means the model overestimates P on average.</p></div><div><span class="eyebrow">Width · precision</span><div class="formula">σ = √mean[(e − b)²]</div><p>Residual standard deviation, not the standard error of the mean.</p></div><div><span class="eyebrow">RMSE · total error</span><div class="formula">R = √mean(e²)</div><p>Combines offset and spread. It can be large for either reason.</p></div></div>
+  <div class="equation">RMSE² = bias² + width²</div>
+  <p>This empirical identity is exact when width uses <code>ddof=0</code>, as the tutorial helper does. It does not require Gaussian residuals. Inspect a histogram, the 95th percentile of absolute errors, and performance by polarization and noise level: one width can hide outliers and systematic trends.</p>
+  <h3>Put the numbers on a polarization scale</h3>
+  <p>Absolute metrics are in fractional P. Multiply by 100 to obtain <strong>percentage points (pp)</strong>. To express an error relative to a chosen nonzero reference <i>P₀</i>, divide the fractional error by <i>|P₀|</i> and multiply by 100.</p>
+  <div class="equation small">0.0005 fractional P = 0.05 pp<br>100 × 0.0005 / 0.05 = 1% relative error at P₀ = 5%</div>
+  <p>The same absolute error is 5% relative at P₀ = 1%, and 0.25% relative at P₀ = 20%. Relative error is undefined at zero. A denominator floor can stabilize a diagnostic, but the result depends on that convention.</p>
+  </div>
+
+  <div id="error-lab" class="lab-panel">
+    <div class="panel-heading"><div><p class="eyebrow">Interactive lab · idealized residuals</p><h3>Move the bias. Change the width.</h3></div><span class="badge">Explore</span></div>
+    <p>These controls describe a hypothetical Gaussian error distribution. They are a teaching model, not fitted experimental results. Watch how offset and spread combine into RMSE.</p>
+    <div class="lab-grid"><div class="controls">
+      <label for="bias">Bias <output id="bias-value" for="bias">+0.020 pp</output></label><input id="bias" type="range" min="-0.15" max="0.15" step="0.001" value="0.02">
+      <label for="width">Residual width <output id="width-value" for="width">0.050 pp</output></label><input id="width" type="range" min="0.005" max="0.15" step="0.001" value="0.05">
+      <label for="p0">Reference polarization P₀ <output id="p0-value" for="p0">5%</output></label><input id="p0" type="range" min="0" max="25" step="0.1" value="5">
+      <button id="reset-lab" type="button" class="secondary-button">Reset example</button>
+    </div><div><svg id="error-chart" class="chart" viewBox="0 0 680 290" role="img" aria-label="Illustrative residual density; its center is bias and its spread is width"></svg><p class="chart-caption">Residual e = P̂ − P, in percentage points. Shading marks the ±0.05 pp absolute-error band; it is not a per-event guarantee.</p></div></div>
+    <div class="lab-readout" aria-live="polite" aria-atomic="true"><div><span>Absolute RMSE</span><strong id="lab-rmse">0.0539 pp</strong></div><div><span>Relative bias</span><strong id="lab-relative-bias">0.400%</strong></div><div><span>Relative width</span><strong id="lab-relative-width">1.000%</strong></div><div><span>Relative RMSE</span><strong id="lab-relative-rmse">1.077%</strong></div></div><p id="gate-status" class="gate-status">Above the 0.05 pp RMSE target.</p>
+    <details><summary>Think it through: can a narrow distribution still be inaccurate?</summary><div class="details-body"><p>Yes. Set width to 0.010 pp and bias to 0.100 pp. Predictions cluster tightly, but far from truth. Conversely, zero bias with a broad width gives an unbiased but imprecise estimator. To reach the RMSE target, the combination of both contributions must fit the error budget.</p></div></details>
+  </div>
+
+  <h3>Measure performance near the polarization you care about</h3>
+  <p>Converting a pooled RMSE to “relative error at 5%” is only a change of scale. To claim actual performance <em>near 5%</em>, select held-out events in a stated signed P band—for example, <code>0.045 ≤ P &lt; 0.055</code>—then recompute bias, width, and RMSE. Positive and negative P can have different biases, so inspect them separately before combining signs.</p>
+<pre><code>python ../NMR-AI/tools/analyze_predictions.py \
+  ml/Models/tutorial_smoke/test_predictions.csv \
+  --p0 0.05 --half-width 0.005</code></pre>
+  <p>The helper reports pooled and local-band metrics, sample counts, MAE, and the 95th-percentile absolute error. A tiny band may contain too few events in a smoke run; an empty band returns null metrics, not zero error. Width is not a calibrated uncertainty interval for an individual prediction. For error bars on your reported metrics, resample independent configurations or use repeated independent evaluations; treating related rows as independent understates uncertainty.</p>
+  <details><summary>Run inference on another Parquet file</summary><div class="details-body"><p>Once you have a separate file with the same 512 signal columns:</p>
+<pre><code>python ml/predict_rgc_joint.py \
+  --model-dir ml/Models/tutorial_smoke \
+  --data path/to/new_spectra.parquet \
+  --target-mode vector --output predictions.csv</code></pre><p>Replace the input path with your file. The script reuses saved preprocessing statistics. If truth labels are present, it also writes <code>inference_metrics.json</code> in the model directory. Running inference on a full training source file is not a held-out accuracy test; use the trainer’s <code>test_predictions.csv</code> for its grouped evaluation.</p><p>Real JSON-lines scans need a separate conversion and checks of grid, voltage convention, and calibration. The prediction script expects Parquet; it does not perform that experimental alignment for you.</p></div></details>
+  <div class="checkpoint"><span>Phase 03 deliverable</span><p>A saved model with its preprocessing and split, a training/validation curve, and held-out bias, width, RMSE, tails, and relative errors in stated polarization bands.</p></div>
+</section>
+
+<section id="results" class="chapter">
+  <p class="eyebrow">The experiment notebook · actual saved runs</p>
+  <h2>What our models have taught us so far.</h2>
+  <p class="lede">The pipeline works. The precision target is still open. Broader physical variability exposed limitations that a restricted pilot did not.</p>
+  <div class="table-wrap"><table><caption>Held-out synthetic P results · fractional units · 100,000 generated events per run</caption><thead><tr><th>Experiment</th><th>Test events</th><th>Bias</th><th>Width</th><th>RMSE</th></tr></thead><tbody id="results-table"><tr><td>Restricted pool, shift augmentation</td><td>10,072</td><td>−0.0000240</td><td>≈0.000661</td><td>0.000661</td></tr><tr><td>Broad pool, fixed cc, no shifts</td><td>10,051</td><td>+0.0000391</td><td>≈0.001637</td><td>0.001637</td></tr><tr><td>Restricted → broad fine-tuning</td><td>10,051</td><td>+0.0000960</td><td>≈0.001931</td><td>0.001934</td></tr></tbody></table></div>
+  <div class="results-panel"><div class="panel-heading"><div><p class="eyebrow">Read a real run</p><label for="run-select" class="select-label">Experiment</label><select id="run-select"><option value="restricted">Restricted pool · shift augmentation</option><option value="broad">Broad pool · fixed cc · no shifts</option><option value="curriculum">Restricted → broad fine-tuning</option></select></div><span class="badge">Measured</span></div>
+    <div class="two-up charts"><figure><h3>Training &amp; validation</h3><svg id="history-chart" class="chart" viewBox="0 0 620 300" role="img" aria-label="Saved normalized training and validation losses by epoch"></svg><figcaption id="history-caption">Training loss and validation loss; the best validation epoch selects the checkpoint.</figcaption></figure><figure><h3>Held-out residuals</h3><svg id="residual-chart" class="chart" viewBox="0 0 620 300" role="img" aria-label="Histogram of actual held-out prediction residuals"></svg><figcaption id="residual-caption">Residuals in percentage points. Full metrics include all events, including tails outside the plot.</figcaption></figure></div>
+    <div class="local-result" id="local-result" aria-live="polite"></div>
+    <p class="provenance">Computed from saved <code>test_predictions.csv</code>, <code>history.csv</code>, and <code>split.json</code>; source revision <code>496f70a</code>. The <a href="assets/results.js">downloadable snapshot</a> records the run configurations and prediction-file hashes. CSV rounding can cause tiny differences from the original float32 metrics.</p>
+  </div>
+  <div class="two-up"><div><h3>Interpret the comparisons carefully</h3><p>The restricted-pool RMSE corresponds to about 1.32% of a 5% reference polarization. That pooled conversion alone does not establish 1.32% performance at P = 5%; the local-band result above answers a different question.</p><p>The broad-pool runs use 2,000 fitted configurations. The no-shift multiscale run improved over the shifted broad-pool run (RMSE 0.001989); a legacy CNN was worse (0.002321). Fine-tuning from the restricted pool did not beat the broad-pool no-shift result. The restricted and broad rows describe different distributions, not a pure architecture comparison.</p></div><div><h3>Keep the research claim honest</h3><p>These are development experiments on pseudo-experiments. Repeatedly comparing test scores can influence design choices; freeze the final method and reserve a fresh evaluation before claiming final generalization.</p><p>The 0.0005 RMSE target is not met. An oracle matched filter using the simulator’s true baseline and gain reached about 0.000518 in a diagnostic, but those hidden quantities are not available to a spectrum-only estimator. Held-out experimental scans with independently established reference labels remain essential.</p></div></div>
+</section>
+
+<section id="assignment" class="chapter assignment">
+  <p class="eyebrow">Bring the three phases together</p><h2>Your investigation.</h2><p class="lede">Make one defensible improvement and explain the evidence.</p>
+  <ol class="assignment-list"><li><strong>Write your measurement contract.</strong> State the P range, known calibration, expected noise and drift, absolute-error target, reference polarization, and latency budget.</li><li><strong>Audit the generator.</strong> Identify what is matched to data, what varies, and what is still assumed. Compare at least two noise diagnostics.</li><li><strong>Run one controlled comparison.</strong> Compare the two CNNs or turn shift augmentation on/off. Use the same dataset and grouped split, record settings, and select using validation results.</li><li><strong>Build an error budget.</strong> Report bias, residual width, RMSE, 95th-percentile absolute error, and event counts—pooled and in a signed P band. Convert to both pp and relative percent.</li><li><strong>Check the cost and limits.</strong> Report forward-pass and end-to-end timing on your hardware. Explain which unseen conditions your test does and does not cover.</li></ol>
+  <details><summary>Discussion: does generating ten times more data guarantee improvement?</summary><div class="details-body"><p>No. Additional noise realizations help sample a fixed simulator distribution, but do not fix wrong physics, missing calibration, or uncovered configurations. Compare validation performance as you increase independent configuration coverage and event count separately. Keep the final evaluation frozen.</p></div></details>
+  <details><summary>Discussion: how do you tell overfitting from missing information?</summary><div class="details-body"><p>A widening training/validation gap suggests a generalization problem. Large errors on both can come from limited capacity, optimization, or an underdetermined input. Controlled tests—fixed calibration, reduced nuisance variation, or simulator-known quantities used only as diagnostics—help separate these explanations.</p></div></details>
+</section>
+
+<section id="resources" class="chapter resources">
+  <p class="eyebrow">Keep exploring</p><h2>The code behind the lessons.</h2>
+  <div class="resource-grid"><a href="https://github.com/zetanaut/gen-NMR/blob/main/data_creation/signal_generator_rgc.py"><span>01 / Generator</span><strong>How a spectrum is assembled ↗</strong><small>signal_generator_rgc.py · rgc_ranges.py</small></a><a href="https://github.com/zetanaut/gen-NMR/blob/main/ml/train_rgc_joint.py"><span>02 / Architecture</span><strong>Read the actual network ↗</strong><small>JointRGCNet · make_features</small></a><a href="https://github.com/zetanaut/gen-NMR/blob/main/ml/train_rgc_vector.py"><span>03 / Training</span><strong>Follow the vector training loop ↗</strong><small>Splits · optimization · saved outputs</small></a><a href="https://github.com/zetanaut/NMR-AI/tree/main/tools"><span>Student tools</span><strong>Analyze errors &amp; benchmark ↗</strong><small>Small, readable Python lab helpers</small></a></div>
+  <p>The <a href="https://github.com/zetanaut/gen-NMR/blob/main/docs/RGC_NVIDIA_HANDOFF.md">research handoff</a> records the development history. Some older prose predates later runs; this page takes counts and bias/width from the saved prediction files. For framework details, see <a href="https://docs.pytorch.org/tutorials/beginner/basics/optimization_tutorial.html">PyTorch’s optimization tutorial</a> and <a href="https://docs.pytorch.org/tutorials/recipes/recipes/benchmark.html">benchmarking guide</a>.</p>
+  <p class="closing-note">Good predictions begin with a credible model of the measurement—and earn trust through evaluation.</p>
+</section>
+<footer><a class="brand" href="#start">NMR <span>/</span> AI</a><p>A student tutorial built from the RGC NMR research pipeline.<br>Vector polarization · simulation results · September 2026</p><button id="print-page" class="secondary-button" type="button">Print / save PDF</button></footer>
+</main>
+</div>
+<div id="copy-status" class="sr-only" role="status"></div>
+<noscript><div class="noscript">The lessons, code examples, and summary table work without JavaScript. Enable it for interactive plots and copy buttons.</div></noscript>
+</body>
+</html>
