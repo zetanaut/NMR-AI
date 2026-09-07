@@ -7,6 +7,7 @@ report every repair, and leave the source file untouched. Do not guess a grid.
 import csv
 import hashlib
 import io
+import json
 from pathlib import Path
 import re
 
@@ -14,6 +15,52 @@ import numpy as np
 
 NUMBER = re.compile(r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\Z")
 DECIMAL_GAP = re.compile(r"(?<=\d)[ \t]+(?=\.)")
+DEFAULT_ACQUISITION = Path(__file__).resolve().parents[1]/"configs/deuteron-acquisition.json"
+
+
+def acquisition_grid(acquisition):
+    """Construct exactly 500 samples from a documented acquisition contract."""
+    if acquisition.get("nucleus") != "deuteron" or acquisition.get("bins") != 500:
+        raise ValueError("Require the deuteron 500-bin acquisition contract")
+    start, step, reference = [acquisition.get(k) for k in ("start_mhz", "step_mhz", "reference_hz")]
+    if not np.isfinite([start, step, reference]).all() or min(start, step, reference) <= 0:
+        raise ValueError("Require positive finite scan start, spacing and reference")
+    if not isinstance(acquisition.get("frequency_source"), str) or not acquisition["frequency_source"].strip():
+        raise ValueError("Record the source of the frequency mapping")
+    frequency = (start + np.arange(500)*step)*1e6
+    if not frequency[0] <= reference <= frequency[-1] or not frequency[0] <= 32.7e6 <= frequency[-1]:
+        raise ValueError("The sweep must bracket the deuteron nominal reference near 32.7 MHz")
+    return frequency
+
+
+def load_acquisition(path=DEFAULT_ACQUISITION):
+    raw = Path(path).read_bytes()
+    acquisition = json.loads(raw)
+    acquisition_grid(acquisition)
+    return {**acquisition, "configuration_sha256": hashlib.sha256(raw).hexdigest()}
+
+
+def add_acquisition_arguments(parser):
+    parser.add_argument("--acquisition", type=Path, default=DEFAULT_ACQUISITION,
+                        help="Default: the owner's confirmed 500-bin deuteron scan contract")
+    parser.add_argument("--start-mhz", type=float, help="Explicit alternative start; requires step and source")
+    parser.add_argument("--step-mhz", type=float, help="Explicit alternative spacing; requires start and source")
+    parser.add_argument("--frequency-source", help="Independent source for an explicitly overridden grid")
+
+
+def resolve_acquisition(args):
+    overrides = (args.start_mhz, args.step_mhz, args.frequency_source)
+    if any(x is not None for x in overrides):
+        if not all(x is not None for x in overrides):
+            raise ValueError("Override --start-mhz, --step-mhz and --frequency-source together")
+        if args.acquisition != DEFAULT_ACQUISITION:
+            raise ValueError("Choose an acquisition file or explicit grid overrides, not both")
+        acquisition = {"nucleus": "deuteron", "bins": 500, "reference_hz": 32.7e6,
+                       "start_mhz": args.start_mhz, "step_mhz": args.step_mhz,
+                       "frequency_source": args.frequency_source}
+    else:
+        acquisition = load_acquisition(args.acquisition)
+    return acquisition_grid(acquisition), acquisition
 
 
 def load_baseline_csv(path):

@@ -6,8 +6,12 @@ software checkout. The original fields and spacing are preserved; only a final
 newline was added to the supplied file.
 
 - One headerless record: timestamp, followed by 500 recorded amplitudes.
-- Nucleus: deuteron; approximate operating frequency: 32.68 MHz.
-- Actual first/last sample frequencies and bin spacing: **not supplied**.
+- Nucleus: deuteron; owner-confirmed nominal center: 32.7 MHz.
+- Frequency: `32.3 + 0.0015287*j MHz`, j = 0…499, preserving the original
+  proton sweep offsets and spacing with the owner's corrected center.
+- First/last sample: 32.3000000 / 33.0628213 MHz. There are 499 intervals
+  between 500 samples, each 1.5287 kHz. Do not substitute a symmetric linspace.
+- Contract: [`deuteron-acquisition.json`](../configs/deuteron-acquisition.json).
 - Recorded-unit to volts conversion: **not supplied**.
 - 35 numeric fields contain spaces immediately before their decimal point.
   The loader repairs that specific formatting pattern in memory and reports
@@ -23,11 +27,12 @@ Original file SHA-256, before the final newline:
 ```python
 import sys
 sys.path.insert(0, "tools")
-from baseline_data import load_baseline_csv
+from baseline_data import load_baseline_csv, load_acquisition, acquisition_grid
 
 records, parsing = load_baseline_csv("examples/deuteron-baseline.csv")
 timestamp = records[0, 0]
 amplitudes = records[0, 1:]
+frequency_hz = acquisition_grid(load_acquisition())
 assert amplitudes.shape == (500,)
 assert parsing["decimal_whitespace_repair_count"] == 35
 ```
@@ -39,9 +44,17 @@ silently converted to `12`. The CSV is never rewritten by the loader.
 ## Preview and fit
 
 Run `python tools/preview_baseline.py` to reproduce the website's measured-data
-preview against sample index. It is not a fit and assumes no frequency mapping.
+preview against the confirmed frequency axis. It is a measured-only plot.
 
-For circuit fitting, first obtain the actual acquisition grid and complete
-`configs/baseline-setup.template.json` with independently known deuteron tuning
-information. The approximate center frequency does not establish the width.
-See the [baseline-fitting procedure](../notes/baseline-fitting.md).
+To reproduce the displayed physical-circuit comparison:
+
+```bash
+python tools/fit_baseline.py examples/deuteron-baseline.csv \
+  --starts 24 --output-dir local-results/deuteron-baseline-fit
+```
+
+It uses the confirmed acquisition file automatically and distinguishes nominal
+component assumptions from fitted unknowns. For independently known tuning
+settings, complete `configs/baseline-setup.template.json` and use
+`fit_tuned_baseline.py`. See the [fitting procedure](../notes/baseline-fitting.md)
+for diagnostics, parameter meanings, and publication.

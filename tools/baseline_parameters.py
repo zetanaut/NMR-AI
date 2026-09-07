@@ -35,7 +35,7 @@ def parameter_reference_html():
         rows.append(f'<tr><td><strong>{escape(symbol)}</strong><br><code>{escape(name)}</code></td>'
                     f'<td>{escape(unit)}</td><td>{escape(meaning)}</td></tr>')
     return ('<div id="fit-parameters"><h3>Every active baseline parameter</h3>'
-            '<p>The deuteron reference is approximately 32.68 MHz. The table lists physical meanings and display units, '
+            '<p>The measured baseline uses the nominal 32.7 MHz deuteron reference. The table lists physical meanings and display units, '
             'not new component measurements. The setup file records each parameter as fixed or fitted, with its source, '
             'supported bounds, and any measurement constraint. Internal units follow the code names; readout phase is stored in radians.</p>'
             '<div class="table-wrap"><table><caption>Physical parameter reference; no measured-fit values are claimed</caption>'
@@ -67,6 +67,14 @@ def parameter_table_html(metadata):
         for name in names:
             symbol, scale, unit, meaning = CATALOG[name]
             context = ''
+            if not specs and name == "reference_hz":
+                context = '<br><small>Source: owner-confirmed nominal acquisition center.</small>'
+            elif not specs and name not in fitted:
+                context = '<br><small>Nominal model assumption; not independently measured.</small>'
+            elif not specs and name in ("tune_capacitance_f", "cable_length_m", "stray_capacitance_f") and "bounds_pf_m_pf" in metadata:
+                index = ("tune_capacitance_f", "cable_length_m", "stray_capacitance_f").index(name)
+                bounds = metadata["bounds_pf_m_pf"]
+                context = f'<br><small>Numerical search bounds: {bounds[0][index]:g} to {bounds[1][index]:g} {escape(unit)}; not a hardware uncertainty.</small>'
             if name in specs:
                 spec = specs[name]
                 context = '<br><small>Source/assumption: '+escape(spec['source'])+'</small>'
@@ -93,7 +101,8 @@ def parameter_table_html(metadata):
                             f'{tuning["reference_hz"]/1e6:g} MHz. Source: {escape(tuning["source"])}.')
     else:
         provenance = ('For this exploratory example, six quantities were fitted: three circuit coordinates and three readout coordinates. '
-                      'The fixed values are nominal assumptions; confirmed tuning records have not yet been supplied for these scans.')
+                      'The frequency grid and nominal center are supplied by the owner. Other fixed component values are nominal assumptions; '
+                      'independent capacitance, cable-branch, and component measurements have not yet been supplied.')
         length_note = ('An integer branch was not enforced. Do not round this value and call the result a known tuning setting. '
                        'Use the recorded branch and its supported trim tolerance for a tuning-informed refit.')
     return ('<div id="fit-parameters"><h3>Every parameter behind the displayed fit</h3>'

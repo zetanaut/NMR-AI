@@ -77,20 +77,37 @@ V_det = G Re[u exp(iφ(f))] + V_DC
 The current public example is `examples/deuteron-baseline.csv`, supplied by the
 repository owner for student use and explicit publication. It contains one
 headerless timestamp-plus-500-amplitude record and no frequency column. The
-nucleus is deuteron, with approximate reference 32.68 MHz. Published SHA-256:
+nucleus is deuteron, with owner-confirmed nominal center 32.7 MHz. Published SHA-256:
 `dac7c4598c6ec32250ab763ab1bf99e2a7aa7346de4e452ce00e80f0e2b1eb28`.
 
 The raw fields are preserved; only a final newline was added. The shared loader
 repairs 35 spaces-before-decimal formatting artifacts in memory, records each
 repair, and rejects ambiguous or nonfinite numbers. No smoothing, missing-bin
-interpolation, or voltage conversion is performed. The website preview plots
-all 500 amplitudes against sample index, not an assumed frequency axis.
+interpolation, or voltage conversion is performed. The measured preview and
+physical-circuit fit both use the confirmed frequency mapping below.
 
-The actual start and spacing/endpoints are still needed for a physical fit.
-An approximate reference alone does not establish scan width. DAQ conversion
-to volts also remains unknown. No previous fit on another file or an invalid
-frequency mapping supplies these missing inputs. The parameter guide and
-physical circuit remain usable; measured-fit metrics await acquisition metadata.
+The owner confirmed that every baseline has 500 bins and uses the original
+proton scan's offsets/spacing, replacing nominal center 213 MHz with 32.7 MHz.
+Thus `f_j = 32.3 + 0.0015287*j MHz`, j=0…499; the last sample is 33.0628213 MHz.
+The midpoint of those endpoints is 32.68141065 MHz; do not force it to equal the
+nominal center by generating a different linspace. The shared contract is
+`configs/deuteron-acquisition.json`, hashed into fit provenance. DAQ conversion
+to volts remains unknown.
+
+The fresh 24-start physical-circuit fit has whole-scan residual RMS
+6.9155951×10⁻⁵ recorded units (0.0280726% of measured peak-to-peak range).
+The largest absolute residual is 8.6450759×10⁻⁴ at sample 499; all bins remain
+included. Lag-one residual correlation is 0.3990. These are fit diagnostics,
+not an independent noise estimate or a polarization-error measurement.
+
+The exploratory solution fits C_tune≈30.0602 pF, cable length≈4.05109 m,
+C_stray≈45.8454 pF, and three readout coordinates. At 32.7 MHz the nominal cable's
+half wavelength is 2.99099 m, so the fitted length is about 1.35443 half-waves.
+No independently known integer branch is claimed. All three shape coordinates
+are interior to their numerical bounds, but the scaled Jacobian condition is
+about 4.95×10⁴ and competing starts show weak parameter combinations. Fixed
+components are nominal assumptions, not newly measured hardware. See the full
+parameter table and saved candidate solutions before interpreting the close fit.
 
 The circuit implementation does not execute or import the supplied old script.
 Its positive component entries supply nominal engineering seeds: coil 30 nH and
@@ -109,8 +126,8 @@ evaluated at the deuteron tuning frequency. Do not use vacuum wavelength,
 infer a branch from the fit and call it independent, or mistake a starting guess
 for a measurement constraint.
 
-The pedagogical variable-projection fitter `fit_baseline.py` uses a 32.68 MHz
-reference and requires explicit start/spacing and their source. Its built-in
+The pedagogical variable-projection fitter `fit_baseline.py` uses the confirmed
+32.7 MHz reference and acquisition configuration by default. Its built-in
 bounds are only numerical search assumptions. For known hardware, use the
 setup-driven fitter instead. Detector coefficients (a,b,d) correspond to
 `atan2(-b,a)` phase and `hypot(a,b)` recorded-unit gain. Unknown RF voltage and
@@ -167,7 +184,7 @@ V_measured = B + S + noise.
 
 This is full complex-susceptibility propagation. The paper also uses an additive circuit-baseline benchmark; that does not justify independently adding the nuclear response a second time here. A single-site kernel does not cover multi-site materials, contaminants, or RF-modified populations. Spin-1/2 and unresolved-quadrupole Voigt problems in §3.2 require their own response model.
 
-The deuteron demonstration uses a fixed 512-bin, 32.3–33.1 MHz sweep. Starting from the explicit nominal passive components, `nominal_circuit` derives a one-half-wave cable at 32.68 MHz and chooses the tuning capacitance to cancel the line's imaginary impedance there. Zero stray admittance and zero phase slope/curvature are reference idealizations. They are not inferred from the supplied baseline data, whose exact acquisition grid still needs confirmation.
+The deuteron demonstration uses a fixed 512-bin, 32.3–33.1 MHz sweep. Starting from the explicit nominal passive components, `nominal_circuit` derives a one-half-wave cable at 32.68 MHz and chooses the tuning capacitance to cancel the line's imaginary impedance there. Zero stray admittance and zero phase slope/curvature are reference idealizations. They are not inferred from the supplied baseline data. The measured 500-bin contract is distinct from this existing synthetic benchmark; no resampling or retraining is performed by the baseline-fitting practical.
 
 For temperature T, with `t=tanh(h*f0/(2*kB*T))`, spin-1 TE polarization is `4t/(3+t²)`; spin-1/2 is `t`. At 1.5 K, 32.7 MHz gives 0.06974899% for spin 1 for this deuteron-scale example. A 5% training example is not a 0.05% TE example. [Paper §5.1, Eqs. (28)–(34), p. 10](https://arxiv.org/pdf/2603.10146v5#page=10).
 

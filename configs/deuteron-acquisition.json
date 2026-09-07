@@ -1,0 +1,9 @@
+{
+  "nucleus": "deuteron",
+  "bins": 500,
+  "reference_hz": 32700000.0,
+  "start_mhz": 32.3,
+  "step_mhz": 0.0015287,
+  "frequency_source": "Repository owner: every baseline is timestamp plus 500 bins; retain the original proton sweep's bin offsets and spacing, replacing its nominal 213 MHz center with 32.7 MHz.",
+  "derivation": "f_j = (212.6 + 0.0015287*j) - (213 - 32.7) = 32.3 + 0.0015287*j MHz, j=0..499. The last sample is 33.0628213 MHz; 32.7 MHz is the nominal center, not the endpoint midpoint."
+}

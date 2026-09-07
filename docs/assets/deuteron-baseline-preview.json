@@ -217,15 +217,25 @@
   ],
   "normalization": "Strip outer whitespace; remove spaces/tabs only between a digit and decimal point; no other edits",
   "field_convention": "Field 0 is timestamp; fields 1..500 are sample indices 0..499",
-  "frequency_grid": "Not encoded in this format; require separate acquisition metadata",
+  "frequency_grid": "Owner-confirmed start + sample index * step; see acquisition",
   "nucleus": "deuteron",
-  "approximate_reference_hz": 32680000.0,
-  "plot_kind": "Measured amplitudes versus sample index; not a circuit fit",
+  "reference_hz": 32700000.0,
+  "acquisition": {
+    "nucleus": "deuteron",
+    "bins": 500,
+    "reference_hz": 32700000.0,
+    "start_mhz": 32.3,
+    "step_mhz": 0.0015287,
+    "frequency_source": "Repository owner: every baseline is timestamp plus 500 bins; retain the original proton sweep's bin offsets and spacing, replacing its nominal 213 MHz center with 32.7 MHz.",
+    "derivation": "f_j = (212.6 + 0.0015287*j) - (213 - 32.7) = 32.3 + 0.0015287*j MHz, j=0..499. The last sample is 33.0628213 MHz; 32.7 MHz is the nominal center, not the endpoint midpoint.",
+    "configuration_sha256": "daa69f3ba3bf9b886587531e983869213e37014c29bca2e8c55e6aed077d881c"
+  },
+  "plot_kind": "Measured amplitudes versus confirmed frequency; not a circuit fit",
   "voltage_unit": "Recorded units; conversion not supplied",
   "plotted_samples": 500,
-  "svg_sha256": "7a965b49615e7863372d655e9880f99b837682f17f855b6c59a94fbb497b7c49",
+  "svg_sha256": "dc9839df9a566333715301674e256523a471d87c8d00c13ae8a378fef11f5bfe",
   "code_sha256": {
-    "preview_baseline.py": "fa6d9135363c19bdf164074024d173922ad42f3dd9fa6b7beaebefcbada15aad",
-    "baseline_data.py": "17b68da75475d798c93bc754d5e88cd93130bc39cd3790a0051f6ff3b1a9281a"
+    "preview_baseline.py": "39a5e4e3c792dfa2f5c2765a4263cc691101d654a017462f5feeeddf8cf9c5d3",
+    "baseline_data.py": "8a08e4a290c9bd1da194fe0f6c9932cd5c814b29fbd497c9c774522aecf27ffb"
   }
 }

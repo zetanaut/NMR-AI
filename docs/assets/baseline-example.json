@@ -1,0 +1,564 @@
+{
+  "selection": "Only supplied trace; all 500 bins",
+  "selected_trace_number": 1,
+  "source_sha256": "dac7c4598c6ec32250ab763ab1bf99e2a7aa7346de4e452ce00e80f0e2b1eb28",
+  "nucleus": "deuteron",
+  "reference_hz": 32700000.0,
+  "start_mhz": 32.3,
+  "step_mhz": 0.0015287,
+  "frequency_source": "Repository owner: every baseline is timestamp plus 500 bins; retain the original proton sweep's bin offsets and spacing, replacing its nominal 213 MHz center with 32.7 MHz.",
+  "fit_report_sha256": "a8ee3ed993f971a0b4d2896ba4916563cd15a5ab461f3fffe13e4daf8d89d5be",
+  "fit_code_sha256": {
+    "fit_baseline.py": "a01778645b1a26a312119ce6fc891753bd77b454b69e03f99376696ba4c4aa7a",
+    "circuit.py": "e9fe63030e1a6356f4f4ebf565d56bfc506ad06efedecfb68b652dbd14946368",
+    "baseline_data.py": "8a08e4a290c9bd1da194fe0f6c9932cd5c814b29fbd497c9c774522aecf27ffb"
+  },
+  "exporter_sha256": "8c2da5ab0cb49872603366b37dc3c54ebdc0eada95d241de37e7dc31a210c4c7",
+  "parameter_catalog_sha256": "146b82523a85e3b4f19e6506ea316f482be69a65ef869bb2e62213b4a4618754",
+  "fit_mode": "exploratory; tuning records not supplied",
+  "source_rows": 1,
+  "unique_rows": 1,
+  "voltage_unit": "recorded units; DAQ conversion not assumed",
+  "residual_sign": "recorded minus fitted",
+  "fitted_bin_mask": "All 500 bins; no exclusions",
+  "starts": 24,
+  "seed": 42,
+  "summaries": [
+    {
+      "trace_number": 1,
+      "bins": 500,
+      "rms_recorded_units": 6.915595093923163e-05,
+      "peak_to_peak_recorded_units": 0.24634709999999999,
+      "rms_percent_of_peak_to_peak": 0.02807256547336325,
+      "max_absolute_residual_recorded_units": 0.0008645075923361389,
+      "trace_csv_sha256": "cb49a05b9afdd036c1685638a9fe13164537d42ca911fda8e21d924f2c215fa2"
+    }
+  ],
+  "selected_fit": {
+    "circuit": {
+      "reference_hz": 32700000.0,
+      "drive_v": 0.382652652,
+      "drive_resistance_ohm": 619.0,
+      "input_resistance_ohm": 50.0,
+      "damping_resistance_ohm": 10.0,
+      "coil_resistance_ohm": 0.35,
+      "coil_inductance_h": 3e-08,
+      "tune_capacitance_f": 3.0060166314290805e-11,
+      "stray_capacitance_f": 4.584540905299178e-11,
+      "cable_resistance_ohm_per_m": 3.43,
+      "cable_inductance_h_per_m": 2.542e-07,
+      "cable_conductance_s_per_m": 0.0,
+      "cable_capacitance_f_per_m": 1.027e-10,
+      "cable_length_m": 4.051087715315551,
+      "filling_factor": 0.098563235,
+      "susceptibility_scale_cgs": 0.11133,
+      "detector_gain": -1.0,
+      "detector_phase_rad": 0.0,
+      "detector_phase_slope_rad_per_hz": 0.0,
+      "detector_phase_curvature_rad_per_hz2": 0.0,
+      "dc_offset_v": 0.0
+    },
+    "quadrature_coefficients": [
+      -579.1439255443795,
+      40.593000618818095,
+      11.03528211537649
+    ],
+    "scaled_shape_jacobian_condition": 49452.43604032016,
+    "active_bounds": [
+      0,
+      0,
+      0
+    ],
+    "shape_fit_success": true,
+    "multistart_candidates": [
+      {
+        "parameters_pf_m_pf": [
+          30.122723316948623,
+          4.04572959181496,
+          73.83334376762839
+        ],
+        "normalized_sse": 3.940571287524435e-05,
+        "success": true,
+        "evaluations": 33
+      },
+      {
+        "parameters_pf_m_pf": [
+          30.10678843050552,
+          4.04706695563512,
+          67.05925945026017
+        ],
+        "normalized_sse": 3.940512329598198e-05,
+        "success": true,
+        "evaluations": 242
+      },
+      {
+        "parameters_pf_m_pf": [
+          30.136322298795065,
+          4.044603216406963,
+          79.43414579189664
+        ],
+        "normalized_sse": 3.9406221884951244e-05,
+        "success": true,
+        "evaluations": 219
+      },
+      {
+        "parameters_pf_m_pf": [
+          30.169625146394548,
+          4.041894438835668,
+          92.52989530550505
+        ],
+        "normalized_sse": 3.9407493328414764e-05,
+        "success": true,
+        "evaluations": 224
+      },
+      {
+        "parameters_pf_m_pf": [
+          30.099832791825385,
+          4.04765595776642,
+          64.03261349963698
+        ],
+        "normalized_sse": 3.940486873897646e-05,
+        "success": true,
+        "evaluations": 242
+      },
+      {
+        "parameters_pf_m_pf": [
+          281.44185707267343,
+          4.999999999999999,
+          399.99999997740673
+        ],
+        "normalized_sse": 0.07898278973935322,
+        "success": true,
+        "evaluations": 27
+      },
+      {
+        "parameters_pf_m_pf": [
+          30.12232819459317,
+          4.045763287995799,
+          73.66386177346179
+        ],
+        "normalized_sse": 3.940569778244839e-05,
+        "success": true,
+        "evaluations": 140
+      },
+      {
+        "parameters_pf_m_pf": [
+          30.184437514109526,
+          4.040711715588865,
+          98.0880880511363
+        ],
+        "normalized_sse": 3.9408069617168746e-05,
+        "success": true,
+        "evaluations": 213
+      },
+      {
+        "parameters_pf_m_pf": [
+          281.44910580366894,
+          4.999999999999999,
+          399.9999999876172
+        ],
+        "normalized_sse": 0.07898278973954204,
+        "success": true,
+        "evaluations": 32
+      },
+      {
+        "parameters_pf_m_pf": [
+          30.106175669400315,
+          4.0471184719623405,
+          66.79575332229896
+        ],
+        "normalized_sse": 3.940510091966554e-05,
+        "success": true,
+        "evaluations": 247
+      },
+      {
+        "parameters_pf_m_pf": [
+          30.150251059735243,
+          4.043461512362203,
+          85.01725279144948
+        ],
+        "normalized_sse": 3.9406749610361145e-05,
+        "success": true,
+        "evaluations": 195
+      },
+      {
+        "parameters_pf_m_pf": [
+          281.4565303696308,
+          4.999999999999999,
+          399.99999997673217
+        ],
+        "normalized_sse": 0.07898278974888062,
+        "success": true,
+        "evaluations": 29
+      },
+      {
+        "parameters_pf_m_pf": [
+          30.172642204794453,
+          4.041652810517608,
+          93.6729366819704
+        ],
+        "normalized_sse": 3.9407609991201224e-05,
+        "success": true,
+        "evaluations": 61
+      },
+      {
+        "parameters_pf_m_pf": [
+          30.10202527890487,
+          4.047470893966884,
+          64.98587693959023
+        ],
+        "normalized_sse": 3.940494833802186e-05,
+        "success": true,
+        "evaluations": 43
+      },
+      {
+        "parameters_pf_m_pf": [
+          30.09338667078509,
+          4.04820566736787,
+          61.18300541652439
+        ],
+        "normalized_sse": 3.9404633919101955e-05,
+        "success": true,
+        "evaluations": 227
+      },
+      {
+        "parameters_pf_m_pf": [
+          30.165387128386286,
+          4.042235339203121,
+          90.91008327442614
+        ],
+        "normalized_sse": 3.940732961517376e-05,
+        "success": true,
+        "evaluations": 221
+      },
+      {
+        "parameters_pf_m_pf": [
+          30.176342869549593,
+          4.041356860206384,
+          95.06772445366195
+        ],
+        "normalized_sse": 3.94077536361808e-05,
+        "success": true,
+        "evaluations": 261
+      },
+      {
+        "parameters_pf_m_pf": [
+          30.157217038651726,
+          4.042895638040358,
+          87.74973165783703
+        ],
+        "normalized_sse": 3.9407015555067235e-05,
+        "success": true,
+        "evaluations": 215
+      },
+      {
+        "parameters_pf_m_pf": [
+          281.4231360070961,
+          4.999999999999999,
+          399.99999999610606
+        ],
+        "normalized_sse": 0.07898278976311687,
+        "success": true,
+        "evaluations": 30
+      },
+      {
+        "parameters_pf_m_pf": [
+          281.43113814982314,
+          4.999999999999999,
+          399.9999999949507
+        ],
+        "normalized_sse": 0.07898278974692308,
+        "success": true,
+        "evaluations": 38
+      },
+      {
+        "parameters_pf_m_pf": [
+          30.130521766371675,
+          4.0450829563373585,
+          77.05961798806202
+        ],
+        "normalized_sse": 3.940600364323764e-05,
+        "success": true,
+        "evaluations": 248
+      },
+      {
+        "parameters_pf_m_pf": [
+          30.138878742401698,
+          4.0443926023612,
+          80.47122902074528
+        ],
+        "normalized_sse": 3.940631835091314e-05,
+        "success": true,
+        "evaluations": 232
+      },
+      {
+        "parameters_pf_m_pf": [
+          30.169179189717152,
+          4.041930380183438,
+          92.35942254825802
+        ],
+        "normalized_sse": 3.940747601015135e-05,
+        "success": true,
+        "evaluations": 224
+      },
+      {
+        "parameters_pf_m_pf": [
+          30.060166314290804,
+          4.051087715315551,
+          45.84540905299178
+        ],
+        "normalized_sse": 3.940344661281284e-05,
+        "success": true,
+        "evaluations": 30
+      }
+    ],
+    "residual_lag1": 0.3990367500619447
+  },
+  "note": "Measured-fit illustration, not a synthetic trace or held-out accuracy test. This metadata omits timestamps; source-CSV publication is handled separately. All 500 measured bins appear in the figure. Fit agreement does not establish unique hardware parameters or electronic-noise variance.",
+  "acquisition": {
+    "nucleus": "deuteron",
+    "bins": 500,
+    "reference_hz": 32700000.0,
+    "start_mhz": 32.3,
+    "step_mhz": 0.0015287,
+    "frequency_source": "Repository owner: every baseline is timestamp plus 500 bins; retain the original proton sweep's bin offsets and spacing, replacing its nominal 213 MHz center with 32.7 MHz.",
+    "derivation": "f_j = (212.6 + 0.0015287*j) - (213 - 32.7) = 32.3 + 0.0015287*j MHz, j=0..499. The last sample is 33.0628213 MHz; 32.7 MHz is the nominal center, not the endpoint midpoint.",
+    "configuration_sha256": "daa69f3ba3bf9b886587531e983869213e37014c29bca2e8c55e6aed077d881c"
+  },
+  "bounds_pf_m_pf": [
+    [
+      0.2,
+      3.0,
+      0
+    ],
+    [
+      600,
+      5.0,
+      400
+    ]
+  ],
+  "loss": "Unweighted least squares; no verified measurement-error covariance supplied",
+  "input_parsing": {
+    "source_sha256": "dac7c4598c6ec32250ab763ab1bf99e2a7aa7346de4e452ce00e80f0e2b1eb28",
+    "rows": 1,
+    "samples_per_row": 500,
+    "decimal_whitespace_repair_count": 35,
+    "decimal_whitespace_repairs": [
+      {
+        "row_1based": 1,
+        "field_0based": 14,
+        "original": "-1     .029542E-1",
+        "normalized": "-1.029542E-1"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 28,
+        "original": "-8     .270395E-2",
+        "normalized": "-8.270395E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 42,
+        "original": "-6     .342880E-2",
+        "normalized": "-6.342880E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 56,
+        "original": "-4     .509375E-2",
+        "normalized": "-4.509375E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 70,
+        "original": "-2     .779931E-2",
+        "normalized": "-2.779931E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 84,
+        "original": "-1     .161231E-2",
+        "normalized": "-1.161231E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 98,
+        "original": " 3     .455145E-3",
+        "normalized": "3.455145E-3"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 112,
+        "original": " 1     .743284E-2",
+        "normalized": "1.743284E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 126,
+        "original": " 3     .028985E-2",
+        "normalized": "3.028985E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 140,
+        "original": " 4     .180282E-2",
+        "normalized": "4.180282E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 154,
+        "original": " 5     .212755E-2",
+        "normalized": "5.212755E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 168,
+        "original": " 6     .109040E-2",
+        "normalized": "6.109040E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 182,
+        "original": " 6     .876080E-2",
+        "normalized": "6.876080E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 196,
+        "original": " 7     .510480E-2",
+        "normalized": "7.510480E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 210,
+        "original": " 7     .997945E-2",
+        "normalized": "7.997945E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 224,
+        "original": " 8     .346985E-2",
+        "normalized": "8.346985E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 238,
+        "original": " 8     .552485E-2",
+        "normalized": "8.552485E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 252,
+        "original": " 8     .608095E-2",
+        "normalized": "8.608095E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 266,
+        "original": " 8     .513595E-2",
+        "normalized": "8.513595E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 280,
+        "original": " 8     .274530E-2",
+        "normalized": "8.274530E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 294,
+        "original": " 7     .878625E-2",
+        "normalized": "7.878625E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 308,
+        "original": " 7     .321875E-2",
+        "normalized": "7.321875E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 322,
+        "original": " 6     .614800E-2",
+        "normalized": "6.614800E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 336,
+        "original": " 5     .754005E-2",
+        "normalized": "5.754005E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 350,
+        "original": " 4     .734047E-2",
+        "normalized": "4.734047E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 364,
+        "original": " 3     .549898E-2",
+        "normalized": "3.549898E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 378,
+        "original": " 2     .208844E-2",
+        "normalized": "2.208844E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 392,
+        "original": " 7     .135150E-3",
+        "normalized": "7.135150E-3"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 406,
+        "original": "-9     .432300E-3",
+        "normalized": "-9.432300E-3"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 420,
+        "original": "-2     .754559E-2",
+        "normalized": "-2.754559E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 434,
+        "original": "-4     .735483E-2",
+        "normalized": "-4.735483E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 448,
+        "original": "-6     .863600E-2",
+        "normalized": "-6.863600E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 462,
+        "original": "-9     .146765E-2",
+        "normalized": "-9.146765E-2"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 476,
+        "original": "-1     .158437E-1",
+        "normalized": "-1.158437E-1"
+      },
+      {
+        "row_1based": 1,
+        "field_0based": 490,
+        "original": "-1     .418735E-1",
+        "normalized": "-1.418735E-1"
+      }
+    ],
+    "normalization": "Strip outer whitespace; remove spaces/tabs only between a digit and decimal point; no other edits",
+    "field_convention": "Field 0 is timestamp; fields 1..500 are sample indices 0..499",
+    "frequency_grid": "Not encoded in this format; require separate acquisition metadata"
+  },
+  "source_csv_url": "https://github.com/zetanaut/NMR-AI/blob/main/examples/deuteron-baseline.csv",
+  "svg_sha256": "9c411235b01215ec09ba604dda451c74296de7984aa6286abb16f521eb16144a"
+}

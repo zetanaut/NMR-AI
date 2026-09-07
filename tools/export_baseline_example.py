@@ -22,7 +22,7 @@ def load_example(folder):
     report = json.loads(report_file.read_text())
     if report.get("nucleus") != "deuteron" or not report.get("frequency_source", "").strip():
         raise ValueError("Require a fresh deuteron fit with an explicit acquisition frequency source; do not relabel an old fit")
-    if not report["start_mhz"] <= 32.68 <= report["start_mhz"] + 499*report["step_mhz"]:
+    if not report["start_mhz"] <= 32.7 <= report["start_mhz"] + 499*report["step_mhz"]:
         raise ValueError("The saved sweep does not bracket the deuteron reference; check acquisition metadata")
     for name, expected in report["code_sha256"].items():
         if hashlib.sha256((ROOT/"tools"/name).read_bytes()).hexdigest() != expected:
@@ -52,7 +52,7 @@ def load_example(folder):
         traces.append(data)
     selected = int(np.argsort([s["rms_recorded_units"] for s in summaries], kind="stable")[len(summaries)//2])
     metadata = {
-        "selection": "Median whole-scan residual RMS among distinct traces (upper median for even counts)",
+        "selection": "Only supplied trace; all 500 bins" if len(traces) == 1 else "Median whole-scan residual RMS among distinct traces (upper median for even counts)",
         "selected_trace_number": selected+1,
         "source_sha256": report["source_sha256"],
         "nucleus": report["nucleus"], "reference_hz": report["reference_hz"],
@@ -73,10 +73,15 @@ def load_example(folder):
                 "This metadata omits timestamps; source-CSV publication is handled separately. All 500 measured bins appear in the figure. "
                 "Fit agreement does not establish unique hardware parameters or electronic-noise variance.",
     }
+    for key in ("acquisition", "bounds_pf_m_pf", "loss", "input_parsing"):
+        if key in report:
+            metadata[key] = report[key]
     public_csv = ROOT/"examples/deuteron-baseline.csv"
     if public_csv.exists() and hashlib.sha256(public_csv.read_bytes()).hexdigest() == report["source_sha256"]:
         metadata["source_csv_url"] = "https://github.com/zetanaut/NMR-AI/blob/main/examples/deuteron-baseline.csv"
     chosen = report["fits"][selected]
+    metadata["selected_fit"].update({key: chosen[key] for key in
+                                    ("shape_fit_success", "multistart_candidates", "residual_lag1")})
     if chosen.get("fit_mode") == "tuning-informed":
         metadata["selected_fit"].update({key: chosen[key] for key in
                                          ("fit_mode", "resolved_parameters", "setup", "free_parameters", "parameter_manifest")})
@@ -124,6 +129,7 @@ def draw_example(data, output):
     fig.subplots_adjust(left=.145, right=.975, top=.92, bottom=.12)
     fig.savefig(output, metadata={"Date": None, "Title": "Measured baseline and physical Q-meter fit",
                                  "Description": "All 500 measured bins and the saved physical circuit fit; residuals shown separately."})
+    output.write_text("\n".join(line.rstrip() for line in output.read_text().splitlines())+"\n")
     plt.close(fig)
 
 
@@ -131,6 +137,9 @@ def example_html(metadata):
     m = metadata["summaries"][metadata["selected_trace_number"]-1]
     rms_millionths = m["rms_recorded_units"]*1e6
     count = metadata["unique_rows"]
+    selection = ("The only supplied measured scan; no selection among traces was made." if count == 1 else
+                 "This example is selected by the median whole-scan residual RMS, not the minimum.")
+    trace_label = "The supplied deuteron baseline" if count == 1 else f'Trace {m["trace_number"]} · median residual RMS among {count} distinct sweeps'
     duplicates = metadata["source_rows"] - count
     optimization = ("All inputs are fixed; no optimizer is run." if metadata["selected_fit"].get("free_parameters") == []
                     else f'The fit uses {metadata["starts"]} starting points.')
@@ -144,7 +153,7 @@ def example_html(metadata):
 <h2>See how closely the fit follows a real baseline.</h2>
 <p>The green points are an experimental sweep; the dashed rust curve is the saved physical Q-meter fit. Compare them in the upper panel; the lower panel expands the residual scale so the remaining differences stay visible.</p>
 <div class="results-panel baseline-example">
-<div class="panel-heading"><div><p class="eyebrow">Trace {m["trace_number"]} · median residual RMS among {count} distinct sweeps</p><h3>Measured data → circuit fit → residuals</h3></div><span class="badge">All {m["bins"]} bins</span></div>
+<div class="panel-heading"><div><p class="eyebrow">{trace_label}</p><h3>Measured data → circuit fit → residuals</h3></div><span class="badge">All {m["bins"]} bins</span></div>
 <figure>
 <div class="baseline-figure-scroll" tabindex="0" role="region" aria-label="Measured baseline plot; scroll horizontally on narrow screens">
 <img class="baseline-fit-image" src="assets/baseline-example.svg" width="950" height="720" alt="Five hundred measured points and the physical Q-curve fit. A separately scaled residual panel retains endpoint deviations. Residual RMS is {rms_millionths:.3f} millionths of one recorded unit.">
@@ -152,9 +161,9 @@ def example_html(metadata):
 <figcaption class="chart-caption">Upper: measured points and fitted circuit response in the original recorded units. Lower: recorded minus fitted, in 10⁻⁶ recorded units—not microvolts. All bins, including both endpoints, enter the fit, plot, and statistics. On a narrow screen, scroll the plot or <a href="assets/baseline-example.svg">open it full-size</a>.</figcaption>
 </figure>
 <div class="baseline-fit-stats"><div><span>Residual RMS</span><strong>{rms_millionths:.3f} × 10⁻⁶</strong><small>recorded units</small></div><div><span>RMS / peak-to-peak range</span><strong>{m["rms_percent_of_peak_to_peak"]:.4f}%</strong><small>shape-fit error, not polarization error</small></div><div><span>Fitted samples</span><strong>{m["bins"]} / {m["bins"]}</strong><small>no smoothing or excluded bins</small></div></div>
-<p>This example is selected by the median whole-scan residual RMS, not the minimum. The largest absolute residual is {m["max_absolute_residual_recorded_units"]*1e6:.2f} × 10⁻⁶ recorded units; the endpoint deviations have not been cropped out. {optimization} It uses the same circuit implementation used by the generator.</p>
+<p>{selection} The largest absolute residual is {m["max_absolute_residual_recorded_units"]*1e6:.2f} × 10⁻⁶ recorded units; the endpoint deviations have not been cropped out. {optimization} It uses the same circuit implementation used by the generator.</p>
 {parameter_table_html(metadata)}
-<details><summary>Compare all {count} distinct measured sweeps</summary><div class="details-body"><div class="table-wrap"><table><caption>Whole-scan residuals; {duplicates} exact duplicate records omitted</caption><thead><tr><th>Sweep</th><th>RMS (10⁻⁶ recorded units)</th><th>RMS / peak-to-peak</th></tr></thead><tbody>{rows}</tbody></table></div><p>The <a href="#diagnostics">diagnostics section</a> explains why residual structure must not automatically be treated as electronic noise.</p></div></details>
+<details><summary>Whole-scan fit statistics</summary><div class="details-body"><div class="table-wrap"><table><caption>Whole-scan residuals; {duplicates} exact duplicate records omitted</caption><thead><tr><th>Sweep</th><th>RMS (10⁻⁶ recorded units)</th><th>RMS / peak-to-peak</th></tr></thead><tbody>{rows}</tbody></table></div><p>The <a href="#diagnostics">diagnostics section</a> explains why residual structure must not automatically be treated as electronic noise.</p></div></details>
 <p class="provenance">Computed directly from the saved measured-fit CSVs; the fitted curve is checked against its stored circuit and detector coefficients before export. <a href="assets/baseline-example.json">Download the figure provenance, fit settings, and statistics</a>. {source_link} A close baseline fit does not uniquely measure each component or establish polarization accuracy.</p>
 </div>
 </section>'''
@@ -176,7 +185,7 @@ def main():
     (ROOT/"docs/assets/baseline-example.json").write_text(json.dumps(metadata, indent=2, allow_nan=False)+"\n")
     page.write_text(re.sub(pattern, "<!-- BEGIN BASELINE EXAMPLE -->\n"+example_html(metadata)
                            +"\n<!-- END BASELINE EXAMPLE -->", original, flags=re.S))
-    print(f"Published measured trace {metadata['selected_trace_number']}, all 500 bins; median-RMS selection")
+    print(f"Published measured trace {metadata['selected_trace_number']}, all 500 bins; {metadata['selection']}")
 
 
 if __name__ == "__main__":

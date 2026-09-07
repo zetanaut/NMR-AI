@@ -2,11 +2,11 @@
   "description": "Complete from independent tuning/component records before use. Nulls deliberately prevent fitting with invented tuning information. Replace nominal assumptions where measured values exist.",
   "cable_tuning": {
     "half_wave_multiple": null,
-    "reference_hz": 32680000.0,
+    "reference_hz": 32700000.0,
     "source": "REPLACE with the cable tuning record; do not infer the integer from the unconstrained baseline fit"
   },
   "parameters": {
-    "reference_hz": {"value": 32680000.0, "source": "User-specified approximate deuteron reference; confirm exact tuning frequency separately from scan endpoints"},
+    "reference_hz": {"value": 32700000.0, "source": "User-confirmed nominal center for the 500-bin deuteron baseline acquisition; not an independent measurement of exact resonance"},
     "drive_v": {"value": 0.382652652, "source": "Nominal engineering seed, not an independently confirmed RF voltage"},
     "drive_resistance_ohm": {"value": 619.0, "source": "Nominal source resistor; replace with measured value/tolerance"},
     "input_resistance_ohm": {"value": 50.0, "source": "Nominal input loading; replace with characterized value"},

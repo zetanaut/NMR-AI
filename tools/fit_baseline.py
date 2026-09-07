@@ -14,18 +14,18 @@ from pathlib import Path
 import numpy as np
 from scipy.optimize import least_squares
 from circuit import Circuit, node_voltage, resonator_impedance
-from baseline_data import load_baseline_csv
+from baseline_data import load_baseline_csv, add_acquisition_arguments, resolve_acquisition
 
 
-def fit_trace(frequency_hz, values, starts=24, seed=42):
+def fit_trace(frequency_hz, values, starts=24, seed=42, reference_hz=32.7e6):
     frequency_hz, values = np.asarray(frequency_hz, dtype=float), np.asarray(values, dtype=float)
     if (frequency_hz.ndim != 1 or values.shape != frequency_hz.shape or len(values) < 7
             or not np.isfinite(frequency_hz).all() or not np.isfinite(values).all()
             or np.any(frequency_hz <= 0) or np.any(np.diff(frequency_hz) <= 0) or starts < 1):
         raise ValueError("Need aligned finite traces on an increasing positive grid and positive starts")
-    base = Circuit(reference_hz=32.68e6)
+    base = Circuit(reference_hz=reference_hz)
     if not frequency_hz[0] <= base.reference_hz <= frequency_hz[-1]:
-        raise ValueError("This deuteron practical requires a sweep around 32.68 MHz; check acquisition metadata")
+        raise ValueError("This deuteron practical requires a sweep around its reference; check acquisition metadata")
     scale = max(float(np.ptp(values)), 1e-12)
     target = (values-values.mean())/scale
 
@@ -89,24 +89,20 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("data", type=Path)
     parser.add_argument("--output-dir", type=Path, required=True)
-    parser.add_argument("--start-mhz", type=float, required=True, help="Actual acquisition start, not inferred from the center")
-    parser.add_argument("--step-mhz", type=float, required=True, help="Actual acquisition spacing between bins")
-    parser.add_argument("--frequency-source", required=True, help="Acquisition record establishing the supplied frequency grid")
+    add_acquisition_arguments(parser)
     parser.add_argument("--starts", type=int, default=24)
     parser.add_argument("--volts-per-unit", type=float, help="Confirmed DAQ conversion; omit if unknown")
     args = parser.parse_args()
-    if not args.frequency_source.strip():
-        parser.error("Record the source of the actual deuteron frequency grid")
-    if (args.starts < 1 or not np.isfinite([args.start_mhz, args.step_mhz]).all()
-            or args.start_mhz <= 0 or args.step_mhz <= 0
+    try:
+        frequency, acquisition = resolve_acquisition(args)
+    except ValueError as error:
+        parser.error(str(error))
+    if (args.starts < 1
             or (args.volts_per_unit is not None and (not np.isfinite(args.volts_per_unit) or args.volts_per_unit <= 0))):
         parser.error("Require positive starts, frequency step, and any supplied unit conversion")
     if args.output_dir.exists():
         parser.error("Choose a new output directory")
     records, input_parsing = load_baseline_csv(args.data)
-    frequency = (args.start_mhz + np.arange(500)*args.step_mhz)*1e6
-    if not frequency[0] <= 32.68e6 <= frequency[-1]:
-        parser.error("The acquisition grid must bracket the approximate 32.68 MHz deuteron reference")
     _, first = np.unique(records, axis=0, return_index=True)
     unique = records[np.sort(first)]
     args.output_dir.mkdir(parents=True)
@@ -116,7 +112,7 @@ def main():
     fig, axes = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
     reports = []
     for i, row in enumerate(unique):
-        fitted, report = fit_trace(frequency, row[1:], args.starts)
+        fitted, report = fit_trace(frequency, row[1:], args.starts, reference_hz=acquisition["reference_hz"])
         report["timestamp"] = float(row[0])
         if args.volts_per_unit is not None:
             c = report["circuit"].copy()
@@ -148,10 +144,10 @@ def main():
               "fitted_bin_mask": "All 500 bins; no exclusions", "residual_sign": "recorded minus fitted",
               "bounds_pf_m_pf": [[0.2, 3.0, 0], [600, 5.0, 400]],
               "rows": len(records), "unique_rows": len(unique), "volts_per_recorded_unit": args.volts_per_unit,
-              "nucleus": "deuteron", "reference_hz": 32.68e6,
-              "frequency_mapping": "start_mhz + bin*step_mhz; both supplied explicitly",
-              "frequency_source": args.frequency_source,
-              "start_mhz": args.start_mhz, "step_mhz": args.step_mhz, "fits": reports}
+              "nucleus": "deuteron", "reference_hz": acquisition["reference_hz"], "acquisition": acquisition,
+              "frequency_mapping": "start_mhz + bin*step_mhz; 500 samples indexed 0..499",
+              "frequency_source": acquisition["frequency_source"],
+              "start_mhz": acquisition["start_mhz"], "step_mhz": acquisition["step_mhz"], "fits": reports}
     (args.output_dir/"fit_report.json").write_text(json.dumps(output, indent=2, allow_nan=False))
 
 

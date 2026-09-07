@@ -25,47 +25,50 @@ On Windows activate with `.venv\Scripts\activate`. A CPU supports all labs; trai
 
 ## Fit a measured deuteron baseline
 
-The public [deuteron-baseline.csv](examples/deuteron-baseline.csv) contains one
-measured deuteron baseline near **32.68 MHz**, supplied by the repository owner
-for student use. Its timestamp and 500 amplitudes are included in GitHub.
-The actual scan start and bin spacing still need confirmation.
+The public [deuteron-baseline.csv](examples/deuteron-baseline.csv) is the owner's
+measured test example: one timestamp plus 500 amplitudes, with nominal center
+**32.7 MHz**. Every supplied baseline uses the same confirmed mapping:
+`f_j = 32.3 + 0.0015287*j MHz`, j=0…499; last sample 33.0628213 MHz.
+See [the acquisition contract](configs/deuteron-acquisition.json) and
+[data README](examples/README.md). The loader preserves all samples and explicitly
+repairs 35 decimal-spacing artifacts in memory.
 
-See [the data README](examples/README.md) for provenance and a runnable loading
-example. The shared reader documents and repairs 35 decimal-spacing artifacts
-in memory while preserving all samples. Run `python tools/preview_baseline.py`
-to reproduce the measured-data preview against sample index; it is not a fit.
+Reproduce the [measured fit](https://zetanaut.github.io/NMR-AI/baseline.html#example):
 
-The [parameter and tuning guide](https://zetanaut.github.io/NMR-AI/baseline.html#known-tuning)
-lists the physical meanings and how to fix known quantities or constrain
-approximate ones. Complete `configs/baseline-setup.template.json` from actual
-deuteron component/tuning records. After confirming the acquisition grid,
-replace the uppercase placeholders with its values:
+```bash
+python tools/fit_baseline.py examples/deuteron-baseline.csv \
+  --starts 24 --output-dir local-results/deuteron-baseline-fit
+python tools/export_baseline_example.py --fit-dir local-results/deuteron-baseline-fit
+```
+
+Both fitters use the owner's acquisition file by default. The whole-scan RMS is
+6.9156 × 10⁻⁵ recorded units, or 0.0281% of peak-to-peak range. All 500 bins,
+including the endpoint residuals, remain visible. The six-parameter comparison
+uses stated nominal fixed components; it is not independent hardware
+identification, a noise measurement, or a polarization-error metric.
+
+Use independent tuning information wherever available. Complete
+`configs/baseline-setup.template.json`, then run:
 
 ```bash
 python tools/fit_tuned_baseline.py examples/deuteron-baseline.csv \
   --setup my-known-setup.json \
-  --start-mhz START_MHZ --step-mhz STEP_MHZ \
-  --frequency-source "Acquisition record identifying this scan and its grid" \
-  --starts 12 --output-dir local-results/deuteron-baseline-fit
+  --starts 12 --output-dir local-results/tuning-informed-baseline-fit
 ```
 
-Every active parameter is explicitly fixed or fitted. A known cable half-wave
-multiple uses `length = n*pi/beta + delta_length`, evaluated near 32.68 MHz;
-only the supported correction need be fitted. Gaussian hardware constraints
-require a supplied data-noise standard deviation. Missing tuning inputs in the
-template deliberately prevent fitting with invented values.
+Known quantities are fixed; only declared unknowns vary within supported bounds.
+A known cable half-wave multiple uses length = n*pi/beta + delta_length at the
+recorded tuning frequency. Gaussian constraints require a data-noise scale.
+Missing hardware records are not filled with invented measurements.
 
-The fitter preserves every CSV row and identifies exact duplicates. It saves
-measured/fitted overlays, residuals, all parameter declarations, candidate
-solutions, acquisition and code/source provenance, and reconstruction details.
-Recorded values remain in recorded units until the DAQ conversion is confirmed.
+`--acquisition` selects another documented contract; alternative start, step,
+and frequency-source overrides must be supplied together. Fit reports save the
+acquisition hash, parsing record, fixed/fitted values, numerical bounds,
+starting-point candidates, residual statistics, and reconstruction information.
 
-After a fresh fit with correct frequency metadata, publish with
-`python tools/export_baseline_example.py --fit-dir local-results/deuteron-baseline-fit`.
-This verifies saved curves and publishes all 500 bins with residuals and the
-parameter table. This public test CSV is the explicitly authorized raw-data
-exception; other measurements and full fit products remain local. No current
-measured-fit accuracy is claimed while the grid is unresolved.
+The public CSV is the explicitly authorized raw-data exception. Other measurements
+and full fit products stay local. The main 512-bin synthetic training benchmark is
+unchanged; it is not silently relabeled as this 500-bin measured acquisition.
 
 ## Run the learning labs
 

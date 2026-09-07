@@ -14,7 +14,7 @@ from pathlib import Path
 import numpy as np
 from scipy.optimize import least_squares
 from circuit import Circuit, cable_parameters, node_voltage, resonator_impedance
-from baseline_data import load_baseline_csv
+from baseline_data import load_baseline_csv, add_acquisition_arguments, resolve_acquisition
 
 INACTIVE = {"filling_factor", "susceptibility_scale_cgs"}
 READOUT_INTERNAL = {"detector_gain", "detector_phase_rad", "dc_offset_v"}
@@ -183,25 +183,22 @@ def main():
     parser.add_argument("data", type=Path)
     parser.add_argument("--setup", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
-    parser.add_argument("--start-mhz", type=float, required=True)
-    parser.add_argument("--step-mhz", type=float, required=True)
-    parser.add_argument("--frequency-source", required=True, help="Acquisition record establishing the supplied deuteron grid")
+    add_acquisition_arguments(parser)
     parser.add_argument("--starts", type=int, default=12)
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
-    if not args.frequency_source.strip():
-        parser.error("Record the source of the actual deuteron frequency grid")
+    try:
+        f, acquisition = resolve_acquisition(args)
+    except ValueError as error:
+        parser.error(str(error))
     setup = json.loads(args.setup.read_text())
     validate_setup(setup)
     if args.output_dir.exists():
         parser.error("Choose a new output directory")
-    if not np.isfinite([args.start_mhz, args.step_mhz]).all() or min(args.start_mhz, args.step_mhz) <= 0 or args.starts < 1:
-        parser.error("Require positive scan mapping and starts")
+    if args.starts < 1:
+        parser.error("Require positive starts")
     data, input_parsing = load_baseline_csv(args.data)
     _, first = np.unique(data, axis=0, return_index=True)
-    f = (args.start_mhz + np.arange(500)*args.step_mhz)*1e6
-    if not f[0] <= 32.68e6 <= f[-1]:
-        parser.error("The acquisition grid must bracket the approximate 32.68 MHz deuteron reference")
     args.output_dir.mkdir(parents=True)
     import matplotlib
     matplotlib.use("Agg")
@@ -227,13 +224,13 @@ def main():
     import scipy
     report = {"fit_mode": "tuning-informed", "setup": setup, "nucleus": "deuteron",
               "reference_hz": setup["parameters"]["reference_hz"]["value"],
-              "frequency_source": args.frequency_source,
+              "frequency_source": acquisition["frequency_source"], "acquisition": acquisition,
               "source_sha256": input_parsing["source_sha256"], "input_parsing": input_parsing,
               "setup_sha256": hashlib.sha256(args.setup.read_bytes()).hexdigest(),
               "code_sha256": {name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
                               for name in ("fit_tuned_baseline.py", "circuit.py", "baseline_data.py")},
               "numpy_version": np.__version__, "scipy_version": scipy.__version__,
-              "starts": args.starts, "seed": args.seed, "start_mhz": args.start_mhz, "step_mhz": args.step_mhz,
+              "starts": args.starts, "seed": args.seed, "start_mhz": acquisition["start_mhz"], "step_mhz": acquisition["step_mhz"],
               "rows": len(data), "unique_rows": len(first), "fitted_bin_mask": "All 500 bins; no exclusions",
               "residual_sign": "recorded minus fitted", "fits": reports}
     (args.output_dir/"fit_report.json").write_text(json.dumps(report, indent=2, allow_nan=False))

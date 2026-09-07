@@ -9,7 +9,7 @@ see the [physics notes](physics-electronics-theory.md) for topology and conventi
 The public example is now [`examples/deuteron-baseline.csv`](../examples/deuteron-baseline.csv),
 provided by the repository owner specifically for student use and publication.
 It contains one headerless record: timestamp plus 500 amplitudes. This is a
-deuteron baseline near **32.68 MHz**; no frequency column is present.
+deuteron baseline with nominal center **32.7 MHz**; no frequency column is present.
 
 The CSV preserves every supplied field and space, with only a final newline
 added. Published SHA-256: `dac7c4598c6ec32250ab763ab1bf99e2a7aa7346de4e452ce00e80f0e2b1eb28`.
@@ -19,32 +19,70 @@ nonfinite values, and wrong field counts are rejected. All 500 samples and the
 timestamp are preserved; neither fitter interprets the first row as a header.
 See [the example README](../examples/README.md) for source provenance and loading.
 
-`python tools/preview_baseline.py` produces the website's measured-data preview
-against sample index and its provenance. It does not fit a circuit or assume Hz.
+The owner confirmed that every baseline has 500 bins and retains the original
+proton sweep offsets and spacing, with nominal center changed from 213 MHz to
+32.7 MHz. This gives:
 
-The actual start frequency and bin spacing (or equivalent endpoints) are still
-needed. The approximate reference frequency alone does not specify the width,
-whether endpoints are included, or where the reference falls between bins.
-Do not silently assume the synthetic generator's 512-bin window describes this
-500-bin measurement. Preserve the raw CSV and record the acquisition source.
+```
+f_j = (212.6 + 0.0015287*j) - (213 - 32.7) MHz
+    = 32.3 + 0.0015287*j MHz, j = 0..499
+first = 32.3000000 MHz; last = 33.0628213 MHz
+spacing = 1.5287 kHz; endpoint midpoint = 32.68141065 MHz
+```
+
+The nominal center is not exactly the midpoint of these inherited offsets.
+Keep the translated grid; do not substitute a symmetric linspace or count 500
+intervals between 500 samples. The confirmed default is
+`configs/deuteron-acquisition.json`; its hash and source are saved with the fit.
+Both fitters and `preview_baseline.py` use it by default. Alternative grid
+overrides require start, step, and frequency source together.
+
+## Reproduce the displayed measured fit
+
+```bash
+python tools/fit_baseline.py examples/deuteron-baseline.csv \
+  --starts 24 --output-dir local-results/deuteron-baseline-fit
+python tools/export_baseline_example.py --fit-dir local-results/deuteron-baseline-fit
+```
+
+Use a fresh output directory. The only supplied trace is fitted in full; there
+is no selection among scans. Twenty-four starts (seed 42) fit C_tune, cable
+length, and C_stray, with readout quadratures and offset solved by linear least
+squares. Numerical bounds are `[0.2 pF, 3 m, 0 pF]` to `[600 pF, 5 m, 400 pF]`.
+Other components are explicit nominal assumptions, not independently known
+hardware. The best solution has no active shape bound; every candidate is saved.
+
+Whole-scan RMS is 6.9155951×10⁻⁵ recorded units, or 0.0280726% of the measured
+0.2463471 peak-to-peak range. The maximum absolute residual is 8.6450759×10⁻⁴
+at sample 499. Residual lag-one correlation is 0.3990. All bins and endpoints
+are included in the fit and figure. These statistics describe the curve match,
+not electronic-noise variance or polarization error.
+
+The fitted C_tune≈30.0602 pF, length≈4.05109 m, and C_stray≈45.8454 pF are
+effective estimates under nominal fixed components. The readout is A≈580.565
+recorded units/V, phase≈−3.07162 rad, and offset≈11.0353 recorded units. Amplitude
+and offset can compensate strongly; do not interpret either as a calibrated
+instrument measurement. The scaled shape-Jacobian condition is approximately
+4.95×10⁴, with nearby competing solutions demonstrating weak identification.
+The length corresponds to about 1.35443 nominal cable half-waves; an integer
+branch has not been independently established or imposed.
 
 ## Use independent tuning information
 
 Complete `configs/baseline-setup.template.json` from component/tuning records.
-Its reference is approximately 32.68 MHz; confirm the exact tuning frequency.
+Its nominal reference is 32.7 MHz; independently measured tuning information
+may further constrain the actual resonant condition.
 The cable half-wave integer, capacitance, component tolerances, and readout
 information remain independent inputs, not quantities established by an
 unconstrained curve match.
 
-After establishing the grid, replace the uppercase placeholders below with
-actual values; they are not runnable defaults:
+The acquisition grid is supplied by the default contract. After completing the
+hardware setup, run:
 
 ```bash
 python tools/fit_tuned_baseline.py examples/deuteron-baseline.csv \
   --setup my-known-setup.json \
-  --start-mhz START_MHZ --step-mhz STEP_MHZ \
-  --frequency-source "Acquisition record identifying this scan and its grid" \
-  --starts 12 --output-dir local-results/deuteron-baseline-fit
+  --starts 12 --output-dir local-results/tuning-informed-baseline-fit
 ```
 
 Every active parameter requires a source or explicit assumption:
@@ -139,15 +177,18 @@ python tools/export_baseline_example.py --fit-dir local-results/deuteron-baselin
 ```
 
 The exporter requires deuteron acquisition provenance, rejects a grid that does
-not bracket the approximate deuteron reference, checks code hashes and exact
-saved-curve reconstruction, and selects the median whole-scan RMS among distinct
-traces. It publishes all measured bins, residuals, parameter meanings/values,
+not bracket the nominal deuteron reference, and checks code hashes and exact
+saved-curve reconstruction. It uses the sole provided trace here; for a file with
+multiple distinct traces it selects the median whole-scan RMS. It publishes all
+measured bins, residuals, parameter meanings/values, search bounds and candidates,
 and provenance. The public CSV includes its timestamp with the owner's explicit
 authorization; the fit metadata does not need to repeat it. Other raw data are
-not automatically published. No current measured-fit accuracy is
-claimed while the acquisition grid remains unresolved.
+not automatically published. A low baseline RMS is not a claim of uniquely known
+hardware, calibrated susceptibility, or polarization accuracy.
 
 The main training generator already uses a 32.68 MHz circuit reference. Its
 synthetic configurations, noise, and TE calibration are not measurements derived
 from the supplied baseline. The generator and trained benchmark are unchanged
-by withdrawal of the invalid baseline illustration.
+by fitting this measured baseline. Its 512-bin synthetic window is not silently
+changed to the confirmed 500-bin acquisition; that would require regeneration
+and retraining as a separate change.

@@ -10,7 +10,9 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/"tools"))
-from baseline_parameters import CATALOG, parameter_reference_html
+from baseline_parameters import CATALOG
+from baseline_data import load_acquisition, acquisition_grid, load_baseline_csv
+from fit_baseline import fitted_curve
 from export_baseline_example import draw_example, load_example
 
 
@@ -19,21 +21,18 @@ class BaselineExample(unittest.TestCase):
         page = (ROOT/"docs/baseline.html").read_text()
         self.assertIn('id="example"', page)
         self.assertIn('id="known-tuning"', page)
-        self.assertIn("32.68 MHz", page)
+        self.assertIn("32.7 MHz", page)
         metadata_path = ROOT/"docs/assets/baseline-example.json"
-        if not metadata_path.exists():
-            for name in CATALOG:
-                self.assertIn(f"<code>{name}</code>", page)
-            self.assertIn("awaiting the actual scan grid", page)
-            self.assertNotIn('src="assets/baseline-example.svg"', page)
-            self.assertFalse((ROOT/"docs/assets/baseline-example.svg").exists())
-            self.assertIn(parameter_reference_html(), page)
-        else:
+        if metadata_path.exists():
             metadata = json.loads(metadata_path.read_text())
             self.assertEqual(metadata["nucleus"], "deuteron")
             self.assertTrue(metadata["frequency_source"])
-            self.assertLessEqual(metadata["start_mhz"], 32.68)
-            self.assertGreaterEqual(metadata["start_mhz"]+499*metadata["step_mhz"], 32.68)
+            self.assertEqual(metadata["start_mhz"], 32.3)
+            self.assertEqual(metadata["step_mhz"], .0015287)
+            self.assertEqual(metadata["reference_hz"], 32.7e6)
+            self.assertEqual(metadata["acquisition"], load_acquisition())
+            self.assertEqual(metadata["unique_rows"], 1)
+            self.assertEqual(metadata["input_parsing"]["decimal_whitespace_repair_count"], 35)
             selected = sorted(metadata["summaries"], key=lambda s: s["rms_recorded_units"])[len(metadata["summaries"])//2]
             self.assertEqual(metadata["selected_trace_number"], selected["trace_number"])
             for name in CATALOG.keys()-{"cable_delta_length_m"}:
@@ -42,6 +41,22 @@ class BaselineExample(unittest.TestCase):
                 self.assertEqual(hashlib.sha256((ROOT/"tools"/name).read_bytes()).hexdigest(), digest)
             self.assertEqual(hashlib.sha256((ROOT/"docs/assets/baseline-example.svg").read_bytes()).hexdigest(),
                              metadata["svg_sha256"])
+            self.assertEqual(hashlib.sha256((ROOT/"tools/export_baseline_example.py").read_bytes()).hexdigest(), metadata["exporter_sha256"])
+            self.assertEqual(hashlib.sha256((ROOT/"tools/baseline_parameters.py").read_bytes()).hexdigest(), metadata["parameter_catalog_sha256"])
+        else:
+            self.fail("The confirmed public acquisition needs its measured-fit example")
+
+    def test_published_fit_reconstructs_against_the_public_csv(self):
+        metadata = json.loads((ROOT/"docs/assets/baseline-example.json").read_text())
+        records, parsing = load_baseline_csv(ROOT/"examples/deuteron-baseline.csv")
+        prediction = fitted_curve(acquisition_grid(load_acquisition()), metadata["selected_fit"])
+        residual = records[0, 1:]-prediction
+        self.assertEqual(metadata["source_sha256"], parsing["source_sha256"])
+        summary = metadata["summaries"][0]
+        np.testing.assert_allclose(np.sqrt(np.mean(residual**2)), summary["rms_recorded_units"], rtol=1e-8)
+        np.testing.assert_allclose(np.max(np.abs(residual)), summary["max_absolute_residual_recorded_units"], rtol=1e-8)
+        self.assertLess(summary["rms_percent_of_peak_to_peak"], .04)
+        self.assertEqual(metadata["selected_fit"]["active_bounds"], [0, 0, 0])
 
     def test_reject_missing_frequency_provenance_and_proton_grid(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -71,17 +86,20 @@ class BaselineExample(unittest.TestCase):
             self.assertEqual(len(dots.findall(".//s:use", ns)), 500)
             self.assertIn("recorded minus fitted", asset.read_text())
 
-    def test_fit_cli_requires_actual_grid_and_its_source(self):
+    def test_fit_cli_requires_complete_alternative_grid_overrides(self):
         import subprocess
         for script in ("fit_baseline.py", "fit_tuned_baseline.py"):
-            result = subprocess.run([sys.executable, str(ROOT/"tools"/script), "unused.csv",
-                                     "--output-dir", "unused-output"], capture_output=True, text=True)
+            args = [sys.executable, str(ROOT/"tools"/script), "unused.csv",
+                    "--output-dir", "unused-output", "--start-mhz", "32.3"]
+            if script == "fit_tuned_baseline.py":
+                args.extend(["--setup", "unused.json"])
+            result = subprocess.run(args, capture_output=True, text=True)
             self.assertNotEqual(result.returncode, 0)
             for option in ("--start-mhz", "--step-mhz", "--frequency-source"):
                 self.assertIn(option, result.stderr)
         template = json.loads((ROOT/"configs/baseline-setup.template.json").read_text())
-        self.assertEqual(template["parameters"]["reference_hz"]["value"], 32.68e6)
-        self.assertEqual(template["cable_tuning"]["reference_hz"], 32.68e6)
+        self.assertEqual(template["parameters"]["reference_hz"]["value"], 32.7e6)
+        self.assertEqual(template["cable_tuning"]["reference_hz"], 32.7e6)
 
 
 if __name__ == "__main__":
