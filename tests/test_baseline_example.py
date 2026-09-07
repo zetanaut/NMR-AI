@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/"tools"))
 from baseline_parameters import CATALOG
 from baseline_data import load_acquisition, acquisition_grid, load_baseline_csv
-from fit_baseline import fitted_curve
+from fit_tuned_baseline import reconstruct_fit, resolved_circuit, validate_setup, DEFAULT_SETUP
 from export_baseline_example import draw_example, load_example
 
 
@@ -49,14 +49,29 @@ class BaselineExample(unittest.TestCase):
     def test_published_fit_reconstructs_against_the_public_csv(self):
         metadata = json.loads((ROOT/"docs/assets/baseline-example.json").read_text())
         records, parsing = load_baseline_csv(ROOT/"examples/deuteron-baseline.csv")
-        prediction = fitted_curve(acquisition_grid(load_acquisition()), metadata["selected_fit"])
+        prediction = reconstruct_fit(acquisition_grid(load_acquisition()), metadata["selected_fit"])
         residual = records[0, 1:]-prediction
         self.assertEqual(metadata["source_sha256"], parsing["source_sha256"])
         summary = metadata["summaries"][0]
         np.testing.assert_allclose(np.sqrt(np.mean(residual**2)), summary["rms_recorded_units"], rtol=1e-8)
         np.testing.assert_allclose(np.max(np.abs(residual)), summary["max_absolute_residual_recorded_units"], rtol=1e-8)
-        self.assertLess(summary["rms_percent_of_peak_to_peak"], .04)
-        self.assertEqual(metadata["selected_fit"]["active_bounds"], [0, 0, 0])
+        self.assertLess(summary["rms_percent_of_peak_to_peak"], 1.0)
+        fit = metadata["selected_fit"]
+        setup = json.loads(DEFAULT_SETUP.read_text())
+        self.assertEqual(fit["setup"], setup)
+        self.assertEqual(setup["cable_tuning"]["half_wave_multiple"], 1)
+        self.assertEqual(setup["cable_tuning"]["half_wave_length_m"], 3.58)
+        self.assertEqual(fit["n_free"], 6)
+        self.assertEqual(len(fit["nonlinear_parameters"]), 3)
+        self.assertEqual(len(fit["profiled_parameters"]), 3)
+        self.assertEqual(fit["active_bound_parameters"], fit["nonlinear_parameters"])
+        self.assertEqual(fit["near_bounds"], {"stray_capacitance_f": "upper", "cable_delta_length_m": "upper"})
+        self.assertIn("not an accepted hardware calibration", (ROOT/"docs/baseline.html").read_text())
+        for candidate in fit["multistart_candidates"]:
+            c = resolved_circuit(candidate["parameters"], setup)
+            self.assertGreaterEqual(c.cable_length_m, 3.58*.97-1e-12)
+            self.assertLessEqual(c.cable_length_m, 3.58*1.03+1e-12)
+        self.assertNotIn("1.3544", (ROOT/"docs/baseline.html").read_text())
 
     def test_reject_missing_frequency_provenance_and_proton_grid(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -68,6 +83,10 @@ class BaselineExample(unittest.TestCase):
             report.write_text(json.dumps({"nucleus": "deuteron", "frequency_source": "Wrong grid regression test",
                                           "start_mhz": 212.6, "step_mhz": .0015287}))
             with self.assertRaisesRegex(ValueError, "does not bracket"):
+                load_example(folder)
+            report.write_text(json.dumps({"nucleus": "deuteron", "frequency_source": "Regression test",
+                                          "start_mhz": 32.3, "step_mhz": .0015287}))
+            with self.assertRaisesRegex(ValueError, "tuning-informed"):
                 load_example(folder)
 
     def test_vector_figure_retains_all_points_on_synthetic_deuteron_grid(self):

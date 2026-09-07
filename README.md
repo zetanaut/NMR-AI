@@ -37,18 +37,25 @@ Reproduce the [measured fit](https://zetanaut.github.io/NMR-AI/baseline.html#exa
 
 ```bash
 python tools/fit_baseline.py examples/deuteron-baseline.csv \
-  --starts 24 --output-dir local-results/deuteron-baseline-fit
-python tools/export_baseline_example.py --fit-dir local-results/deuteron-baseline-fit
+  --starts 24 --output-dir local-results/deuteron-tuned-baseline-fit
+python tools/export_baseline_example.py --fit-dir local-results/deuteron-tuned-baseline-fit
 ```
 
-Both fitters use the owner's acquisition file by default. The whole-scan RMS is
-6.9156 × 10⁻⁵ recorded units, or 0.0281% of peak-to-peak range. All 500 bins,
-including the endpoint residuals, remain visible. The six-parameter comparison
-uses stated nominal fixed components; it is not independent hardware
-identification, a noise measurement, or a polarization-error metric.
+The default fit now enforces the owner's **n = 1** branch and **3.580 m cable
+half-wavelength at 32.7 MHz**, using consistent RLGC propagation (velocity factor
+0.7809803). The [setup preset](configs/deuteron-baseline-setup.json) permits only
+a provisional ±3% trim, an explicit working bound rather than a measured uncertainty.
 
-Use independent tuning information wherever available. Complete
-`configs/baseline-setup.template.json`, then run:
+The constrained result reaches the upper trim and stray-capacitance limits.
+RMS is approximately 8.1195 × 10⁻⁴ recorded units (0.3296% of peak-to-peak range),
+with strongly correlated residuals. All 500 bins remain visible. This is a
+**diagnostic fit, not an accepted hardware calibration**: additional capacitor,
+coil, cable-loss and detector records are needed. The tutorial explains the
+warnings and lists every fixed, fitted, profiled and derived quantity.
+
+Both commands below use the same setup-driven fitter. To add independent
+measurements for this setup, copy and refine `deuteron-baseline-setup.json`.
+For another setup, complete `configs/baseline-setup.template.json`:
 
 ```bash
 python tools/fit_tuned_baseline.py examples/deuteron-baseline.csv \
@@ -136,7 +143,7 @@ Preview with `python3 -m http.server 8000 --bind 127.0.0.1 --directory docs`. Th
 - `docs/index.html`, `docs/baseline.html`: three-phase guide and baseline practical.
 - `tools/circuit.py`, `tools/lineshape.py`: physical electronics and complex nuclear response.
 - `tools/fit_tuned_baseline.py`, `configs/baseline-setup.template.json`: fit only declared unknowns using independent tuning information.
-- `tools/fit_baseline.py`: pedagogical variable projection on an explicitly supplied deuteron grid.
+- `tools/fit_baseline.py`, `configs/deuteron-baseline-setup.json`: constrained default fit for the supplied n=1, 3.580 m setup.
 - `examples/`, `tools/baseline_data.py`, `tools/preview_baseline.py`: public measured CSV, audited parser, and sample-index preview.
 - `tools/baseline_parameters.py`, `tools/export_baseline_example.py`: physical parameter catalogue and verified measured-fit publication.
 - `tools/nmr_lab.py`: generation, calibration, features, group split, networks.

@@ -51,10 +51,10 @@ def parameter_table_html(metadata):
     values = dict(fit["circuit"])
     a, b, offset = fit["quadrature_coefficients"]
     values.update(readout_gain=float(np.hypot(a, b)), readout_phase_rad=float(np.arctan2(-b, a)), readout_offset=offset)
-    fitted = {"tune_capacitance_f", "cable_length_m", "stray_capacitance_f", "readout_gain", "readout_phase_rad", "readout_offset"}
-    if "resolved_parameters" in fit:
-        values.update(fit["resolved_parameters"])
-        fitted = set(fit["free_parameters"])
+    if fit.get("fit_mode") != "tuning-informed":
+        raise ValueError("Only tuning-informed fit tables are supported")
+    values.update(fit["resolved_parameters"])
+    fitted = set(fit["free_parameters"])
     specs = fit.get("setup", {}).get("parameters", {})
     derived = {"cable_length_m"} if "cable_tuning" in fit.get("setup", {}) else set()
     groups = []
@@ -67,19 +67,13 @@ def parameter_table_html(metadata):
         for name in names:
             symbol, scale, unit, meaning = CATALOG[name]
             context = ''
-            if not specs and name == "reference_hz":
-                context = '<br><small>Source: owner-confirmed nominal acquisition center.</small>'
-            elif not specs and name not in fitted:
-                context = '<br><small>Nominal model assumption; not independently measured.</small>'
-            elif not specs and name in ("tune_capacitance_f", "cable_length_m", "stray_capacitance_f") and "bounds_pf_m_pf" in metadata:
-                index = ("tune_capacitance_f", "cable_length_m", "stray_capacitance_f").index(name)
-                bounds = metadata["bounds_pf_m_pf"]
-                context = f'<br><small>Numerical search bounds: {bounds[0][index]:g} to {bounds[1][index]:g} {escape(unit)}; not a hardware uncertainty.</small>'
             if name in specs:
                 spec = specs[name]
                 context = '<br><small>Source/assumption: '+escape(spec['source'])+'</small>'
                 if 'bounds' in spec:
                     context += f'<br><small>Bounds: {spec["bounds"][0]*scale:.6g} to {spec["bounds"][1]*scale:.6g} {escape(unit)}</small>'
+                if spec.get('profile'):
+                    context += '<br><small>Fitted analytically at each circuit step; counts as an unknown.</small>'
                 if 'prior' in spec:
                     context += f'<br><small>Constraint: {spec["prior"]["mean"]*scale:.6g} ± {spec["prior"]["sigma"]*scale:.6g} {escape(unit)} (1σ)</small>'
             rows.append(f'<tr><td><strong>{escape(symbol)}</strong><br><code>{escape(name)}</code></td>'
@@ -90,21 +84,21 @@ def parameter_table_html(metadata):
     c = Circuit(**fit["circuit"])
     tuning_frequency = fit.get("setup", {}).get("cable_tuning", {}).get("reference_hz", c.reference_hz)
     beta = float(cable_parameters(tuning_frequency, c)[1].imag)
-    if 'resolved_parameters' in fit:
-        provenance = (f'This tuning-informed fit optimizes only {len(fitted)} declared unknowns. '
-                      'Fixed entries, bounds, and independent measurement constraints come from the supplied setup file; '
-                      'their source or assumption is recorded with each parameter.')
-        length_note = 'The setup specifies whether length is directly known/fitted or derived from a known half-wave branch plus a declared correction.'
-        if "cable_tuning" in fit["setup"]:
-            tuning = fit["setup"]["cable_tuning"]
-            length_note += (f' The fixed branch is n = {tuning["half_wave_multiple"]} at '
-                            f'{tuning["reference_hz"]/1e6:g} MHz. Source: {escape(tuning["source"])}.')
-    else:
-        provenance = ('For this exploratory example, six quantities were fitted: three circuit coordinates and three readout coordinates. '
-                      'The frequency grid and nominal center are supplied by the owner. Other fixed component values are nominal assumptions; '
-                      'independent capacitance, cable-branch, and component measurements have not yet been supplied.')
-        length_note = ('An integer branch was not enforced. Do not round this value and call the result a known tuning setting. '
-                       'Use the recorded branch and its supported trim tolerance for a tuning-informed refit.')
+    provenance = (f'This tuning-informed fit optimizes only {len(fitted)} declared unknowns. '
+                  'Fixed entries, bounds, and independent measurement constraints come from the supplied setup file; '
+                  'their source or assumption is recorded with each parameter.')
+    length_note = 'The setup specifies whether length is directly known/fitted or derived from a known half-wave branch plus a declared correction.'
+    if "cable_tuning" in fit["setup"]:
+        tuning = fit["setup"]["cable_tuning"]
+        length_note += (f' The fixed branch is n = {tuning["half_wave_multiple"]} at '
+                        f'{tuning["reference_hz"]/1e6:g} MHz. Source: {escape(tuning["source"])}.')
+        if 'half_wave_length_m' in tuning:
+            h = tuning['half_wave_length_m']
+            length_note += (f' The supplied λ/2 = {h:.3f} m fixes the phase velocity factor to '
+                            f'{2*tuning["reference_hz"]*h/299792458:.6f}. '
+                            f'The fitted trim is {(c.cable_length_m-tuning["half_wave_multiple"]*h)*100:.4f} cm. '
+                            'Cable L and C were derived together to enforce this propagation constraint, '
+                            'with nominal impedance and loss assumptions retained explicitly.')
     return ('<div id="fit-parameters"><h3>Every parameter behind the displayed fit</h3>'
             '<p>Distinguish fitted estimates from fixed inputs and their sources; a numerical fit value is not itself an independent component measurement or uncertainty. '
             +provenance+'</p>'

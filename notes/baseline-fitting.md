@@ -37,158 +37,178 @@ intervals between 500 samples. The confirmed default is
 Both fitters and `preview_baseline.py` use it by default. Alternative grid
 overrides require start, step, and frequency source together.
 
-## Reproduce the displayed measured fit
+## Apply the known cable tuning BEFORE fitting
+
+The owner confirms **n = 1**, with **λ/2 = 358.0 cm = 3.580 m** at nominal
+32.7 MHz and installed length very close to this. This is independent hardware
+information, not an integer inferred from the fitted curve. The paper explicitly
+requires integer half-wave tuning and quotes approximately 0.78 velocity factor
+and 360 cm half-wavelength for deuterons [Sec. 2, pp. 2–3](https://arxiv.org/pdf/2603.10146#page=2).
+
+The working preset is [deuteron-baseline-setup.json](../configs/deuteron-baseline-setup.json).
+It fixes the branch and propagation scale, allowing only δℓ = ±0.1074 m (±3%).
+This is our explicit working interpretation of “a few percent,” not an independently
+measured tolerance or Gaussian standard uncertainty. Do not increase it to absorb
+other model errors. The allowed physical interval is 3.4726–3.6874 m.
+
+### Make the cable constants consistent
+
+For h = 3.580 m and f₀ = 32.7 MHz, β₀ = π/h and v_phase/c = 2f₀h/c = 0.7809802874.
+Changing a length label while keeping incompatible RLGC constants does not
+change the model's electrical wavelength.
+
+Retain the nominal assumptions R′ = 3.43 Ω/m, G′ = 0 and Z_lc = sqrt(L′/C′) = 50 Ω.
+These losses and impedance are not newly measured. With G′ = 0, derive both L′
+and C′ from the exact lossy propagation relation:
+
+```
+ω₀ = 2πf₀; β₀ = π/h
+C′ = 2β₀² / [ω₀ sqrt(R′² + 4β₀² Z_lc²)]
+L′ = Z_lc² C′
+γ = sqrt[(R′ + iωL′) iωC′]
+```
+
+This gives L′ = 2.13391803595×10⁻⁷ H/m and C′ = 8.53567214380×10⁻¹¹ F/m.
+At f₀, Im(γ)h = π to numerical precision and attenuation is 0.03427383/m.
+The exact complex characteristic impedance is approximately 50.0382−1.9543i Ω;
+50 Ω denotes nominal sqrt(L′/C′), not a claim that the lossy Z₀ is purely real.
+
+The derivation is implemented in `calibrated_cable_lc` in
+`tools/fit_tuned_baseline.py`. It tends to the familiar low-loss conversions
+L′ = Z_lc/v and C′ = 1/(Z_lc v) when R′ = 0.
+The setup's `half_wave_length_m` field rejects RLGC constants that contradict
+the known propagation scale. At each frequency use the full γ and Z₀ from
+the same RLGC values. The physical length remains fixed across the sweep.
+
+## Reproduce the constrained diagnostic example
 
 ```bash
 python tools/fit_baseline.py examples/deuteron-baseline.csv \
-  --starts 24 --output-dir local-results/deuteron-baseline-fit
-python tools/export_baseline_example.py --fit-dir local-results/deuteron-baseline-fit
+  --starts 24 --output-dir local-results/deuteron-tuned-baseline-fit
+python tools/export_baseline_example.py --fit-dir local-results/deuteron-tuned-baseline-fit
 ```
 
-Use a fresh output directory. The only supplied trace is fitted in full; there
-is no selection among scans. Twenty-four starts (seed 42) fit C_tune, cable
-length, and C_stray, with readout quadratures and offset solved by linear least
-squares. Numerical bounds are `[0.2 pF, 3 m, 0 pF]` to `[600 pF, 5 m, 400 pF]`.
-Other components are explicit nominal assumptions, not independently known
-hardware. The best solution has no active shape bound; every candidate is saved.
+Use a fresh output directory. `fit_baseline.py` is a convenience entry point to
+the setup-driven fitter with the supplied deuteron preset, not a separate
+unrestricted search. The former unconstrained workflow and its public fit have
+been replaced. The CSV and confirmed frequency grid are unchanged.
 
-Whole-scan RMS is 6.9155951×10⁻⁵ recorded units, or 0.0280726% of the measured
-0.2463471 peak-to-peak range. The maximum absolute residual is 8.6450759×10⁻⁴
-at sample 499. Residual lag-one correlation is 0.3990. All bins and endpoints
-are included in the fit and figure. These statistics describe the curve match,
-not electronic-noise variance or polarization error.
+Twenty-four starts (seed 42) vary only C_tune, C_stray, and δℓ. Numerical
+capacitance bounds are 10–2000 pF and 0–400 pF respectively; these are search
+intervals, not measured component tolerances. The 800 pF initial tuning estimate
+comes from 1/(ω₀²L₀) with nominal L₀ = 30 nH; it is not a prior.
+At every circuit step the three unknown readout coefficients a,b,d are solved
+by weighted linear least squares. They still count as three unknowns:
+**three nonlinear coordinates plus three profiled readout coordinates = six**.
 
-The fitted C_tune≈30.0602 pF, length≈4.05109 m, and C_stray≈45.8454 pF are
-effective estimates under nominal fixed components. The readout is A≈580.565
-recorded units/V, phase≈−3.07162 rad, and offset≈11.0353 recorded units. Amplitude
-and offset can compensate strongly; do not interpret either as a calibrated
-instrument measurement. The scaled shape-Jacobian condition is approximately
-4.95×10⁴, with nearby competing solutions demonstrating weak identification.
-The length corresponds to about 1.35443 nominal cable half-waves; an integer
-branch has not been independently established or imposed.
+### What the constrained result tells us
 
-## Use independent tuning information
+This is a **diagnostic constrained fit, not an accepted hardware calibration**.
+It reaches the +3% length limit (ℓ ≈ 3.6874 m, 1.0300 half-waves, δℓ ≈ +10.74 cm)
+and the 400 pF stray-capacitance limit. Do not interpret the fitted trim as a
+measurement of the installed length; it shows pressure against the allowed range.
 
-Complete `configs/baseline-setup.template.json` from component/tuning records.
-Its nominal reference is 32.7 MHz; independently measured tuning information
-may further constrain the actual resonant condition.
-The cable half-wave integer, capacitance, component tolerances, and readout
-information remain independent inputs, not quantities established by an
-unconstrained curve match.
+Whole-scan RMS is approximately 8.1195×10⁻⁴ recorded units, or 0.3296% of the
+measured 0.2463471 peak-to-peak range. The largest residual is approximately
+3.5850×10⁻³ at sample 0. Lag-one residual correlation is approximately 0.9958.
+All 500 bins and both endpoints remain fitted and plotted. This smooth mismatch
+is not an estimate of electronic noise or polarization error.
 
-The acquisition grid is supplied by the default contract. After completing the
-hardware setup, run:
+The effective C_tune is about 49.92 pF. Readout gain is about 1.606×10⁴ recorded
+units/V and offset about −194.6 recorded units, strongly compensating each other.
+Those values, the boundary pressure, and correlated residuals challenge the
+remaining nominal components and constant-phase approximation. They are not
+validated settings to seed an experimental generator. In particular, a nominal
+30 nH coil near half-wave would suggest an isolated-coil capacitance near 790 pF;
+the fitted capacitance must be checked against the actual setting and full
+zero-reactance condition, not accepted because the curve looks close.
+
+The public JSON contains exact values, every candidate, convergence flags,
+active-bound status and a separate near-bound warning. “Near” means within
+10⁻⁵ of the declared search-interval width, so optimizer tolerance cannot hide
+boundary pressure. The reported Jacobian is for the three scaled nonlinear
+coordinates after profiling readout, not a full six-parameter covariance.
+Derivatives use three-point finite differences with relative step 10⁻⁴;
+no statistical parameter errors are inferred from this diagnostic.
+
+## Use additional independent information
+
+First obtain the approximate tuning capacitance or knob calibration, coil R/L,
+cable impedance/loss characterization, and detector settings. Replace corresponding
+nominal assumptions with independently known values or supported constraints.
+Do not declare a fitted value to be an independent measurement.
+
+For this same setup, copy `configs/deuteron-baseline-setup.json` and preserve
+the known branch and propagation. For another setup, complete
+`configs/baseline-setup.template.json`; nulls intentionally prevent silent
+assumptions about missing cable/component records.
 
 ```bash
 python tools/fit_tuned_baseline.py examples/deuteron-baseline.csv \
   --setup my-known-setup.json \
-  --starts 12 --output-dir local-results/tuning-informed-baseline-fit
+  --starts 24 --output-dir local-results/my-tuned-baseline-fit
 ```
 
 Every active parameter requires a source or explicit assumption:
 
 - `value`: fixed, excluded from optimization.
-- `initial` and `bounds`: unknown, fitted only within supported limits.
-- Optional `prior` with `mean` and positive `sigma`: an independent Gaussian
+- `initial` and `bounds`: an unknown fitted only within the declared limits.
+- `profile: true`: allowed only for all three readout parameters together;
+  eliminate a,b,d analytically. If any readout value is independently constrained,
+  use explicit fixed/bounded coordinates instead.
+- Optional `prior` with `mean` and positive `sigma`: independent Gaussian
   measurement constraint in physical units. It requires `noise_sigma_recorded`
-  so data and hardware constraints have consistent statistical weights.
+  so spectrum and hardware constraints have consistent statistical weights.
 
-A starting point is not a prior; a bound is not automatically a standard
-uncertainty. The noise scale is a positive scalar or 500-bin array in recorded
-units. This implementation uses diagonal data errors and independent hardware
-constraints. Without a measured noise scale, use fixed values/bounds and
-unweighted least squares; no likelihood or parameter errors are claimed.
+A starting point is not a prior; a hard bound is not a standard uncertainty.
+The noise scale must be a positive scalar or 500-bin array in recorded units.
+The implementation assumes diagonal data errors and independent Gaussian
+constraints. Without a measured noise scale it uses range-normalized unweighted
+least squares and makes no likelihood or parameter-error claim.
 
-The template intentionally contains nulls for missing tuning inputs. Tests use
-explicitly synthetic deuteron grids and components. They do not fill in missing
-experimental records.
+With known branch n, specify `cable_tuning` and `cable_delta_length_m`:
+`length = n*pi/beta(f_tune) + delta_length`. Include `half_wave_length_m`
+when independently known. A directly measured physical length is an alternative:
+omit the branch block and supply `cable_length_m`. Never impose both length
+definitions or optimize an integer as a continuous parameter.
 
-## Cable length and capacitance
+The full zero-reactance condition gives C_tune = 1/[ω Im(Z_line)] when the
+denominator is positive. The isolated-coil estimate is only a check. A
+phase-sensitive voltage maximum is not necessarily zero resonator reactance.
 
-For independently known half-wave integer n at f_tune, provide `cable_tuning`
-with `half_wave_multiple`, `reference_hz`, and `source`. Declare
-`cable_delta_length_m` instead of `cable_length_m`. At each evaluation:
+## Fitting, validation, and saved evidence
 
-```
-beta0 = Im[gamma(2*pi*f_tune)]
-length = n*pi/beta0 + delta_length
-```
+1. Read every record with the audited CSV loader; remove only exact duplicates.
+2. Construct the actual frequency grid and apply independent hardware constraints.
+3. Build the χ=0 coil with shunt stray admittance and the passive RLGC line.
+4. Add one series capacitor and damping resistor, then finite-source/input loading.
+5. Fit only declared unknowns, retaining every starting-point solution.
+6. Plot recorded-minus-fitted residuals on a separate scale, retaining all bins.
+7. Inspect bound hits, correlation, localized/endpoint deviations and competing fits.
+8. Validate against independent acquisitions, not other bins of the fitted scan.
 
-Use the supported trim/reference-plane tolerance. Alternatively supply a
-measured physical length directly and omit the branch block. If several integer
-branches remain possible, compare supported discrete hypotheses and retain the
-ambiguity. Do not derive an alleged independent branch from the same fit.
+Free RF amplitude and free readout gain together are rejected: only their
+product is identifiable. Filling factor and susceptibility amplitude multiply
+χ=0 and cannot be determined from a baseline.
 
-Cable wavelength is set by propagation velocity, not vacuum c. Consistent
-low-loss conversions from independently known velocity factor and impedance are
-`L_c ≈ Z0/(VF*c)` and `C_c ≈ 1/(Z0*VF*c)`. Prefer measured RLGC.
-All wavelength and tuning calculations must be evaluated at the deuteron
-frequency, not transferred from proton-frequency results.
+Saved outputs are `baseline_fits.png`, `trace_N.csv` (MHz, recorded, fitted,
+recorded-minus-fitted) and `fit_report.json`. The report includes data/code/setup
+hashes, acquisition provenance, versions, seed, parsing repairs, fixed/fitted/
+profiled status, all candidates, bounds and diagnostics.
 
-Use a calibrated capacitance setting and its tolerance. The isolated-coil
-estimate `1/(omega²L0)` is only a check. The full zero-reactance condition gives
-`C_tune = 1/[omega*Im(Z_line)]` when the denominator is positive.
-A phase-sensitive voltage maximum need not mark zero resonator reactance.
-
-## Fitting and validation
-
-1. Use `load_baseline_csv` to read all records and report formatting repairs;
-   identify only exact duplicates before fitting.
-2. Construct the actual frequency grid from confirmed acquisition metadata.
-3. Build the χ=0 coil with parallel stray admittance, transform it through the
-   passive RLGC cable, and add one series tuning capacitor and damping resistor.
-4. Solve the finite-source/input-loaded node voltage and phase-sensitive readout.
-5. Optimize only declared unknowns; retain every starting-point solution.
-6. Plot recorded-minus-fitted residuals on their own scale, retaining all 500 bins.
-7. Check bound hits, correlated/endpoint/localized residuals, competing solutions,
-   and the scaled Jacobian before interpreting parameters.
-8. Validate against independent acquisitions, not other bins from the fitted scan.
-
-The baseline cannot identify filling factor or susceptibility amplitude at χ=0.
-Free RF amplitude and free readout gain are rejected because only their product
-is identifiable without independent information.
-
-`fit_baseline.py` illustrates variable projection of readout quadratures. It
-also requires explicit frequency metadata and uses a deuteron reference; its
-built-in broad search bounds are numerical assumptions, not measured settings.
-The setup-driven fitter is preferred for a hardware-specific result.
-
-## Saved outputs and publication
-
-Use a new output directory. The outputs are `baseline_fits.png`,
-`trace_N.csv` (MHz, recorded, fitted, recorded-minus-fitted), and
-`fit_report.json`. The report includes nucleus/reference, frequency source and
-mapping, source/code/setup hashes, versions, seed, duplicate counts, all-bin
-policy, fixed/fitted values, constraints, candidate solutions, and diagnostics.
-
-Reconstruct the tuning-informed prediction with
+Reconstruct without optimizing using
 `fit_tuned_baseline.reconstruct_fit(f_hz, report["fits"][i])`.
-This retains any frequency-dependent phase. Readout coefficients a, b, d are an
-alternative representation of A, phase, and offset, not three extra unknowns.
+Frequency-dependent detector phase is retained. Coefficients a,b,d and A,φ₀,d
+are alternative representations, not six readout unknowns.
+Recorded units are not volts without independent DAQ conversion.
 
-Recorded-unit conversion remains unknown. Never label residuals µV without
-independent DAQ conversion. Residual RMS is not an electronic-noise measurement
-or a polarization-error metric.
+The exporter requires a tuning-informed deuteron report, validates code hashes
+and saved-curve reconstruction, and publishes all 500 points, residuals, physical
+parameter meanings and provenance. For multiple distinct scans it selects the
+median whole-scan RMS, not the best. The supplied CSV (including its timestamp)
+is explicitly authorized for publication; other raw data are not published.
 
-After a fresh fit on the correct grid, publish with:
-
-```bash
-python tools/export_baseline_example.py --fit-dir local-results/deuteron-baseline-fit
-```
-
-The exporter requires deuteron acquisition provenance, rejects a grid that does
-not bracket the nominal deuteron reference, and checks code hashes and exact
-saved-curve reconstruction. It uses the sole provided trace here; for a file with
-multiple distinct traces it selects the median whole-scan RMS. It publishes all
-measured bins, residuals, parameter meanings/values, search bounds and candidates,
-and provenance. The public CSV includes its timestamp with the owner's explicit
-authorization; the fit metadata does not need to repeat it. Other raw data are
-not automatically published. A low baseline RMS is not a claim of uniquely known
-hardware, calibrated susceptibility, or polarization accuracy.
-
-The main training generator already uses a 32.68 MHz circuit reference. Its
-synthetic configurations, noise, and TE calibration are not measurements derived
-from the supplied baseline. The generator and trained benchmark are unchanged
-by fitting this measured baseline. Its 512-bin synthetic window is not silently
-changed to the confirmed 500-bin acquisition; that would require regeneration
-and retraining as a separate change.
+The existing 512-bin synthetic teaching benchmark is unchanged. It already
+uses a derived n=1 operating point, but its nominal cable and component settings
+are a separate controlled scenario, not this measured 3.580 m setup. Adopting
+new hardware parameters in that benchmark requires regenerated data and retraining.

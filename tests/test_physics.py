@@ -127,16 +127,19 @@ class Physics(unittest.TestCase):
         self.assertAlmostEqual(m["rmse"]**2, m["bias"]**2+m["width"]**2)
 
     def test_baseline_fit_recovers_detector_trace(self):
-        from fit_baseline import fit_trace, fitted_curve
+        from dataclasses import asdict
+        from fit_tuned_baseline import CIRCUIT_NAMES, READOUT_NAMES, fit_with_setup, reconstruct_fit
         c = replace(Circuit(), reference_hz=32.68e6, tune_capacitance_f=100e-12,
                     cable_length_m=4, stray_capacitance_f=50e-12,
                     detector_gain=30, detector_phase_rad=.7, dc_offset_v=-.02)
         f = np.linspace(32.28, 33.08, 500)*1e6  # synthetic, not acquisition metadata
         truth = detector_voltage(f, c)
-        prediction, report = fit_trace(f, truth, starts=1)
+        parameters = {name: {"value": asdict(c)[name], "source": "Synthetic truth"} for name in CIRCUIT_NAMES}
+        parameters.update({name: {"profile": True, "source": "Synthetic unknown readout"} for name in READOUT_NAMES})
+        prediction, report = fit_with_setup(f, truth, {"parameters": parameters}, starts=1)
         np.testing.assert_allclose(prediction, truth, atol=1e-11)
         self.assertLess(report["rmse_over_trace_range"], 1e-9)
-        np.testing.assert_allclose(fitted_curve(f, report), truth, atol=1e-11)
+        np.testing.assert_allclose(reconstruct_fit(f, report), truth, atol=1e-11)
 
 
 if __name__ == "__main__":

@@ -3,19 +3,19 @@
   "selected_trace_number": 1,
   "source_sha256": "dac7c4598c6ec32250ab763ab1bf99e2a7aa7346de4e452ce00e80f0e2b1eb28",
   "nucleus": "deuteron",
-  "reference_hz": 32700000.0,
+  "reference_hz": 32700000,
   "start_mhz": 32.3,
   "step_mhz": 0.0015287,
   "frequency_source": "Repository owner: every baseline is timestamp plus 500 bins; retain the original proton sweep's bin offsets and spacing, replacing its nominal 213 MHz center with 32.7 MHz.",
-  "fit_report_sha256": "a8ee3ed993f971a0b4d2896ba4916563cd15a5ab461f3fffe13e4daf8d89d5be",
+  "fit_report_sha256": "1e0293535dc095eca616ac172592905eb311b6628516cf7cab9fc9f3169ab8fe",
   "fit_code_sha256": {
-    "fit_baseline.py": "a01778645b1a26a312119ce6fc891753bd77b454b69e03f99376696ba4c4aa7a",
+    "fit_tuned_baseline.py": "a7261f40c5c7ea62f82846b0997af350a9ed7456768326ac07061d870fc4c6df",
     "circuit.py": "e9fe63030e1a6356f4f4ebf565d56bfc506ad06efedecfb68b652dbd14946368",
     "baseline_data.py": "8a08e4a290c9bd1da194fe0f6c9932cd5c814b29fbd497c9c774522aecf27ffb"
   },
-  "exporter_sha256": "8c2da5ab0cb49872603366b37dc3c54ebdc0eada95d241de37e7dc31a210c4c7",
-  "parameter_catalog_sha256": "146b82523a85e3b4f19e6506ea316f482be69a65ef869bb2e62213b4a4618754",
-  "fit_mode": "exploratory; tuning records not supplied",
+  "exporter_sha256": "60360ad152edb93fec0b9d397bea6dd8a16df9b06c6ce238eecde8b5b399346d",
+  "parameter_catalog_sha256": "b4521e8233abbbc7e68e138c455b6c9df40246ca1f3d99c8d5f447cf11eb4877",
+  "fit_mode": "tuning-informed",
   "source_rows": 1,
   "unique_rows": 1,
   "voltage_unit": "recorded units; DAQ conversion not assumed",
@@ -27,292 +27,978 @@
     {
       "trace_number": 1,
       "bins": 500,
-      "rms_recorded_units": 6.915595093923163e-05,
+      "rms_recorded_units": 0.0008119546531277335,
       "peak_to_peak_recorded_units": 0.24634709999999999,
-      "rms_percent_of_peak_to_peak": 0.02807256547336325,
-      "max_absolute_residual_recorded_units": 0.0008645075923361389,
-      "trace_csv_sha256": "cb49a05b9afdd036c1685638a9fe13164537d42ca911fda8e21d924f2c215fa2"
+      "rms_percent_of_peak_to_peak": 0.3295978126504162,
+      "max_absolute_residual_recorded_units": 0.0035850464242164065,
+      "trace_csv_sha256": "88302eecca6e97c9be5f816d2d0d3550441b86cb2a492c9af69054fc43ec65c2"
     }
   ],
   "selected_fit": {
     "circuit": {
-      "reference_hz": 32700000.0,
+      "reference_hz": 32700000,
       "drive_v": 0.382652652,
-      "drive_resistance_ohm": 619.0,
-      "input_resistance_ohm": 50.0,
-      "damping_resistance_ohm": 10.0,
+      "drive_resistance_ohm": 619,
+      "input_resistance_ohm": 50,
+      "damping_resistance_ohm": 10,
       "coil_resistance_ohm": 0.35,
       "coil_inductance_h": 3e-08,
-      "tune_capacitance_f": 3.0060166314290805e-11,
-      "stray_capacitance_f": 4.584540905299178e-11,
+      "tune_capacitance_f": 4.99207338833758e-11,
+      "stray_capacitance_f": 3.9999999999999996e-10,
       "cable_resistance_ohm_per_m": 3.43,
-      "cable_inductance_h_per_m": 2.542e-07,
-      "cable_conductance_s_per_m": 0.0,
-      "cable_capacitance_f_per_m": 1.027e-10,
-      "cable_length_m": 4.051087715315551,
+      "cable_inductance_h_per_m": 2.133918035950722e-07,
+      "cable_conductance_s_per_m": 0,
+      "cable_capacitance_f_per_m": 8.535672143802888e-11,
+      "cable_length_m": 3.6873999956943817,
       "filling_factor": 0.098563235,
       "susceptibility_scale_cgs": 0.11133,
       "detector_gain": -1.0,
       "detector_phase_rad": 0.0,
-      "detector_phase_slope_rad_per_hz": 0.0,
-      "detector_phase_curvature_rad_per_hz2": 0.0,
+      "detector_phase_slope_rad_per_hz": 0,
+      "detector_phase_curvature_rad_per_hz2": 0,
       "dc_offset_v": 0.0
     },
     "quadrature_coefficients": [
-      -579.1439255443795,
-      40.593000618818095,
-      11.03528211537649
+      1738.7810523463502,
+      -15966.230469340944,
+      -194.56562085747464
     ],
-    "scaled_shape_jacobian_condition": 49452.43604032016,
+    "scaled_shape_jacobian_condition": 54232.52741836001,
     "active_bounds": [
       0,
-      0,
+      1,
       0
     ],
     "shape_fit_success": true,
     "multistart_candidates": [
       {
-        "parameters_pf_m_pf": [
-          30.122723316948623,
-          4.04572959181496,
-          73.83334376762839
-        ],
-        "normalized_sse": 3.940571287524435e-05,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.99206367527064e-11,
+          "stray_capacitance_f": 3.9999999999999996e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.10739998448640498,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.69493694991,
+          "readout_phase_rad": 1.462317784473775,
+          "readout_offset": -194.5670912811238
+        },
+        "objective": 0.00543173603776101,
         "success": true,
-        "evaluations": 33
+        "evaluations": 1077
       },
       {
-        "parameters_pf_m_pf": [
-          30.10678843050552,
-          4.04706695563512,
-          67.05925945026017
-        ],
-        "normalized_sse": 3.940512329598198e-05,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.992086923799706e-11,
+          "stray_capacitance_f": 3.999999999999999e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.10739999034114825,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.543299962503,
+          "readout_phase_rad": 1.4623234371063958,
+          "readout_offset": -194.563588796329
+        },
+        "objective": 0.005431735968559749,
         "success": true,
-        "evaluations": 242
+        "evaluations": 952
       },
       {
-        "parameters_pf_m_pf": [
-          30.136322298795065,
-          4.044603216406963,
-          79.43414579189664
-        ],
-        "normalized_sse": 3.9406221884951244e-05,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.992088548973626e-11,
+          "stray_capacitance_f": 3.999999999999997e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.10739999242997353,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.532628825924,
+          "readout_phase_rad": 1.4623238338156583,
+          "readout_offset": -194.563342598316
+        },
+        "objective": 0.005431735943879549,
         "success": true,
-        "evaluations": 219
+        "evaluations": 825
       },
       {
-        "parameters_pf_m_pf": [
-          30.169625146394548,
-          4.041894438835668,
-          92.52989530550505
-        ],
-        "normalized_sse": 3.9407493328414764e-05,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.992068820737484e-11,
+          "stray_capacitance_f": 3.9999999999999996e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.10739998695894637,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.661325903677,
+          "readout_phase_rad": 1.4623190366377987,
+          "readout_offset": -194.5663151360386
+        },
+        "objective": 0.005431736008529332,
         "success": true,
-        "evaluations": 224
+        "evaluations": 974
       },
       {
-        "parameters_pf_m_pf": [
-          30.099832791825385,
-          4.04765595776642,
-          64.03261349963698
-        ],
-        "normalized_sse": 3.940486873897646e-05,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.9920723371779226e-11,
+          "stray_capacitance_f": 3.999999999999999e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.1073999870869091,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.638422172871,
+          "readout_phase_rad": 1.4623198909169497,
+          "readout_offset": -194.56578598225678
+        },
+        "objective": 0.00543173600701737,
         "success": true,
-        "evaluations": 242
+        "evaluations": 836
       },
       {
-        "parameters_pf_m_pf": [
-          281.44185707267343,
-          4.999999999999999,
-          399.99999997740673
-        ],
-        "normalized_sse": 0.07898278973935322,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.9920889763795956e-11,
+          "stray_capacitance_f": 3.9999999999999996e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.1073999860294522,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.530116816964,
+          "readout_phase_rad": 1.462323931666294,
+          "readout_offset": -194.5632834843218
+        },
+        "objective": 0.005431736019588326,
         "success": true,
-        "evaluations": 27
+        "evaluations": 1030
       },
       {
-        "parameters_pf_m_pf": [
-          30.12232819459317,
-          4.045763287995799,
-          73.66386177346179
-        ],
-        "normalized_sse": 3.940569778244839e-05,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.992068473516994e-11,
+          "stray_capacitance_f": 3.9999999999999996e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.10739999061271391,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.663432160629,
+          "readout_phase_rad": 1.4623189557031857,
+          "readout_offset": -194.56636441376395
+        },
+        "objective": 0.005431735965284719,
         "success": true,
-        "evaluations": 140
+        "evaluations": 1230
       },
       {
-        "parameters_pf_m_pf": [
-          30.184437514109526,
-          4.040711715588865,
-          98.0880880511363
-        ],
-        "normalized_sse": 3.9408069617168746e-05,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.992082263796064e-11,
+          "stray_capacitance_f": 3.999999999999999e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.10739999307646989,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.573528729248,
+          "readout_phase_rad": 1.4623223077219654,
+          "readout_offset": -194.56428767064062
+        },
+        "objective": 0.00543173593618738,
         "success": true,
-        "evaluations": 213
+        "evaluations": 1059
       },
       {
-        "parameters_pf_m_pf": [
-          281.44910580366894,
-          4.999999999999999,
-          399.9999999876172
-        ],
-        "normalized_sse": 0.07898278973954204,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.992093534050221e-11,
+          "stray_capacitance_f": 3.9999999999999996e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.10739998343877513,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.500548433209,
+          "readout_phase_rad": 1.462325036327629,
+          "readout_offset": -194.5625998923333
+        },
+        "objective": 0.005431736050309641,
         "success": true,
-        "evaluations": 32
+        "evaluations": 977
       },
       {
-        "parameters_pf_m_pf": [
-          30.106175669400315,
-          4.0471184719623405,
-          66.79575332229896
-        ],
-        "normalized_sse": 3.940510091966554e-05,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.992087018567947e-11,
+          "stray_capacitance_f": 3.9999999999999996e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.10739998656447264,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.542842840705,
+          "readout_phase_rad": 1.462323456604483,
+          "readout_offset": -194.56357760007995
+        },
+        "objective": 0.005431736013270884,
         "success": true,
-        "evaluations": 247
+        "evaluations": 994
       },
       {
-        "parameters_pf_m_pf": [
-          30.150251059735243,
-          4.043461512362203,
-          85.01725279144948
-        ],
-        "normalized_sse": 3.9406749610361145e-05,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.992063320133701e-11,
+          "stray_capacitance_f": 3.9999999999999996e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.10739999092792865,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.69697666833,
+          "readout_phase_rad": 1.462317704215519,
+          "readout_offset": -194.56713949016012
+        },
+        "objective": 0.005431735961559298,
         "success": true,
-        "evaluations": 195
+        "evaluations": 1192
       },
       {
-        "parameters_pf_m_pf": [
-          281.4565303696308,
-          4.999999999999999,
-          399.99999997673217
-        ],
-        "normalized_sse": 0.07898278974888062,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.9920669982940194e-11,
+          "stray_capacitance_f": 3.999999999999999e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.107399985694165,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.67324687207,
+          "readout_phase_rad": 1.4623185927783056,
+          "readout_offset": -194.56659034941367
+        },
+        "objective": 0.0054317360234790975,
         "success": true,
-        "evaluations": 29
+        "evaluations": 1083
       },
       {
-        "parameters_pf_m_pf": [
-          30.172642204794453,
-          4.041652810517608,
-          93.6729366819704
-        ],
-        "normalized_sse": 3.9407609991201224e-05,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.9920850091172364e-11,
+          "stray_capacitance_f": 3.9999999999999996e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.10739998592155645,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.555955044716,
+          "readout_phase_rad": 1.4623229679008793,
+          "readout_offset": -194.5638804402679
+        },
+        "objective": 0.0054317360208601265,
         "success": true,
-        "evaluations": 61
+        "evaluations": 1190
       },
       {
-        "parameters_pf_m_pf": [
-          30.10202527890487,
-          4.047470893966884,
-          64.98587693959023
-        ],
-        "normalized_sse": 3.940494833802186e-05,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.9920648678552535e-11,
+          "stray_capacitance_f": 3.9999999999999996e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.10739998642925275,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.687088750508,
+          "readout_phase_rad": 1.4623180759699184,
+          "readout_offset": -194.566910280284
+        },
+        "objective": 0.005431736014804881,
         "success": true,
-        "evaluations": 43
+        "evaluations": 1198
       },
       {
-        "parameters_pf_m_pf": [
-          30.09338667078509,
-          4.04820566736787,
-          61.18300541652439
-        ],
-        "normalized_sse": 3.9404633919101955e-05,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.992084382486984e-11,
+          "stray_capacitance_f": 3.999999999999999e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.10739998837662246,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.559931486721,
+          "readout_phase_rad": 1.4623228179788863,
+          "readout_offset": -194.56397272583308
+        },
+        "objective": 0.005431735991801028,
         "success": true,
-        "evaluations": 227
+        "evaluations": 878
       },
       {
-        "parameters_pf_m_pf": [
-          30.165387128386286,
-          4.042235339203121,
-          90.91008327442614
-        ],
-        "normalized_sse": 3.940732961517376e-05,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.992066589515435e-11,
+          "stray_capacitance_f": 3.999999999999999e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.10739998381354998,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.675988430114,
+          "readout_phase_rad": 1.462318491730503,
+          "readout_offset": -194.56665337511004
+        },
+        "objective": 0.005431736045772012,
         "success": true,
-        "evaluations": 221
+        "evaluations": 916
       },
       {
-        "parameters_pf_m_pf": [
-          30.176342869549593,
-          4.041356860206384,
-          95.06772445366195
-        ],
-        "normalized_sse": 3.94077536361808e-05,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.9920867517551416e-11,
+          "stray_capacitance_f": 3.999999999999999e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.10739999033018144,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.544420729357,
+          "readout_phase_rad": 1.4623233953057988,
+          "readout_offset": -194.56361468903378
+        },
+        "objective": 0.005431735968701156,
         "success": true,
-        "evaluations": 261
+        "evaluations": 851
       },
       {
-        "parameters_pf_m_pf": [
-          30.157217038651726,
-          4.042895638040358,
-          87.74973165783703
-        ],
-        "normalized_sse": 3.9407015555067235e-05,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.9920675526867614e-11,
+          "stray_capacitance_f": 3.9999999999999996e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.107399993715902,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.669296970505,
+          "readout_phase_rad": 1.4623187349226698,
+          "readout_offset": -194.56650043782793
+        },
+        "objective": 0.0054317359285689345,
         "success": true,
-        "evaluations": 215
+        "evaluations": 1169
       },
       {
-        "parameters_pf_m_pf": [
-          281.4231360070961,
-          4.999999999999999,
-          399.99999999610606
-        ],
-        "normalized_sse": 0.07898278976311687,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.992071560407239e-11,
+          "stray_capacitance_f": 3.9999999999999996e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.10739999251761728,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.643250279638,
+          "readout_phase_rad": 1.4623197072994916,
+          "readout_offset": -194.56589844523296
+        },
+        "objective": 0.005431735942753379,
         "success": true,
-        "evaluations": 30
+        "evaluations": 1284
       },
       {
-        "parameters_pf_m_pf": [
-          281.43113814982314,
-          4.999999999999999,
-          399.9999999949507
-        ],
-        "normalized_sse": 0.07898278974692308,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.99207338833758e-11,
+          "stray_capacitance_f": 3.9999999999999996e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.10739999569438263,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.631212630151,
+          "readout_phase_rad": 1.4623201542743554,
+          "readout_offset": -194.56562085747464
+        },
+        "objective": 0.005431735905196945,
         "success": true,
-        "evaluations": 38
+        "evaluations": 946
       },
       {
-        "parameters_pf_m_pf": [
-          30.130521766371675,
-          4.0450829563373585,
-          77.05961798806202
-        ],
-        "normalized_sse": 3.940600364323764e-05,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.992083462604595e-11,
+          "stray_capacitance_f": 3.9999999999999996e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.10739998968868425,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.565865923554,
+          "readout_phase_rad": 1.462322595758885,
+          "readout_offset": -194.5641100574212
+        },
+        "objective": 0.005431735976281199,
         "success": true,
-        "evaluations": 248
+        "evaluations": 959
       },
       {
-        "parameters_pf_m_pf": [
-          30.138878742401698,
-          4.0443926023612,
-          80.47122902074528
-        ],
-        "normalized_sse": 3.940631835091314e-05,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.992078524951917e-11,
+          "stray_capacitance_f": 3.9999999999999996e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.10739998913266074,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.59804218248,
+          "readout_phase_rad": 1.4623213958629064,
+          "readout_offset": -194.56485337406048
+        },
+        "objective": 0.005431735982853,
         "success": true,
-        "evaluations": 232
+        "evaluations": 1076
       },
       {
-        "parameters_pf_m_pf": [
-          30.169179189717152,
-          4.041930380183438,
-          92.35942254825802
-        ],
-        "normalized_sse": 3.940747601015135e-05,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.9920625736288436e-11,
+          "stray_capacitance_f": 3.9999999999999996e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.1073999939330477,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.701710475252,
+          "readout_phase_rad": 1.4623175256879026,
+          "readout_offset": -194.5672493667571
+        },
+        "objective": 0.005431735925965855,
         "success": true,
-        "evaluations": 224
+        "evaluations": 990
       },
       {
-        "parameters_pf_m_pf": [
-          30.060166314290804,
-          4.051087715315551,
-          45.84540905299178
-        ],
-        "normalized_sse": 3.940344661281284e-05,
+        "parameters": {
+          "reference_hz": 32700000,
+          "drive_v": 0.382652652,
+          "drive_resistance_ohm": 619,
+          "input_resistance_ohm": 50,
+          "damping_resistance_ohm": 10,
+          "coil_resistance_ohm": 0.35,
+          "coil_inductance_h": 3e-08,
+          "tune_capacitance_f": 4.992091618096697e-11,
+          "stray_capacitance_f": 3.9999999999999996e-10,
+          "cable_resistance_ohm_per_m": 3.43,
+          "cable_inductance_h_per_m": 2.133918035950722e-07,
+          "cable_conductance_s_per_m": 0,
+          "cable_capacitance_f_per_m": 8.535672143802888e-11,
+          "cable_delta_length_m": 0.10739998431333056,
+          "detector_phase_slope_rad_per_hz": 0,
+          "detector_phase_curvature_rad_per_hz2": 0,
+          "readout_gain": 16060.512987463257,
+          "readout_phase_rad": 1.4623245717501399,
+          "readout_offset": -194.56288743429104
+        },
+        "objective": 0.00543173603995441,
         "success": true,
-        "evaluations": 30
+        "evaluations": 1041
       }
     ],
-    "residual_lag1": 0.3990367500619447
+    "residual_lag1": 0.9958032378131971,
+    "fit_mode": "tuning-informed",
+    "resolved_parameters": {
+      "reference_hz": 32700000,
+      "drive_v": 0.382652652,
+      "drive_resistance_ohm": 619,
+      "input_resistance_ohm": 50,
+      "damping_resistance_ohm": 10,
+      "coil_resistance_ohm": 0.35,
+      "coil_inductance_h": 3e-08,
+      "tune_capacitance_f": 4.99207338833758e-11,
+      "stray_capacitance_f": 3.9999999999999996e-10,
+      "cable_resistance_ohm_per_m": 3.43,
+      "cable_inductance_h_per_m": 2.133918035950722e-07,
+      "cable_conductance_s_per_m": 0,
+      "cable_capacitance_f_per_m": 8.535672143802888e-11,
+      "cable_delta_length_m": 0.10739999569438263,
+      "detector_phase_slope_rad_per_hz": 0,
+      "detector_phase_curvature_rad_per_hz2": 0,
+      "readout_gain": 16060.631212630151,
+      "readout_phase_rad": 1.4623201542743554,
+      "readout_offset": -194.56562085747464
+    },
+    "setup": {
+      "description": "Supplied deuteron baseline: owner-confirmed n=1 with half-wave length 3.580 m at nominal 32.7 MHz. A +/-3% length trim is an explicit working interpretation of 'a few percent', not a measured uncertainty. Other nominal component values are assumptions pending characterization. All 500 bins are retained.",
+      "cable_tuning": {
+        "half_wave_multiple": 1,
+        "reference_hz": 32700000,
+        "half_wave_length_m": 3.58,
+        "source": "Owner's setup information: n=1, lambda/2=358.0 cm, installed length very close to this. Paper Sec. 2 supports integer half-wave tuning and velocity factor approximately 0.78."
+      },
+      "parameters": {
+        "reference_hz": {
+          "value": 32700000,
+          "source": "User-confirmed nominal center for the 500-bin deuteron baseline acquisition; not an independent measurement of exact resonance"
+        },
+        "drive_v": {
+          "value": 0.382652652,
+          "source": "Nominal engineering seed, not an independently confirmed RF voltage"
+        },
+        "drive_resistance_ohm": {
+          "value": 619,
+          "source": "Nominal source resistor; replace with measured value/tolerance"
+        },
+        "input_resistance_ohm": {
+          "value": 50,
+          "source": "Nominal input loading; replace with characterized value"
+        },
+        "damping_resistance_ohm": {
+          "value": 10,
+          "source": "Nominal damping resistor; replace with measured value/tolerance"
+        },
+        "coil_resistance_ohm": {
+          "value": 0.35,
+          "source": "Nominal RF coil resistance; replace with characterization"
+        },
+        "coil_inductance_h": {
+          "value": 3e-08,
+          "source": "Nominal coil inductance; replace with characterization"
+        },
+        "tune_capacitance_f": {
+          "initial": 8e-10,
+          "bounds": [
+            1e-11,
+            2e-09
+          ],
+          "source": "Unknown capacitor setting. Initial 800 pF is approximately 1/(omega^2 L0) for nominal 30 nH at 32.7 MHz; bounds are a numerical search range, not a measured component tolerance."
+        },
+        "stray_capacitance_f": {
+          "initial": 5e-11,
+          "bounds": [
+            0,
+            4e-10
+          ],
+          "source": "Unknown shunt parasitic capacitance; numerical 0-400 pF search interval, not a measured tolerance."
+        },
+        "cable_resistance_ohm_per_m": {
+          "value": 3.43,
+          "source": "Nominal distributed cable resistance; replace with characterization"
+        },
+        "cable_inductance_h_per_m": {
+          "value": 2.133918035950722e-07,
+          "source": "Derived jointly with cable C from beta(32.7 MHz)=pi/3.580 m and nominal sqrt(L/C)=50 ohm, retaining nominal R=3.43 ohm/m and G=0; not an independent inductance measurement."
+        },
+        "cable_conductance_s_per_m": {
+          "value": 0,
+          "source": "Explicit negligible dielectric-leakage approximation, not a measured zero"
+        },
+        "cable_capacitance_f_per_m": {
+          "value": 8.535672143802888e-11,
+          "source": "Derived jointly with cable L from the known 3.580 m half-wave and nominal 50 ohm impedance; see tools/fit_tuned_baseline.py calibrated_cable_lc."
+        },
+        "cable_delta_length_m": {
+          "initial": 0,
+          "bounds": [
+            -0.1074,
+            0.1074
+          ],
+          "source": "Working hard bound +/-3% of 3.580 m, implementing the owner's 'a few percent' near n=1. Not a measured 1-sigma uncertainty; do not widen to compensate for model mismatch."
+        },
+        "detector_phase_slope_rad_per_hz": {
+          "value": 0,
+          "source": "Constant-phase approximation; replace if a phase-versus-frequency measurement exists"
+        },
+        "detector_phase_curvature_rad_per_hz2": {
+          "value": 0,
+          "source": "Constant-phase approximation; replace if a phase-versus-frequency measurement exists"
+        },
+        "readout_gain": {
+          "profile": true,
+          "source": "Unknown effective detector/DAQ mapping. Solve a Re(u)+b Im(u)+d by linear least squares at every circuit step; A=hypot(a,b), phi0=atan2(-b,a). RF drive held fixed; no physical gain or phase measurement is claimed."
+        },
+        "readout_phase_rad": {
+          "profile": true,
+          "source": "Unknown effective detector/DAQ mapping. Solve a Re(u)+b Im(u)+d by linear least squares at every circuit step; A=hypot(a,b), phi0=atan2(-b,a). RF drive held fixed; no physical gain or phase measurement is claimed."
+        },
+        "readout_offset": {
+          "profile": true,
+          "source": "Unknown effective detector/DAQ mapping. Solve a Re(u)+b Im(u)+d by linear least squares at every circuit step; A=hypot(a,b), phi0=atan2(-b,a). RF drive held fixed; no physical gain or phase measurement is claimed."
+        }
+      }
+    },
+    "free_parameters": [
+      "tune_capacitance_f",
+      "stray_capacitance_f",
+      "cable_delta_length_m",
+      "readout_gain",
+      "readout_phase_rad",
+      "readout_offset"
+    ],
+    "parameter_manifest": [
+      {
+        "name": "reference_hz",
+        "mode": "fixed",
+        "result": 32700000,
+        "value": 32700000,
+        "source": "User-confirmed nominal center for the 500-bin deuteron baseline acquisition; not an independent measurement of exact resonance"
+      },
+      {
+        "name": "drive_v",
+        "mode": "fixed",
+        "result": 0.382652652,
+        "value": 0.382652652,
+        "source": "Nominal engineering seed, not an independently confirmed RF voltage"
+      },
+      {
+        "name": "drive_resistance_ohm",
+        "mode": "fixed",
+        "result": 619,
+        "value": 619,
+        "source": "Nominal source resistor; replace with measured value/tolerance"
+      },
+      {
+        "name": "input_resistance_ohm",
+        "mode": "fixed",
+        "result": 50,
+        "value": 50,
+        "source": "Nominal input loading; replace with characterized value"
+      },
+      {
+        "name": "damping_resistance_ohm",
+        "mode": "fixed",
+        "result": 10,
+        "value": 10,
+        "source": "Nominal damping resistor; replace with measured value/tolerance"
+      },
+      {
+        "name": "coil_resistance_ohm",
+        "mode": "fixed",
+        "result": 0.35,
+        "value": 0.35,
+        "source": "Nominal RF coil resistance; replace with characterization"
+      },
+      {
+        "name": "coil_inductance_h",
+        "mode": "fixed",
+        "result": 3e-08,
+        "value": 3e-08,
+        "source": "Nominal coil inductance; replace with characterization"
+      },
+      {
+        "name": "tune_capacitance_f",
+        "mode": "fitted",
+        "result": 4.99207338833758e-11,
+        "initial": 8e-10,
+        "bounds": [
+          1e-11,
+          2e-09
+        ],
+        "source": "Unknown capacitor setting. Initial 800 pF is approximately 1/(omega^2 L0) for nominal 30 nH at 32.7 MHz; bounds are a numerical search range, not a measured component tolerance."
+      },
+      {
+        "name": "stray_capacitance_f",
+        "mode": "fitted",
+        "result": 3.9999999999999996e-10,
+        "initial": 5e-11,
+        "bounds": [
+          0,
+          4e-10
+        ],
+        "source": "Unknown shunt parasitic capacitance; numerical 0-400 pF search interval, not a measured tolerance."
+      },
+      {
+        "name": "cable_resistance_ohm_per_m",
+        "mode": "fixed",
+        "result": 3.43,
+        "value": 3.43,
+        "source": "Nominal distributed cable resistance; replace with characterization"
+      },
+      {
+        "name": "cable_inductance_h_per_m",
+        "mode": "fixed",
+        "result": 2.133918035950722e-07,
+        "value": 2.133918035950722e-07,
+        "source": "Derived jointly with cable C from beta(32.7 MHz)=pi/3.580 m and nominal sqrt(L/C)=50 ohm, retaining nominal R=3.43 ohm/m and G=0; not an independent inductance measurement."
+      },
+      {
+        "name": "cable_conductance_s_per_m",
+        "mode": "fixed",
+        "result": 0,
+        "value": 0,
+        "source": "Explicit negligible dielectric-leakage approximation, not a measured zero"
+      },
+      {
+        "name": "cable_capacitance_f_per_m",
+        "mode": "fixed",
+        "result": 8.535672143802888e-11,
+        "value": 8.535672143802888e-11,
+        "source": "Derived jointly with cable L from the known 3.580 m half-wave and nominal 50 ohm impedance; see tools/fit_tuned_baseline.py calibrated_cable_lc."
+      },
+      {
+        "name": "cable_delta_length_m",
+        "mode": "fitted",
+        "result": 0.10739999569438263,
+        "initial": 0,
+        "bounds": [
+          -0.1074,
+          0.1074
+        ],
+        "source": "Working hard bound +/-3% of 3.580 m, implementing the owner's 'a few percent' near n=1. Not a measured 1-sigma uncertainty; do not widen to compensate for model mismatch."
+      },
+      {
+        "name": "detector_phase_slope_rad_per_hz",
+        "mode": "fixed",
+        "result": 0,
+        "value": 0,
+        "source": "Constant-phase approximation; replace if a phase-versus-frequency measurement exists"
+      },
+      {
+        "name": "detector_phase_curvature_rad_per_hz2",
+        "mode": "fixed",
+        "result": 0,
+        "value": 0,
+        "source": "Constant-phase approximation; replace if a phase-versus-frequency measurement exists"
+      },
+      {
+        "name": "readout_gain",
+        "mode": "profiled",
+        "result": 16060.631212630151,
+        "profile": true,
+        "source": "Unknown effective detector/DAQ mapping. Solve a Re(u)+b Im(u)+d by linear least squares at every circuit step; A=hypot(a,b), phi0=atan2(-b,a). RF drive held fixed; no physical gain or phase measurement is claimed."
+      },
+      {
+        "name": "readout_phase_rad",
+        "mode": "profiled",
+        "result": 1.4623201542743554,
+        "profile": true,
+        "source": "Unknown effective detector/DAQ mapping. Solve a Re(u)+b Im(u)+d by linear least squares at every circuit step; A=hypot(a,b), phi0=atan2(-b,a). RF drive held fixed; no physical gain or phase measurement is claimed."
+      },
+      {
+        "name": "readout_offset",
+        "mode": "profiled",
+        "result": -194.56562085747464,
+        "profile": true,
+        "source": "Unknown effective detector/DAQ mapping. Solve a Re(u)+b Im(u)+d by linear least squares at every circuit step; A=hypot(a,b), phi0=atan2(-b,a). RF drive held fixed; no physical gain or phase measurement is claimed."
+      }
+    ],
+    "nonlinear_parameters": [
+      "tune_capacitance_f",
+      "stray_capacitance_f",
+      "cable_delta_length_m"
+    ],
+    "profiled_parameters": [
+      "readout_gain",
+      "readout_phase_rad",
+      "readout_offset"
+    ],
+    "n_free": 6,
+    "jacobian_scope": "Declared nonlinear parameters in unit-interval coordinates; readout profiled out; includes constraints",
+    "active_bound_parameters": [
+      "tune_capacitance_f",
+      "stray_capacitance_f",
+      "cable_delta_length_m"
+    ],
+    "near_bounds": {
+      "stray_capacitance_f": "upper",
+      "cable_delta_length_m": "upper"
+    },
+    "near_bound_fraction_of_search_interval": 1e-05,
+    "numerical_derivative": "Three-point finite differences, relative step 1e-4, in unit-interval coordinates",
+    "data_objective": 0.005431735905196945,
+    "constraint_objective": 0.0,
+    "objective_kind": "range-normalized unweighted SSE; no likelihood or parameter errors claimed"
   },
   "note": "Measured-fit illustration, not a synthetic trace or held-out accuracy test. This metadata omits timestamps; source-CSV publication is handled separately. All 500 measured bins appear in the figure. Fit agreement does not establish unique hardware parameters or electronic-noise variance.",
   "acquisition": {
@@ -325,19 +1011,6 @@
     "derivation": "f_j = (212.6 + 0.0015287*j) - (213 - 32.7) = 32.3 + 0.0015287*j MHz, j=0..499. The last sample is 33.0628213 MHz; 32.7 MHz is the nominal center, not the endpoint midpoint.",
     "configuration_sha256": "daa69f3ba3bf9b886587531e983869213e37014c29bca2e8c55e6aed077d881c"
   },
-  "bounds_pf_m_pf": [
-    [
-      0.2,
-      3.0,
-      0
-    ],
-    [
-      600,
-      5.0,
-      400
-    ]
-  ],
-  "loss": "Unweighted least squares; no verified measurement-error covariance supplied",
   "input_parsing": {
     "source_sha256": "dac7c4598c6ec32250ab763ab1bf99e2a7aa7346de4e452ce00e80f0e2b1eb28",
     "rows": 1,
@@ -560,5 +1233,5 @@
     "frequency_grid": "Not encoded in this format; require separate acquisition metadata"
   },
   "source_csv_url": "https://github.com/zetanaut/NMR-AI/blob/main/examples/deuteron-baseline.csv",
-  "svg_sha256": "9c411235b01215ec09ba604dda451c74296de7984aa6286abb16f521eb16144a"
+  "svg_sha256": "a015f66a83ad99f0915cc26a798ad12504e41dd7cdc57ebd38adccb80134f4d1"
 }

@@ -8,7 +8,8 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/"tools"))
 from circuit import Circuit, cable_parameters
 from fit_tuned_baseline import (CIRCUIT_NAMES, validate_setup, resolved_circuit, setup_voltage,
-                                fit_with_setup, reconstruct_fit)
+                                fit_with_setup, reconstruct_fit, calibrated_cable_lc, DEFAULT_SETUP, readout_basis,
+                                READOUT_NAMES)
 
 
 def known_setup():
@@ -21,6 +22,64 @@ def known_setup():
 
 
 class TunedBaseline(unittest.TestCase):
+    def test_known_deuteron_propagation_and_contradiction_rejection(self):
+        import json
+        setup = json.loads(DEFAULT_SETUP.read_text())
+        parameters = validate_setup(setup)
+        c = resolved_circuit(parameters, setup)
+        z0, gamma = cable_parameters(32.7e6, c)
+        self.assertAlmostEqual(gamma.imag*3.58, np.pi, places=13)
+        self.assertAlmostEqual((2*32.7e6*3.58)/299792458, .7809802873693373, places=14)
+        inductance, capacitance = calibrated_cable_lc(32.7e6, 3.58)
+        self.assertAlmostEqual(c.cable_inductance_h_per_m/inductance, 1, places=14)
+        self.assertAlmostEqual(c.cable_capacitance_f_per_m/capacitance, 1, places=14)
+        self.assertAlmostEqual(np.sqrt(inductance/capacitance), 50)
+        self.assertGreater(gamma.real, 0)
+        self.assertNotEqual(z0.imag, 0)  # 50 ohm is nominal sqrt(L/C), not exact complex Z0
+        setup["parameters"]["cable_inductance_h_per_m"]["value"] = 2.542e-7
+        with self.assertRaisesRegex(ValueError, "contradict"):
+            validate_setup(setup)
+        for args in ((0, 3.58), (32.7e6, -1), (32.7e6, 3.58, 50, -1)):
+            with self.assertRaises(ValueError):
+                calibrated_cable_lc(*args)
+
+    def test_profiled_readout_retains_phase_and_noise_weighting(self):
+        self.setup["parameters"]["detector_phase_slope_rad_per_hz"]["value"] = 1e-7
+        self.setup["parameters"]["detector_phase_curvature_rad_per_hz2"]["value"] = 2e-13
+        truth = validate_setup(self.setup)
+        clean = setup_voltage(self.f, truth, self.setup)
+        basis = readout_basis(self.f, truth, self.setup)
+        sigma = np.linspace(1e-5, 1e-3, 500)
+        data = clean + np.random.default_rng(32).normal(0, sigma)
+        self.setup["noise_sigma_recorded"] = sigma.tolist()
+        for name in READOUT_NAMES:
+            self.setup["parameters"][name] = {"profile": True, "source": "Synthetic unknown"}
+        prediction, report = fit_with_setup(self.f, data, self.setup, starts=1)
+        expected = np.linalg.lstsq(basis/sigma[:, None], data/sigma, rcond=None)[0]
+        np.testing.assert_allclose(prediction, basis@expected, atol=1e-12)
+        np.testing.assert_array_equal(prediction, reconstruct_fit(self.f, report))
+        self.assertEqual(report["n_free"], 3)
+        self.assertEqual(report["nonlinear_parameters"], [])
+        self.assertEqual(set(report["profiled_parameters"]), READOUT_NAMES)
+        self.setup["parameters"]["readout_offset"] = {"value": 0, "source": "Synthetic fixed"}
+        with self.assertRaisesRegex(ValueError, "all three"):
+            validate_setup(self.setup)
+
+    def test_profiled_readout_with_unknown_trim(self):
+        import json
+        setup = json.loads(DEFAULT_SETUP.read_text())
+        parameters = validate_setup(setup)
+        parameters.update(cable_delta_length_m=.021, readout_gain=20, readout_phase_rad=.7, readout_offset=-.01)
+        data = setup_voltage(self.f, parameters, setup)
+        for name in ("tune_capacitance_f", "stray_capacitance_f"):
+            setup["parameters"][name] = {"value": parameters[name], "source": "Synthetic known value"}
+        prediction, report = fit_with_setup(self.f, data, setup, starts=2)
+        self.assertAlmostEqual(report["resolved_parameters"]["cable_delta_length_m"], .021, places=5)
+        np.testing.assert_allclose(prediction, data, atol=1e-10)
+        setup["parameters"]["drive_v"] = {"initial": 1, "bounds": [.1, 5], "source": "Synthetic unknown"}
+        with self.assertRaisesRegex(ValueError, "product is identifiable"):
+            validate_setup(setup)
+
     def setUp(self):
         # Explicit synthetic grid, not the supplied CSV's acquisition mapping.
         self.f = (32.28 + np.arange(500)*(.8/499))*1e6

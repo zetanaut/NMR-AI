@@ -1,0 +1,99 @@
+{
+  "description": "Supplied deuteron baseline: owner-confirmed n=1 with half-wave length 3.580 m at nominal 32.7 MHz. A +/-3% length trim is an explicit working interpretation of 'a few percent', not a measured uncertainty. Other nominal component values are assumptions pending characterization. All 500 bins are retained.",
+  "cable_tuning": {
+    "half_wave_multiple": 1,
+    "reference_hz": 32700000,
+    "half_wave_length_m": 3.58,
+    "source": "Owner's setup information: n=1, lambda/2=358.0 cm, installed length very close to this. Paper Sec. 2 supports integer half-wave tuning and velocity factor approximately 0.78."
+  },
+  "parameters": {
+    "reference_hz": {
+      "value": 32700000,
+      "source": "User-confirmed nominal center for the 500-bin deuteron baseline acquisition; not an independent measurement of exact resonance"
+    },
+    "drive_v": {
+      "value": 0.382652652,
+      "source": "Nominal engineering seed, not an independently confirmed RF voltage"
+    },
+    "drive_resistance_ohm": {
+      "value": 619,
+      "source": "Nominal source resistor; replace with measured value/tolerance"
+    },
+    "input_resistance_ohm": {
+      "value": 50,
+      "source": "Nominal input loading; replace with characterized value"
+    },
+    "damping_resistance_ohm": {
+      "value": 10,
+      "source": "Nominal damping resistor; replace with measured value/tolerance"
+    },
+    "coil_resistance_ohm": {
+      "value": 0.35,
+      "source": "Nominal RF coil resistance; replace with characterization"
+    },
+    "coil_inductance_h": {
+      "value": 3e-8,
+      "source": "Nominal coil inductance; replace with characterization"
+    },
+    "tune_capacitance_f": {
+      "initial": 8e-10,
+      "bounds": [
+        1e-11,
+        2e-9
+      ],
+      "source": "Unknown capacitor setting. Initial 800 pF is approximately 1/(omega^2 L0) for nominal 30 nH at 32.7 MHz; bounds are a numerical search range, not a measured component tolerance."
+    },
+    "stray_capacitance_f": {
+      "initial": 5e-11,
+      "bounds": [
+        0,
+        4e-10
+      ],
+      "source": "Unknown shunt parasitic capacitance; numerical 0-400 pF search interval, not a measured tolerance."
+    },
+    "cable_resistance_ohm_per_m": {
+      "value": 3.43,
+      "source": "Nominal distributed cable resistance; replace with characterization"
+    },
+    "cable_inductance_h_per_m": {
+      "value": 2.133918035950722e-7,
+      "source": "Derived jointly with cable C from beta(32.7 MHz)=pi/3.580 m and nominal sqrt(L/C)=50 ohm, retaining nominal R=3.43 ohm/m and G=0; not an independent inductance measurement."
+    },
+    "cable_conductance_s_per_m": {
+      "value": 0,
+      "source": "Explicit negligible dielectric-leakage approximation, not a measured zero"
+    },
+    "cable_capacitance_f_per_m": {
+      "value": 8.535672143802888e-11,
+      "source": "Derived jointly with cable L from the known 3.580 m half-wave and nominal 50 ohm impedance; see tools/fit_tuned_baseline.py calibrated_cable_lc."
+    },
+    "cable_delta_length_m": {
+      "initial": 0,
+      "bounds": [
+        -0.1074,
+        0.1074
+      ],
+      "source": "Working hard bound +/-3% of 3.580 m, implementing the owner's 'a few percent' near n=1. Not a measured 1-sigma uncertainty; do not widen to compensate for model mismatch."
+    },
+    "detector_phase_slope_rad_per_hz": {
+      "value": 0,
+      "source": "Constant-phase approximation; replace if a phase-versus-frequency measurement exists"
+    },
+    "detector_phase_curvature_rad_per_hz2": {
+      "value": 0,
+      "source": "Constant-phase approximation; replace if a phase-versus-frequency measurement exists"
+    },
+    "readout_gain": {
+      "profile": true,
+      "source": "Unknown effective detector/DAQ mapping. Solve a Re(u)+b Im(u)+d by linear least squares at every circuit step; A=hypot(a,b), phi0=atan2(-b,a). RF drive held fixed; no physical gain or phase measurement is claimed."
+    },
+    "readout_phase_rad": {
+      "profile": true,
+      "source": "Unknown effective detector/DAQ mapping. Solve a Re(u)+b Im(u)+d by linear least squares at every circuit step; A=hypot(a,b), phi0=atan2(-b,a). RF drive held fixed; no physical gain or phase measurement is claimed."
+    },
+    "readout_offset": {
+      "profile": true,
+      "source": "Unknown effective detector/DAQ mapping. Solve a Re(u)+b Im(u)+d by linear least squares at every circuit step; A=hypot(a,b), phi0=atan2(-b,a). RF drive held fixed; no physical gain or phase measurement is claimed."
+    }
+  }
+}

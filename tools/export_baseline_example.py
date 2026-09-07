@@ -11,7 +11,7 @@ from pathlib import Path
 import re
 
 import numpy as np
-from fit_baseline import fitted_curve
+from fit_tuned_baseline import reconstruct_fit
 from baseline_parameters import parameter_table_html
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,6 +24,8 @@ def load_example(folder):
         raise ValueError("Require a fresh deuteron fit with an explicit acquisition frequency source; do not relabel an old fit")
     if not report["start_mhz"] <= 32.7 <= report["start_mhz"] + 499*report["step_mhz"]:
         raise ValueError("The saved sweep does not bracket the deuteron reference; check acquisition metadata")
+    if report.get("fit_mode") != "tuning-informed" or not report.get("fits"):
+        raise ValueError("Require a tuning-informed fit; unconstrained legacy reports must not be republished")
     for name, expected in report["code_sha256"].items():
         if hashlib.sha256((ROOT/"tools"/name).read_bytes()).hexdigest() != expected:
             raise ValueError(f"{name} changed since fitting; verify and regenerate the fit report")
@@ -36,11 +38,9 @@ def load_example(folder):
         frequency, measured, prediction, residual = data.T
         np.testing.assert_allclose(frequency, report["start_mhz"]+np.arange(500)*report["step_mhz"], atol=1e-10, rtol=0)
         np.testing.assert_allclose(residual, measured-prediction, atol=1e-14, rtol=1e-10)
-        if fit.get("fit_mode") == "tuning-informed":
-            from fit_tuned_baseline import reconstruct_fit
-            reconstructed = reconstruct_fit(frequency*1e6, fit)
-        else:
-            reconstructed = fitted_curve(frequency*1e6, fit)
+        if fit.get("fit_mode") != "tuning-informed":
+            raise ValueError("Require a tuning-informed fit; unconstrained legacy reports must not be republished")
+        reconstructed = reconstruct_fit(frequency*1e6, fit)
         np.testing.assert_allclose(prediction, reconstructed, atol=1e-12, rtol=1e-10)
         rms = float(np.sqrt(np.mean(residual**2)))
         span = float(np.ptp(measured))
@@ -62,7 +62,7 @@ def load_example(folder):
         "fit_code_sha256": report["code_sha256"],
         "exporter_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "parameter_catalog_sha256": hashlib.sha256(Path(__file__).with_name("baseline_parameters.py").read_bytes()).hexdigest(),
-        "fit_mode": report.get("fit_mode", "exploratory; tuning records not supplied"),
+        "fit_mode": report["fit_mode"],
         "source_rows": report["rows"], "unique_rows": report["unique_rows"],
         "voltage_unit": "recorded units; DAQ conversion not assumed",
         "residual_sign": "recorded minus fitted", "fitted_bin_mask": report["fitted_bin_mask"],
@@ -84,7 +84,10 @@ def load_example(folder):
                                     ("shape_fit_success", "multistart_candidates", "residual_lag1")})
     if chosen.get("fit_mode") == "tuning-informed":
         metadata["selected_fit"].update({key: chosen[key] for key in
-                                         ("fit_mode", "resolved_parameters", "setup", "free_parameters", "parameter_manifest")})
+                                         ("fit_mode", "resolved_parameters", "setup", "free_parameters", "parameter_manifest",
+                                          "nonlinear_parameters", "profiled_parameters", "n_free", "jacobian_scope",
+                                          "active_bound_parameters", "near_bounds", "near_bound_fraction_of_search_interval",
+                                          "numerical_derivative", "data_objective", "constraint_objective", "objective_kind")})
     return traces[selected], metadata
 
 
@@ -145,13 +148,24 @@ def example_html(metadata):
                     else f'The fit uses {metadata["starts"]} starting points.')
     source_link = ('<a href="'+metadata['source_csv_url']+'">Public test CSV</a> (published with the owner’s authorization).'
                    if "source_csv_url" in metadata else 'Source-CSV publication is separate from this figure export.')
+    from html import escape
+    bound_warning = ''
+    near = metadata['selected_fit'].get('near_bounds', {})
+    if near:
+        boundaries = ', '.join(escape(name)+' ('+escape(side)+')' for name, side in near.items())
+        bound_warning = ('<aside class="note"><h3>Constraint warning: this is not an accepted hardware calibration</h3>'
+                         '<p>The fit reaches or approaches these declared limits: '+boundaries+'. '
+                         'Do not widen the known cable branch/trim to absorb model mismatch. '
+                         'Check independent capacitor, coil, cable-loss and detector records; '
+                         'correlated residuals and compensating readout coefficients require investigation.</p></aside>')
     rows = "".join(f'<tr><td>Trace {s["trace_number"]}{" · shown" if s is m else ""}</td>'
                    f'<td>{s["rms_recorded_units"]*1e6:.3f}</td><td>{s["rms_percent_of_peak_to_peak"]:.4f}%</td></tr>'
                    for s in metadata["summaries"])
     return f'''<section id="example" class="chapter">
 <p class="eyebrow">Measured example · the physical circuit in action</p>
-<h2>See how closely the fit follows a real baseline.</h2>
+<h2>Fit a real baseline with its known tuning constraints.</h2>
 <p>The green points are an experimental sweep; the dashed rust curve is the saved physical Q-meter fit. Compare them in the upper panel; the lower panel expands the residual scale so the remaining differences stay visible.</p>
+{bound_warning}
 <div class="results-panel baseline-example">
 <div class="panel-heading"><div><p class="eyebrow">{trace_label}</p><h3>Measured data → circuit fit → residuals</h3></div><span class="badge">All {m["bins"]} bins</span></div>
 <figure>

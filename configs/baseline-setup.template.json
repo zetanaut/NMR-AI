@@ -1,29 +1,92 @@
 {
-  "description": "Complete from independent tuning/component records before use. Nulls deliberately prevent fitting with invented tuning information. Replace nominal assumptions where measured values exist.",
+  "description": "Template for a DIFFERENT setup: complete independent tuning/component records before use. For the supplied CSV use deuteron-baseline-setup.json, which already records its known n=1 and 3.580 m half-wave. Nulls prevent silent propagation assumptions.",
   "cable_tuning": {
     "half_wave_multiple": null,
-    "reference_hz": 32700000.0,
+    "reference_hz": 32700000,
     "source": "REPLACE with the cable tuning record; do not infer the integer from the unconstrained baseline fit"
   },
   "parameters": {
-    "reference_hz": {"value": 32700000.0, "source": "User-confirmed nominal center for the 500-bin deuteron baseline acquisition; not an independent measurement of exact resonance"},
-    "drive_v": {"value": 0.382652652, "source": "Nominal engineering seed, not an independently confirmed RF voltage"},
-    "drive_resistance_ohm": {"value": 619.0, "source": "Nominal source resistor; replace with measured value/tolerance"},
-    "input_resistance_ohm": {"value": 50.0, "source": "Nominal input loading; replace with characterized value"},
-    "damping_resistance_ohm": {"value": 10.0, "source": "Nominal damping resistor; replace with measured value/tolerance"},
-    "coil_resistance_ohm": {"value": 0.35, "source": "Nominal RF coil resistance; replace with characterization"},
-    "coil_inductance_h": {"value": 3e-8, "source": "Nominal coil inductance; replace with characterization"},
-    "tune_capacitance_f": {"initial": null, "bounds": null, "source": "REPLACE with calibrated capacitor setting and supported bounds"},
-    "stray_capacitance_f": {"initial": null, "bounds": null, "source": "REPLACE with measured value or bounded unknown parasitic capacitance"},
-    "cable_resistance_ohm_per_m": {"value": 3.43, "source": "Nominal distributed cable resistance; replace with characterization"},
-    "cable_inductance_h_per_m": {"value": 2.542e-7, "source": "Nominal cable L per meter; check against cable type, impedance and velocity factor"},
-    "cable_conductance_s_per_m": {"value": 0.0, "source": "Explicit negligible dielectric-leakage approximation, not a measured zero"},
-    "cable_capacitance_f_per_m": {"value": 1.027e-10, "source": "Nominal cable C per meter; check against cable type, impedance and velocity factor"},
-    "cable_delta_length_m": {"initial": 0.0, "bounds": null, "source": "REPLACE with supported trim/connector/reference-plane tolerance about the known half-wave multiple"},
-    "detector_phase_slope_rad_per_hz": {"value": 0.0, "source": "Constant-phase approximation; replace if a phase-versus-frequency measurement exists"},
-    "detector_phase_curvature_rad_per_hz2": {"value": 0.0, "source": "Constant-phase approximation; replace if a phase-versus-frequency measurement exists"},
-    "readout_gain": {"initial": null, "bounds": null, "source": "REPLACE with known gain or bounds in recorded units per node volt; do not free RF voltage simultaneously"},
-    "readout_phase_rad": {"initial": null, "bounds": null, "source": "REPLACE with the actual detector phase setting or justified range in radians"},
-    "readout_offset": {"initial": null, "bounds": null, "source": "REPLACE with offset measurement or justified unknown range in recorded units"}
+    "reference_hz": {
+      "value": 32700000,
+      "source": "User-confirmed nominal center for the 500-bin deuteron baseline acquisition; not an independent measurement of exact resonance"
+    },
+    "drive_v": {
+      "value": 0.382652652,
+      "source": "Nominal engineering seed, not an independently confirmed RF voltage"
+    },
+    "drive_resistance_ohm": {
+      "value": 619,
+      "source": "Nominal source resistor; replace with measured value/tolerance"
+    },
+    "input_resistance_ohm": {
+      "value": 50,
+      "source": "Nominal input loading; replace with characterized value"
+    },
+    "damping_resistance_ohm": {
+      "value": 10,
+      "source": "Nominal damping resistor; replace with measured value/tolerance"
+    },
+    "coil_resistance_ohm": {
+      "value": 0.35,
+      "source": "Nominal RF coil resistance; replace with characterization"
+    },
+    "coil_inductance_h": {
+      "value": 3e-8,
+      "source": "Nominal coil inductance; replace with characterization"
+    },
+    "tune_capacitance_f": {
+      "initial": null,
+      "bounds": null,
+      "source": "REPLACE with calibrated capacitor setting and supported bounds"
+    },
+    "stray_capacitance_f": {
+      "initial": null,
+      "bounds": null,
+      "source": "REPLACE with measured value or bounded unknown parasitic capacitance"
+    },
+    "cable_resistance_ohm_per_m": {
+      "value": 3.43,
+      "source": "Nominal distributed cable resistance; replace with characterization"
+    },
+    "cable_inductance_h_per_m": {
+      "value": null,
+      "source": "REPLACE with characterized L per meter or derive jointly with C from known cable half-wave and nominal/measured impedance and losses; use calibrated_cable_lc for the G=0 case."
+    },
+    "cable_conductance_s_per_m": {
+      "value": 0,
+      "source": "Explicit negligible dielectric-leakage approximation, not a measured zero"
+    },
+    "cable_capacitance_f_per_m": {
+      "value": null,
+      "source": "REPLACE with characterized C per meter or derive jointly with L; do not reuse cable constants inconsistent with the known half-wave length."
+    },
+    "cable_delta_length_m": {
+      "initial": 0,
+      "bounds": null,
+      "source": "REPLACE with supported trim/connector/reference-plane tolerance about the known half-wave multiple"
+    },
+    "detector_phase_slope_rad_per_hz": {
+      "value": 0,
+      "source": "Constant-phase approximation; replace if a phase-versus-frequency measurement exists"
+    },
+    "detector_phase_curvature_rad_per_hz2": {
+      "value": 0,
+      "source": "Constant-phase approximation; replace if a phase-versus-frequency measurement exists"
+    },
+    "readout_gain": {
+      "initial": null,
+      "bounds": null,
+      "source": "REPLACE with known gain or bounds in recorded units per node volt; do not free RF voltage simultaneously"
+    },
+    "readout_phase_rad": {
+      "initial": null,
+      "bounds": null,
+      "source": "REPLACE with the actual detector phase setting or justified range in radians"
+    },
+    "readout_offset": {
+      "initial": null,
+      "bounds": null,
+      "source": "REPLACE with offset measurement or justified unknown range in recorded units"
+    }
   }
 }

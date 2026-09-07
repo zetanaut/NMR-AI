@@ -50,11 +50,18 @@ To reproduce the displayed physical-circuit comparison:
 
 ```bash
 python tools/fit_baseline.py examples/deuteron-baseline.csv \
-  --starts 24 --output-dir local-results/deuteron-baseline-fit
+  --starts 24 --output-dir local-results/deuteron-tuned-baseline-fit
 ```
 
-It uses the confirmed acquisition file automatically and distinguishes nominal
-component assumptions from fitted unknowns. For independently known tuning
-settings, complete `configs/baseline-setup.template.json` and use
-`fit_tuned_baseline.py`. See the [fitting procedure](../notes/baseline-fitting.md)
-for diagnostics, parameter meanings, and publication.
+It uses the confirmed acquisition and hardware preset automatically:
+[deuteron-baseline-setup.json](../configs/deuteron-baseline-setup.json) fixes n=1
+and λ/2=3.580 m at 32.7 MHz. The provisional ±3% length trim is a working bound,
+not a measured uncertainty. Cable L/C are derived consistently from that known
+propagation scale with explicit nominal impedance/loss assumptions.
+
+The constrained fit reaches trim and stray-capacitance limits and has correlated
+residuals; it is not an accepted hardware calibration. Add actual capacitor,
+coil, loss and detector records before treating fitted values as physical settings.
+For this setup, copy and refine the preset; the blank template is for other setups.
+See the [fitting procedure](../notes/baseline-fitting.md) for diagnostics, parameter
+meanings, and publication.

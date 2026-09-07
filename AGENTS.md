@@ -24,6 +24,13 @@ but replace the nominal 213 MHz center with 32.7 MHz. Thus f_j = 32.3 +
 Keep this measured 500-bin contract distinct from the existing 512-bin synthetic
 training benchmark; changing that generator requires new data and training.
 A baseline fit alone does not establish signal calibration or parameter distributions.
+For the supplied baseline the owner confirmed n=1 and cable half-wavelength
+3.580 m at nominal 32.7 MHz. Use configs/deuteron-baseline-setup.json: consistent
+RLGC propagation (phase velocity factor 0.7809803) and only a +/-3% working trim
+bound, explicitly not a measured standard uncertainty. Never widen the branch or
+silently reuse incompatible cable L/C to improve the residual. Boundary pressure
+and other nominal component assumptions must remain visible. This measured setup
+is distinct from the existing synthetic teaching benchmark.
 The owner explicitly authorized publishing `examples/deuteron-baseline.csv`
 as a student test example. Use the shared `baseline_data.py` loader to report its
 decimal-spacing repairs; do not silently rewrite values or the confirmed grid.

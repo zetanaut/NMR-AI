@@ -94,52 +94,56 @@ nominal center by generating a different linspace. The shared contract is
 `configs/deuteron-acquisition.json`, hashed into fit provenance. DAQ conversion
 to volts remains unknown.
 
-The fresh 24-start physical-circuit fit has whole-scan residual RMS
-6.9155951×10⁻⁵ recorded units (0.0280726% of measured peak-to-peak range).
-The largest absolute residual is 8.6450759×10⁻⁴ at sample 499; all bins remain
-included. Lag-one residual correlation is 0.3990. These are fit diagnostics,
-not an independent noise estimate or a polarization-error measurement.
+The hardware constraint is now explicit: the owner confirms n=1 with λ/2 =
+3.580 m at nominal 32.7 MHz. The paper itself specifies integer half-wave tuning
+and approximately 0.78 cable velocity factor [Sec. 2, pp. 2–3](https://arxiv.org/pdf/2603.10146#page=2).
+The measured setup fixes v_phase/c = 2f₀h/c = 0.7809802874 and permits only a
+±3% working trim (±0.1074 m). This range implements “a few percent”; it is not
+an independently measured uncertainty. Never widen it to absorb model mismatch.
 
-The exploratory solution fits C_tune≈30.0602 pF, cable length≈4.05109 m,
-C_stray≈45.8454 pF, and three readout coordinates. At 32.7 MHz the nominal cable's
-half wavelength is 2.99099 m, so the fitted length is about 1.35443 half-waves.
-No independently known integer branch is claimed. All three shape coordinates
-are interior to their numerical bounds, but the scaled Jacobian condition is
-about 4.95×10⁴ and competing starts show weak parameter combinations. Fixed
-components are nominal assumptions, not newly measured hardware. See the full
-parameter table and saved candidate solutions before interpreting the close fit.
+The preset `configs/deuteron-baseline-setup.json` derives L′ =
+2.13391803595×10⁻⁷ H/m and C′ = 8.53567214380×10⁻¹¹ F/m jointly so that the
+exact lossy RLGC β₀ satisfies β₀(3.580 m)=π. Derivation is in
+[the baseline record](baseline-fitting.md#make-the-cable-constants-consistent)
+and `calibrated_cable_lc`. Nominal sqrt(L′/C′)=50 Ω, R′=3.43 Ω/m and G′=0
+remain explicit assumptions; impedance and losses have not been measured anew.
+The fitter rejects RLGC values inconsistent with the known half-wave length.
+A fixed physical length is only n half-waves at its tuning frequency, not
+throughout the sweep.
 
-The circuit implementation does not execute or import the supplied old script.
-Its positive component entries supply nominal engineering seeds: coil 30 nH and
-0.35 Ω; source 619 Ω; input 50 Ω; damping 10 Ω; cable L = 2.542×10⁻⁷ H/m,
-C = 1.027×10⁻¹⁰ F/m. Cable R = 3.43 Ω/m follows the low-loss seed
-Rc≈2 Z_nom α using 50 Ω and 0.0343/m; Gc=0 is an explicit approximation.
-These are not independently confirmed deuteron hardware measurements.
-Exact RLGC propagation replaces an independently specified propagation slope.
+The constrained 24-start fit is a **diagnostic, not an accepted hardware
+calibration**. It presses against the +3% trim and 400 pF stray-capacitance
+limits. Length is about 3.6874 m (1.0300 half-waves), C_tune about 49.92 pF.
+Whole-scan RMS is about 8.1195×10⁻⁴ recorded units (0.3296% of trace range);
+the largest residual is about 3.5850×10⁻³ at sample 0 and lag-one correlation
+about 0.9958. All 500 bins remain included. Large compensating readout gain
+and offset, boundary pressure, and structured residuals require independent
+component/readout checks. These numbers do not establish noise variance,
+component measurements, or polarization accuracy.
 
-Use `fit_tuned_baseline.py` with the actual acquisition grid and independent
-capacitance, cable branch/length, component and readout records. Fixed inputs are
-excluded from optimization. Bounded unknowns remain within supported ranges.
-Independent Gaussian constraints require a measured data-noise scale.
-A known half-wave branch gives `length = n*pi/beta(f_tune) + delta_length`,
-evaluated at the deuteron tuning frequency. Do not use vacuum wavelength,
-infer a branch from the fit and call it independent, or mistake a starting guess
-for a measurement constraint.
+The circuit does not execute or import the supplied old script. Remaining
+positive entries are nominal engineering seeds: coil 30 nH and 0.35 Ω,
+source 619 Ω, input 50 Ω, damping 10 Ω, RF drive 0.382652652 V. Constant phase
+across the scan is an explicit approximation. These must be replaced where
+actual tuning and component records exist. The fitted ~50 pF capacitor does
+not establish a plausible tuning setting for the assumed 30 nH near-half-wave
+circuit; check the actual setting and full zero-reactance condition.
+The former incompatible propagation assumptions and unrestricted baseline
+length search have been removed from this measured-fit workflow.
 
-The pedagogical variable-projection fitter `fit_baseline.py` uses the confirmed
-32.7 MHz reference and acquisition configuration by default. Its built-in
-bounds are only numerical search assumptions. For known hardware, use the
-setup-driven fitter instead. Detector coefficients (a,b,d) correspond to
-`atan2(-b,a)` phase and `hypot(a,b)` recorded-unit gain. Unknown RF voltage and
-gain cannot both be identified from their product. Filling factor and
-susceptibility scale are inactive at χ=0.
+`fit_baseline.py` now delegates to `fit_tuned_baseline.py` using the known
+deuteron preset. It has three bounded nonlinear coordinates (C_tune, C_stray,
+δℓ) and three analytically profiled readout coordinates. Known quantities are
+fixed; Gaussian measurement constraints require a data-noise scale. Supplied
+readout constraints use explicit fixed/bounded coordinates instead of profiling.
+Free RF drive and free gain together are rejected because only their product
+is identifiable. Saved coefficients a,b,d represent phase atan2(−b,a), gain
+hypot(a,b), and offset d; reconstruction retains any frequency-dependent phase.
 
-The reports retain acquisition provenance, code/source hashes, versions, seeds,
-all candidates, fixed/fitted status, supported constraints, duplicate count,
-all-bin policy, reconstruction information, residual metrics and scaled-Jacobian
-diagnostics. A corrected fit must regenerate these quantities, inspect structure
-and parameter degeneracies, and be checked on independent acquisitions.
-See [the fitting record](baseline-fitting.md).
+The main 512-bin generator and its trained teaching benchmark are a separate
+controlled configuration, unchanged by this baseline-only correction. Their
+derived n=1 operating point is not a calibration to this measured 3.580 m cable.
+Adopting this setup there would require new data, calibration checks, and training.
 
 ## 4. Complex spin-1 powder response
 
