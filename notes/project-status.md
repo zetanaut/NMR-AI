@@ -34,6 +34,15 @@ JavaScript-disabled reading and absence of page overflow; an HTML audit checked
 165 local/repository links on five pages. This documentation-only change did
 not require another training run or a new full Python-suite result.
 
+Published in commit
+[`6dc7448`](https://github.com/zetanaut/NMR-AI/commit/6dc74486be8e88b8a63660defefaf91a88caef39),
+with a successful [Pages deployment](https://github.com/zetanaut/NMR-AI/actions/runs/34251188019).
+The live [matching uncertainty and shift section](https://zetanaut.github.io/NMR-AI/#distribution-shift)
+was verified on 2026-09-08: its complete HTML matches the committed bytes,
+and desktop/mobile Chromium checks passed for all three expandable explanations,
+active navigation, absence of overflow and absence of JavaScript errors.
+The same evidence directory contains `publication-report.json` and live screenshots.
+
 ## Model-building tutorial completed — 2026-09-08
 
 The model-building task expanded the tutorial from a basic MLP through a deeper
@@ -166,6 +175,7 @@ fit, generation, or training run needs a fresh output path.
 | New MLP/DNN/CNN comparison | `local-results/model-comparison-v1/{mlp,dnn,physics_multiscale}/` |
 | Final comparison browser audit | `local-results/model-comparison-final-review-8dl4_ha8/browser-report.json` and adjacent screenshots |
 | GitHub publication verification | `local-results/github-publication-20260908-18scaq63/publication-report.json` and live screenshot |
+| Matching uncertainty and shift verification | `local-results/distribution-shift-review-1uz0m8hz/` contains numerical, browser and publication reports plus screenshots |
 
 The butanol development and partial-run directories are not publication inputs.
 On 2026-09-08 the matched dataset hash was checked against its JSON metadata,

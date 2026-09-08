@@ -317,3 +317,11 @@ overflow or JavaScript errors; the section and explanations work without JavaScr
 An HTML audit checked nesting, unique IDs and 165 local/repository links across
 the five tutorial pages. Existing generators, preprocessing, fits, trained
 models and numerical performance results were not changed.
+
+The section was published in commit
+[`6dc7448`](https://github.com/zetanaut/NMR-AI/commit/6dc74486be8e88b8a63660defefaf91a88caef39).
+The [Pages deployment](https://github.com/zetanaut/NMR-AI/actions/runs/34251188019)
+succeeded, and the public HTML was verified byte-for-byte against the committed
+file on 2026-09-08. Live desktop/mobile checks passed for the three explanations,
+active navigation and absence of overflow or JavaScript errors. The same evidence
+folder retains `publication-report.json` and live screenshots.
