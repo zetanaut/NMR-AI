@@ -3,3 +3,8 @@ __pycache__/
 .venv/
 .DS_Store
 local-results/
+
+# Private owner/agent operating notes stay on this workstation.
+AGENTS.md
+notes/project-status.md
+notes/private/

@@ -5,7 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 import numpy as np
-from lineshape import SIMULATOR
+from learning_data import SIMULATOR, BINS, ACQUISITION
 from nmr_lab import (FREQUENCY, sample_configurations, simulate, validate_configurations,
                      clean_response, te_calibration, noise_factor)
 
@@ -16,7 +16,7 @@ def main():
     parser.add_argument("--num-samples", type=int, default=2000)
     parser.add_argument("--num-configurations", type=int, default=100)
     parser.add_argument("--configurations", type=Path, help="JSON list of physical configurations")
-    parser.add_argument("--noise-covariance", type=Path, help="Optional development-data 512x512 NPY covariance in V²")
+    parser.add_argument("--noise-covariance", type=Path, help="Optional development-data 500x500 NPY covariance in V²")
     parser.add_argument("--coverage", choices=["narrow", "broad"], default="narrow")
     parser.add_argument("--p-min", type=float, default=-0.25)
     parser.add_argument("--p-max", type=float, default=0.25)
@@ -41,18 +41,18 @@ def main():
     references, calibrations = [], []
     for config in configs:
         _, baseline = clean_response(0, config)
-        noise = (rng.normal(size=512)*config["noise_rms_v"] if factor is None else factor @ rng.normal(size=512))
+        noise = (rng.normal(size=BINS)*config["noise_rms_v"] if factor is None else factor @ rng.normal(size=BINS))
         references.append(baseline + noise/np.sqrt(config["reference_averages"]))
         calibrations.append(te_calibration(config))
-    signals = np.empty((args.num_samples, 512), dtype=np.float64)
+    signals = np.empty((args.num_samples, BINS), dtype=np.float64)
     for i, (p, group) in enumerate(zip(labels, groups)):
         signals[i] = simulate(p, configs[group], rng, args.center_jitter, factor)["signal"]
     args.output.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(args.output, signals=signals, baselines=np.asarray(references)[groups],
                         calibration=np.asarray(calibrations)[groups], P=labels.astype(np.float32),
-                        configuration_id=groups, frequency_mhz=FREQUENCY, simulator=SIMULATOR)
+                        configuration_id=groups, frequency_mhz=FREQUENCY, simulator=SIMULATOR, voltage_unit="V", feature_mode="te_area")
     settings = {key: str(value) if isinstance(value, Path) else value for key, value in vars(args).items()}
-    settings.update(simulator=SIMULATOR, voltage_unit="V", calibration="P_TE / trapezoidal integral(S_TE/f df)",
+    settings.update(simulator=SIMULATOR, acquisition=ACQUISITION, voltage_unit="V", calibration="P_TE / trapezoidal integral(S_TE/f df)",
                     reference_model="Independent noise averaged 16 times by default; shared by configuration",
                     distribution_provenance="Controlled physical-parameter sensitivity study, not a fitted experimental population",
                     dataset_sha256=hashlib.sha256(args.output.read_bytes()).hexdigest())

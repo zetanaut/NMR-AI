@@ -15,7 +15,7 @@ import numpy as np
 import torch
 
 from analyze_predictions import summarize
-from lineshape import SIMULATOR
+from learning_data import SIMULATOR, load_dataset, validate_contract
 from nmr_lab import FREQUENCY, build_model, group_split, make_features
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,11 +41,10 @@ def verify_comparison(protocol_path, runs_dir=None):
     evaluation = json.loads((runs_dir/"evaluation.json").read_text())
     if evaluation["protocol_sha256"] != digest(protocol_path) or evaluation["predictor_sha256"] != digest(ROOT/"tools/predict.py"):
         raise ValueError("Evaluation protocol or prediction code differs from its saved record")
-    with np.load(dataset_path, allow_pickle=False) as data:
-        if str(data["simulator"].item()) != SIMULATOR or not np.array_equal(data["frequency_mhz"], FREQUENCY):
-            raise ValueError("Require the unchanged 512-bin TE-area benchmark")
-        groups, labels = data["configuration_id"], data["P"]
-        features = make_features(data["signals"], data["calibration"], data["baselines"])
+    data = load_dataset(dataset_path, training=True)
+    contract = data["contract"]
+    group_column = contract["group_column"]
+    groups, labels, features = data["identifiers"][group_column], data["P"], data["features"]
     partitions = dict(zip(("train", "validation", "test"), group_split(groups, protocol["training"]["seed"])))
     mean = features[partitions["train"]].mean(axis=(0, 2), keepdims=True)
     std = features[partitions["train"]].std(axis=(0, 2), keepdims=True)
@@ -65,6 +64,9 @@ def verify_comparison(protocol_path, runs_dir=None):
             for name, indices in partitions.items():
                 np.testing.assert_array_equal(saved[name], indices)
         with np.load(folder/"scaler.npz", allow_pickle=False) as saved:
+            np.testing.assert_array_equal(saved["frequency_mhz"], FREQUENCY)
+            if str(saved["feature_mode"].item()) != contract["feature_mode"] or str(saved["voltage_unit"].item()) != contract["voltage_unit"]:
+                raise ValueError("Saved preprocessing mode/units mismatch")
             np.testing.assert_array_equal(saved["feature_mean"], mean)
             np.testing.assert_array_equal(saved["feature_std"], std)
             if float(saved["target_scale"][0]) != target_scale:
@@ -78,7 +80,7 @@ def verify_comparison(protocol_path, runs_dir=None):
         checkpoint = torch.load(folder/"model.pt", map_location="cpu", weights_only=True)
         if evaluation["checkpoint_sha256"][architecture] != digest(folder/"model.pt"):
             raise ValueError("Checkpoint changed after the comparison was fixed")
-        if checkpoint["architecture"] != architecture or checkpoint["simulator"] != SIMULATOR:
+        if checkpoint["architecture"] != architecture or checkpoint["simulator"] != data["simulator"] or checkpoint["input_contract"] != contract:
             raise ValueError("Checkpoint contract mismatch")
         model = build_model(architecture).eval()
         model.load_state_dict(checkpoint["model_state"])
@@ -93,15 +95,33 @@ def verify_comparison(protocol_path, runs_dir=None):
         best = min(history, key=lambda row: row["val_loss"])
         if int(best["epoch"]) != provenance["best_epoch"]:
             raise ValueError("Saved best epoch differs from minimum validation MSE")
-        results, max_differences = {}, {}
+        results, max_differences, reconstruction_devices, cpu_differences = {}, {}, {}, {}
         for name in ("validation", "test"):
             indices = partitions[name]
             rows = np.atleast_1d(np.genfromtxt(folder/f"{name}_predictions.csv", delimiter=",", names=True))
             np.testing.assert_array_equal(rows["P_true"], labels[indices])
-            np.testing.assert_array_equal(rows["configuration_id"], groups[indices])
-            with torch.inference_mode():
-                reproduced = np.concatenate([model(torch.from_numpy(inputs[indices[i:i+128]])).numpy()[:, 0]*target_scale
-                                             for i in range(0, len(indices), 128)])
+            np.testing.assert_array_equal(rows[group_column], groups[indices])
+            def reconstruct(device):
+                model.to(device)
+                with torch.inference_mode():
+                    return np.concatenate([
+                        model(torch.from_numpy(inputs[indices[i:i+128]]).to(device)).cpu().numpy()[:, 0]*target_scale
+                        for i in range(0, len(indices), 128)])
+
+            reproduced = reconstruct("cpu")
+            cpu_differences[name] = float(np.max(np.abs(rows["P_pred"]-reproduced)))
+            reconstruction_devices[name] = "cpu"
+            if not np.allclose(rows["P_pred"], reproduced, rtol=1e-6, atol=1e-7):
+                # Training saves validation predictions on its training device; the
+                # declared comparison evaluates test rows on CPU. Verify roundoff
+                # sensitive validation results on the original device, retaining
+                # the independent CPU difference as a separate diagnostic.
+                if name != "validation" or provenance["device"] != "cuda":
+                    raise ValueError(f"Saved {name} predictions do not reconstruct on CPU")
+                if not torch.cuda.is_available():
+                    raise ValueError("CUDA is required to verify these saved validation predictions at the declared tolerance")
+                reproduced = reconstruct("cuda")
+                reconstruction_devices[name] = "cuda"
             np.testing.assert_allclose(rows["P_pred"], reproduced, rtol=1e-6, atol=1e-7)
             max_differences[name] = float(np.max(np.abs(rows["P_pred"]-reproduced)))
             results[name] = rows
@@ -115,14 +135,17 @@ def verify_comparison(protocol_path, runs_dir=None):
             "trainable_parameters": counts[1], "metrics": metrics, "validation_metrics": validation,
             "near_five_percent": summarize(rows["P_true"][local], rows["P_pred"][local], .05),
             "history": history, "best_epoch": int(best["epoch"]), "target_scale": target_scale,
-            "test_predictions": np.column_stack([rows["P_true"], rows["P_pred"], rows["configuration_id"]]).tolist(),
-            "prediction_columns": ["P_true", "P_pred", "configuration_id"],
+            "test_predictions": np.column_stack([rows["P_true"], rows["P_pred"], rows[group_column]]).tolist(),
+            "prediction_columns": ["P_true", "P_pred", group_column],
             "provenance": provenance, "reconstruction_max_difference_fractional_p": max_differences,
+            "reconstruction_device": reconstruction_devices,
+            "cpu_reconstruction_max_difference_fractional_p": cpu_differences,
             "artifact_sha256": {name: digest(folder/name) for name in
                                 ("model.pt", "scaler.npz", "partition.npz", "history.csv", "test_predictions.csv", "validation_predictions.csv")},
         })
     return {
-        "version": protocol["version"], "simulator": SIMULATOR, "protocol": protocol,
+        "version": protocol["version"], "simulator": data["simulator"], "protocol": protocol,
+        "input_contract": contract, "group_column": group_column,
         "protocol_sha256": digest(protocol_path), "exporter_sha256": digest(__file__),
         "dataset_sha256": dataset_hash, "events": len(labels), "bins": len(FREQUENCY),
         "rows": {name: len(indices) for name, indices in partitions.items()},
@@ -134,8 +157,10 @@ def verify_comparison(protocol_path, runs_dir=None):
         "limitations": [
             "One training seed and a common budget; no claim that depth or convolution always improves accuracy",
             "CNN includes a train-only ridge fit to 25 physical summaries; gains are not attributable to convolutions alone",
-            "Ideal TE calibration and independently noisy, stable references; no experimental accuracy or calibration claim",
-            "Existing broad 512-bin controlled sensitivity benchmark; no 500-bin or material-specific network result",
+            ("Ideal TE calibration and independently noisy, stable references; no experimental accuracy or calibration claim"
+             if contract["feature_mode"] == "te_area" else
+             "Recorded-unit raw/reference inputs without TE calibration; source-scan grouped synthetic holdout, not experimental accuracy"),
+            "Controlled sensitivity coverage; no measured material-specific accuracy",
         ],
     }
 

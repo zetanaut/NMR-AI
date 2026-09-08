@@ -5,8 +5,8 @@ Read the [circuit and lineshape conventions](physics-electronics-theory.md)
 and [baseline practical](baseline-fitting.md) first. The reference is
 [Seay, Fernando and Keller, arXiv:2603.10146](https://arxiv.org/pdf/2603.10146):
 Fig. 1 and Eqs. (1)–(14) for electronics; Eqs. (15)–(26) for the spin-1 model.
-See the [project status](project-status.md) for the completed generation run,
-the pending 500-bin network workflow, and local verification limits.
+The [learning example](../docs/matching.html#lineshape-network) includes generation,
+training, saved preprocessing and prediction on this exact 500-bin acquisition.
 
 This remains **Example 1: the single-site starting model**. The owner has now
 identified its five sweeps as butanol. [Example 2](../docs/butanol.html) applies
@@ -193,10 +193,10 @@ as clean signal or independent noise.
 python tools/generate_matched_data.py \
   --matching-report local-results/experimental-matching/matching_report.json \
   --num-samples 2000 --num-configurations 100 --seed 42 \
-  --output local-results/experiment-anchored.npz
+  --output local-results/experiment-anchored-500-v2.npz
 python tools/export_signal_matching.py \
   --fit-dir local-results/experimental-matching \
-  --dataset local-results/experiment-anchored.npz
+  --dataset local-results/experiment-anchored-500-v2.npz
 ```
 
 The displayed generator example is always event zero, not a selected favorable
@@ -230,25 +230,37 @@ readout: detector gain is recorded-units per node volt, and `dc_offset_v` carrie
 the recorded-unit offset in these matched configurations, not a claimed DAQ
 voltage conversion. The companion metadata state the output units explicitly.
 
-## Training handoff: implementation still pending
+## Training and prediction
 
-This is a new 500-bin lineshape-regression dataset. `train_model.py` and
-`predict.py` currently require the old `qmeter-complex-pake-v2` simulator tag,
-the exact 512-bin `nmr_lab.FREQUENCY` grid, and a TE `calibration` array.
-`nmr_lab.make_features` and the multiscale model's frequency summaries are also
-tied to that grid. The generated 500-bin NPZ cannot be passed directly to them.
+`train_model.py` and `predict.py` accept the generated NPZ directly. The
+`learning_data.py` contract uses raw and reference-subtracted recorded units
+without a required TE calibration. Subtraction precedes float32 conversion.
+Each model saves the exact 500-bin frequency array, feature mode, units,
+training-only scalers and target normalization. Clean simulator arrays remain
+available for diagnostics and are excluded from network inputs.
 
-The next implementation must save grid-aware preprocessing and compatible
-training/prediction paths without a required TE calibration channel. Use
-experimentally available raw/reference inputs; reserve simulator-only clean
-arrays for diagnostics. Fit scalers on the training partition and reuse them
-at inference. The existing 512-bin benchmark and trained results remain
-unchanged. No 500-bin neural-network performance is claimed in this practical.
+The declared [training protocol](../configs/lineshape-training.json) uses a
+multiscale CNN with an 80-epoch cap and validation-selected checkpoint. All
+`source_scan_1based` descendants stay together: source scans 3, 4 and 5 supply
+1,200 training examples, source 2 supplies 400 validation examples, and source 1
+supplies 400 test examples. These labels are newly sampled simulator truth.
+Splitting only by simulated configuration would leak measured-seed relationships.
 
-Keep all descendants of each experimental seed together using `source_scan_1based`
-when evaluating unseen measured configurations. Splitting only by simulated
-`configuration_id` would allow descendants of one measured seed into different
-partitions. Synthetic pseudo-experiments can test recovery, bias
-and width at a fixed known P, but these five development spectra alone are not
-a held-out experimental performance benchmark. Larger generation counts do
-not compensate for unsupported parameter/noise distributions or model mismatch.
+The [published training record](../docs/assets/lineshape-training.json) retains
+all test predictions, metrics, history, source partitions, preprocessing and
+hashes. Its source-holdout synthetic result is not experimental polarization
+accuracy. The five development scans do not provide an independent experimental
+holdout, and controlled excursions do not establish empirical distributions.
+
+```bash
+python tools/run_model_comparison.py --protocol configs/lineshape-training.json
+python tools/export_lineshape_training.py
+```
+
+For fresh output directories pass the same `--runs-dir` to both commands.
+Ordinary measured prediction accepts raw/reference arrays, the exact grid and
+explicit `feature_mode="lineshape"` and `voltage_unit="recorded units"`; it does
+not require P labels or simulator/group identifiers. The trained model requires
+corresponding references; a fitted baseline from the same sweep is not an
+independent reference. See the [README](../README.md#train-on-experiment-anchored-lineshapes)
+for direct training and prediction commands.

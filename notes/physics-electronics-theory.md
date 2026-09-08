@@ -7,10 +7,9 @@ These notes distinguish the paper's physics, explicit implementation conventions
 The new [experimental-matching record](experimental-matching.md) documents five
 polarized spin-1 sweeps on the confirmed 500-bin grid. That workflow fits the
 capacitor, detector phase and complex branch shapes to infer P without TE
-calibration, then generates new simulator-labeled examples. The 512-bin TE-area
-benchmark discussed below remains a separate reproducible teaching task.
-See the [project status](project-status.md) for implemented workflows and pending
-validation. Training and prediction currently support only the 512-bin benchmark.
+calibration, then generates new simulator-labeled examples. The controlled TE-area benchmark is a separate calibration exercise on the same
+500-bin acquisition grid. Training and prediction support both modes; see the
+[learning examples](../README.md#train-on-experiment-anchored-lineshapes).
 
 The owner has identified those five sweeps as butanol. The
 [material-examples record](material-examples.md) adds a C–D/O–D comparison on the
@@ -164,7 +163,7 @@ independent measurement. The constant-phase result above remains a documented
 diagnostic. The matching workflow uses jointly fitted polarized-scan configurations
 as generator seeds, rather than this bound-limited baseline solution.
 
-The main 512-bin generator and its trained teaching benchmark are a separate
+The 500-bin TE-area generator and its trained teaching benchmark are a separate
 controlled configuration, unchanged by this baseline-only correction. Their
 derived n=1 operating point is not a calibration to this measured 3.580 m cable.
 Adopting this setup there would require new data, calibration checks, and training.
@@ -200,7 +199,7 @@ The real absorption integral is equivalent to the Dulya broadened branch with di
 
 `susceptibility_scale_cgs` multiplies this dimensionless normalized kernel. The 0.11133 nominal coefficient is a supplied setup-scale seed, not a universal material susceptibility or an experimental calibration. A real application must fit/calibrate the signal scale with the filling factor and detector response. Normalization is never forced to a discrete finite-scan sum; truncated tails remain truncated.
 
-## 5. Full-spectrum generation and 512-bin TE-area calibration
+## 5. Full-spectrum generation and 500-bin TE-area calibration
 
 Define the baseline and nuclear detector signal by
 
@@ -212,7 +211,7 @@ V_measured = B + S + noise.
 
 This is full complex-susceptibility propagation. The paper also uses an additive circuit-baseline benchmark; that does not justify independently adding the nuclear response a second time here. A single-site kernel does not cover multi-site materials, contaminants, or RF-modified populations. Spin-1/2 and unresolved-quadrupole Voigt problems in §3.2 require their own response model.
 
-The deuteron demonstration uses a fixed 512-bin, 32.3–33.1 MHz sweep. Starting from the explicit nominal passive components, `nominal_circuit` derives a one-half-wave cable at 32.68 MHz and chooses the tuning capacitance to cancel the line's imaginary impedance there. Zero stray admittance and zero phase slope/curvature are reference idealizations. They are not inferred from the supplied baseline data. The measured 500-bin contract is distinct from this existing synthetic benchmark; no resampling or retraining is performed by the baseline-fitting practical.
+The deuteron demonstration uses a confirmed 500-bin sweep, `32.3 + 0.0015287*j MHz` for j=0..499. Starting from the explicit nominal passive components, `nominal_circuit` derives a one-half-wave cable at 32.68 MHz and chooses the tuning capacitance to cancel the line's imaginary impedance there. Zero stray admittance and zero phase slope/curvature are reference idealizations. They are not inferred from the supplied baseline data. The generated sweep and measured butanol acquisition share their grid. The controlled circuit and ideal TE calibration remain separate assumptions; the generator is `qmeter-complex-pake-500-v3`, with regenerated data and retrained models.
 
 For temperature T, with `t=tanh(h*f0/(2*kB*T))`, spin-1 TE polarization is `4t/(3+t²)`; spin-1/2 is `t`. At 1.5 K, 32.7 MHz gives 0.06974899% for spin 1 for this deuteron-scale example. A 5% training example is not a 0.05% TE example. [Paper §5.1, Eqs. (28)–(34), p. 10](https://arxiv.org/pdf/2603.10146v5#page=10).
 
@@ -231,7 +230,7 @@ Each configuration has one independent noisy baseline reference, averaged over 1
 
 [Paper §2.2, §6.4, and Eq. (45)](https://arxiv.org/pdf/2603.10146v5#page=5) distinguish Gaussian electronic noise, coherent pickup, microphonics, and tuning drift. A full noise model is more than a histogram width. Characterize repeat differences, covariance, autocorrelation, spectral density, tails, and sweep-to-sweep coherence using development measurements.
 
-The 512-bin generator supports a finite symmetric positive-semidefinite 512×512 covariance in V² and draws `noise=L*z`, where `LLᵀ=Σ` and z is standard normal. Singular positive-semidefinite covariances are supported. A covariance measured on 500 bins is not silently relabeled as a 512-bin covariance. The default diagonal case has σ=10⁻⁹ V, corresponding to the nominal 10⁻⁶ mV scale discussed in the paper. It is a reference noise scenario, not the noise inferred from the supplied traces. Circuit filtering can be represented by a measured output covariance; thermal resistances and amplifier/filter bandwidths are not fabricated to claim a first-principles absolute noise level.
+The 500-bin TE-area generator supports a finite symmetric positive-semidefinite 500×500 covariance in V² and draws `noise=L*z`, where `LLᵀ=Σ` and z is standard normal. Singular positive-semidefinite covariances are supported. A covariance must use this exact grid and the stated V² units; recorded-unit covariance needs its own conversion. The default diagonal case has σ=10⁻⁹ V, corresponding to the nominal 10⁻⁶ mV scale discussed in the paper. It is a reference noise scenario, not the noise inferred from the supplied traces. Circuit filtering can be represented by a measured output covariance; thermal resistances and amplifier/filter bandwidths are not fabricated to claim a first-principles absolute noise level.
 
 The 500-bin matched generator instead uses recorded units and accepts a 500×500
 covariance in recorded-units squared. Its default white-Gaussian scale is a
@@ -247,10 +246,10 @@ The narrow/broad presets are controlled physical sensitivity studies, not empiri
 
 These distributions are intentionally inspectable numerical experiments. For experimental training, infer supported joint ranges from independent hardware constraints and development fits. Varying every fit coordinate independently can violate correlations; increasing event count cannot fix an unidentifiable calibration. A low baseline RMS alone cannot validate nuclear amplitude, noise, or a family of operating configurations.
 
-## 7. Existing 512-bin networks, validation, and metric conventions
+## 7. 500-bin networks, validation, and metric conventions
 
 The 2026-09-08 [model-comparison record](model-comparison.md) adds a basic MLP
-(65,665 parameters) and a three-hidden-layer dense DNN (303,617) to the
+(64,129 parameters) and a three-hidden-layer dense DNN (297,473) to the
 existing CNNs below. The new tutorial comparison trains the MLP, dense DNN and
 multiscale CNN on the same broad dataset, exact grouped partition and preprocessing,
 with a common 80-epoch cap and deferred test evaluation. It retains all three
@@ -262,11 +261,15 @@ The compact CNN (3,889 parameters) and ridge-summary-plus-multiscale CNN (82,391
 
 Configuration IDs define disjoint 80/10/10 train/validation/test groups. Scalers, target normalization, and ridge coefficients are fitted only on training rows. AdamW optimizes normalized absolute MSE; validation selects the checkpoint and early stopping. Test scores must not be reused to optimize the final estimator. Forward-pass benchmarking excludes preprocessing, IO, and transfers; measure end-to-end cost before deployment. The tutorial saves inference checkpoints, not a complete optimizer-resume state.
 
-These tools still require the 512-bin grid, simulator version, and nonzero TE
-calibration array. They do not train or predict on the new 500-bin matched data.
-A dedicated lineshape workflow remains to be implemented. Evaluation on unseen
-experimental seed configurations must keep all `source_scan_1based` descendants
-together, even when they have different simulated `configuration_id` values.
+The tools save and validate the exact 500-bin grid, channel mode and units.
+The TE-area mode requires calibration; lineshape mode uses raw/reference recorded
+units without it. Neither mode uses simulator-only clean arrays as inputs.
+Lineshape evaluation groups all `source_scan_1based` descendants together, even
+when they have different simulated configuration IDs. With five measured seeds,
+this gives three training, one validation and one test source. Grouping and
+preprocessing are saved with the model and reused for prediction. New measured
+inference files can omit labels and generator provenance when their grid,
+channel mode and units match the checkpoint.
 
 Following [Eqs. (38)–(45), pp. 13–14](https://arxiv.org/pdf/2603.10146v5#page=13):
 

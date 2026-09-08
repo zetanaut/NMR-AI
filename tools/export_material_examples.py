@@ -20,6 +20,30 @@ from uva_nd3_data import load_nd3
 ROOT=Path(__file__).resolve().parents[1]
 ASSETS=ROOT/"docs/assets"
 PREVIEW_DIR=None
+REUSE_FIGURES=False
+FIGURE_PROVENANCE={}
+
+
+def single_site_reference(report):
+    """Resolve the immutable snapshot used by the saved two-site comparison."""
+    for name in ("experimental-matching.json", "experimental-matching-single-site-reference.json"):
+        path=ASSETS/name
+        if path.exists() and digest(path)==report["single_site_report_sha256"]:
+            return path
+    raise ValueError("Cannot find the pinned single-site comparison snapshot")
+
+
+def verify_reused_figures(report, asset_name):
+    if not REUSE_FIGURES:
+        return
+    previous=json.loads((ASSETS/asset_name).read_text())
+    if {key:value for key,value in previous.items() if key!="publication"}!=report:
+        raise ValueError("Existing figures describe a different fit report")
+    publication=previous["publication"]
+    for name,expected in publication["figure_sha256"].items():
+        if digest(ASSETS/name)!=expected:
+            raise ValueError(f"Existing figure changed: {name}")
+        FIGURE_PROVENANCE[name]=publication.get("figure_environment",publication["validation_environment"])
 
 
 def read_verified(path):
@@ -31,6 +55,11 @@ def read_verified(path):
 
 
 def save(fig,name,title):
+    if REUSE_FIGURES:
+        if name not in FIGURE_PROVENANCE:
+            raise ValueError(f"Unverified figure reuse: {name}")
+        plt.close(fig)
+        return
     fig.savefig(ASSETS/name,metadata={"Date":None,"Title":title})
     if PREVIEW_DIR is not None:
         fig.savefig(PREVIEW_DIR/Path(name).with_suffix(".png"),dpi=120)
@@ -50,7 +79,7 @@ def page(title,number,lede,content):
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="{title}"><meta name="theme-color" content="#173c3a"><title>NMR / AI — {title}</title><link rel="stylesheet" href="assets/style.css"></head>
 <body><a class="skip-link" href="#main">Skip to the practical</a>
 <header class="topbar"><a class="brand" href="index.html">NMR <span>/</span> AI</a><span class="topbar-note">Experimental example {number} of 3</span><a class="repo-link" href="https://github.com/zetanaut/NMR-AI">View on GitHub ↗</a></header>
-<div class="layout"><aside class="sidebar"><p class="eyebrow">Three experimental examples</p><nav aria-label="Experimental examples"><a href="matching.html">1 · Single-site starting model</a><a href="butanol.html">2 · Butanol: C–D and O–D</a><a href="uva-nd3.html">3 · UVA-ND3 data</a><a href="#model">Model and assumptions</a><a href="#results">Fits and full residuals</a><a href="#reproduce">Reproduce the example</a><a href="#limits">Interpretation and next steps</a><a href="baseline.html">Physical-baseline practical</a><a href="index.html#project-status">Project status</a></nav><p class="sidebar-footer">Preserve the measured grid. Match the material and readout.</p></aside>
+<div class="layout"><aside class="sidebar"><p class="eyebrow">Three experimental examples</p><nav aria-label="Experimental examples"><a href="matching.html">1 · Single-site starting model</a><a href="butanol.html">2 · Butanol: C–D and O–D</a><a href="uva-nd3.html">3 · UVA-ND3 data</a><a href="#model">Model and assumptions</a><a href="#results">Fits and full residuals</a><a href="#reproduce">Reproduce the example</a><a href="#limits">Interpretation and next steps</a><a href="baseline.html">Physical-baseline practical</a><a href="index.html#network">500-bin learning models</a></nav><p class="sidebar-footer">Preserve the measured grid. Match the material and readout.</p></aside>
 <main id="main"><section class="hero"><p class="eyebrow">Experimental example {number} of 3</p><h1>{title}</h1><p class="lede">{lede}</p></section>
 {content}
 <footer><a class="brand" href="index.html">NMR <span>/</span> AI</a><p>Material-specific lineshapes · measured data · reproducible comparisons</p></footer></main></div></body></html>
@@ -59,9 +88,9 @@ def page(title,number,lede,content):
 
 def publish_butanol(folder):
     report=read_verified(folder/"butanol_report.json")
-    single=json.loads((ASSETS/"experimental-matching.json").read_text())
-    if digest(ASSETS/"experimental-matching.json")!=report["single_site_report_sha256"]:
-        raise ValueError("Single-site comparison snapshot changed")
+    reference=single_site_reference(report)
+    single=json.loads(reference.read_text())
+    verify_reused_figures(report,"butanol-matching.json")
     if digest(ROOT/"configs/butanol-matching.json")!=report["config_sha256"]:
         raise ValueError("Butanol fitting configuration changed")
     records,audit=load_signal_csv(ROOT/"examples/Sample_RawSignal.csv")
@@ -119,6 +148,8 @@ def publish_butanol(folder):
                  "theory_source_sha256":digest(ROOT/"configs/butanol-theory-source.json"),
                  "numerical_convergence":convergence,"figure_sha256":{n:digest(ASSETS/n) for n in ("butanol-comparison.svg","butanol-sites.svg")},
                  "validation_environment":{"numpy":np.__version__,"scipy":scipy.__version__,"matplotlib":matplotlib.__version__}}
+    publication["single_site_reference_asset"]=reference.name
+    publication["figure_environment"]=FIGURE_PROVENANCE.get("butanol-sites.svg",publication["validation_environment"])
     (ASSETS/"butanol-matching.json").write_text(json.dumps({**report,"publication":publication},indent=2,allow_nan=False)+"\n")
     content=f'''
 <section id="model" class="chapter"><p class="eyebrow">Same data · a material-specific model</p><h2>Two deuteron environments in butanol.</h2>
@@ -147,6 +178,7 @@ python tools/export_material_examples.py \\
 
 def publish_nd3(folder):
     report=read_verified(folder/"uva_nd3_report.json")
+    verify_reused_figures(report,"uva-nd3-matching.json")
     data,audit=load_nd3(ROOT/"examples/uva-nd3.json")
     if report["audit"]!=audit or len(report["fits"])!=len(data["records"]):
         raise ValueError("UVA-ND3 report does not match the complete teaching excerpt")
@@ -188,6 +220,7 @@ def publish_nd3(folder):
     publication={"report_sha256":digest(folder/"uva_nd3_report.json"),"exporter_sha256":digest(__file__),
                  "numerical_convergence":convergence,"figure_sha256":{n:digest(ASSETS/n) for n in ("uva-nd3-matches.svg","uva-nd3-raw.svg")},
                  "validation_environment":{"numpy":np.__version__,"scipy":scipy.__version__,"matplotlib":matplotlib.__version__}}
+    publication["figure_environment"]=FIGURE_PROVENANCE.get("uva-nd3-raw.svg",publication["validation_environment"])
     (ASSETS/"uva-nd3-matching.json").write_text(json.dumps({**report,"publication":publication},indent=2,allow_nan=False)+"\n")
     all_success=all(f["success"] for f in report["fits"])
     warnings=[f'Record {f["source_record_1based"]}: {f["near_bounds"]}' for f in report["fits"] if f["near_bounds"]]
@@ -196,7 +229,7 @@ def publish_nd3(folder):
     content=f'''
 <section id="model" class="chapter"><p class="eyebrow">Another material · another acquisition</p><h2>Preserve the data contract for UVA-ND3.</h2>
 <p>The owner supplied this ND3 example from an earlier acquisition. The public <a href="https://github.com/zetanaut/NMR-AI/blob/main/examples/uva-nd3.json">UVA-ND3 teaching excerpt</a> contains records 1, 126, 251, 376 and 501, selected at equal intervals through the 501-record source file before fitting. It retains all 512 measured bins in each selected raw phase, baseline reference and reference-subtracted spectrum. The arrays preserve their parsed numeric values; unrelated DAQ metadata are omitted and source hashes are retained.</p>
-<p>The stored frequency arrays run from about 32.3000000 to 33.0999878 MHz. Their digitized spacing varies slightly, so use the actual values. This is a third grid contract: it is distinct from both the 500-bin butanol acquisition and the synthetic 512-bin TE-area benchmark. The acquisition records report 4,000 sweeps for each selected record; that does not establish noise independence or a new covariance.</p>
+<p>The stored frequency arrays run from about 32.3000000 to 33.0999878 MHz. Their digitized spacing varies slightly, so use the actual values. This measured grid contract is separate: it is distinct from the 500-bin butanol and generated learning grid. The acquisition records report 4,000 sweeps for each selected record; that does not establish noise independence or a new covariance.</p>
 <div class="baseline-figure-scroll" tabindex="0" role="region" aria-label="Raw UVA-ND3 data and recorded reference subtraction"><img class="baseline-fit-image" src="assets/uva-nd3-raw.svg" width="1100" height="450" alt="Five raw phase sweeps with their reference context and the recorded baseline-subtracted spectra."></div>
 <h3>A conditional fit after measured reference subtraction</h3>
 <div class="equation small">y_sub = phase − recorded baseline<br>y_fit = a_abs [−Im κ(f;P)] + a_disp Re κ(f;P)<br>+ b₀ + b₁t + b₂t² + b₃t³, &nbsp; t = (f_MHz − 32.7)/0.4</div>
@@ -219,12 +252,14 @@ python tools/export_material_examples.py \\
 
 
 def main():
-    global PREVIEW_DIR
+    global PREVIEW_DIR,REUSE_FIGURES
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--butanol-fit-dir",type=Path)
     parser.add_argument("--nd3-fit-dir",type=Path)
     parser.add_argument("--preview-dir",type=Path,help="Optional local PNG copies for visual inspection")
+    parser.add_argument("--reuse-figures",action="store_true",help="Keep hash-verified existing figures for unchanged fit reports")
     args=parser.parse_args()
+    REUSE_FIGURES=args.reuse_figures
     if args.butanol_fit_dir is None and args.nd3_fit_dir is None:
         parser.error("Supply at least one material fit directory")
     if args.preview_dir is not None:

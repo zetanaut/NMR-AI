@@ -184,7 +184,7 @@ def main():
                 "limitations": ["Five development scans do not define a measured population distribution",
                                 "White-noise reference does not reproduce all structured fit residuals or endpoint artifacts",
                                 "All descendants of a source scan must stay together in experimental holdout splits",
-                                "This 500-bin lineshape dataset is separate from the existing 512-bin TE-area teaching benchmark; use grid-aware preprocessing",
+                                "Lineshape preprocessing uses raw/reference recorded units without the optional TE-area benchmark calibration",
                                 "Simulation test accuracy is not a measured experimental polarization uncertainty"]}
     args.output.with_suffix('.json').write_text(json.dumps(metadata, indent=2, allow_nan=False)+"\n")
     print(f"Saved {args.num_samples} new simulated sweeps, 500 bins, with simulator-known P and independent baseline-reference noise")

@@ -14,8 +14,8 @@ electronics assumption, not a prerequisite capacitor measurement. The separate
 matching model gives baseline RMS about 6.3643e-5 recorded units and fitted
 C_tune about 544.84 pF; it also fixes the cable at 3.580 m and C_stray at zero.
 This changes several assumptions, so the comparison does not isolate phase
-alone or establish hardware calibration. See the [project status](project-status.md)
-for the remaining training and validation work.
+alone or establish hardware calibration. See the [learning examples](../README.md#train-on-experiment-anchored-lineshapes)
+for generation, training and prediction.
 
 The owner has identified the five polarized sweeps as butanol. The
 [three material examples](material-examples.md) retain the original exercise,
@@ -230,7 +230,6 @@ raw sweeps in `examples/Sample_RawSignal.csv`, used by the separate matching
 practical. Other raw data require their own authorization; full local fit
 products remain in `local-results/`.
 
-The existing 512-bin synthetic teaching benchmark is unchanged. It already
-uses a derived n=1 operating point, but its nominal cable and component settings
+The 500-bin TE-area teaching benchmark shares the measured grid. It uses a derived n=1 operating point, but its nominal cable and component settings
 are a separate controlled scenario, not this measured 3.580 m setup. Adopting
 new hardware parameters in that benchmark requires regenerated data and retraining.

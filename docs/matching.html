@@ -81,7 +81,7 @@ signals = records[:, 1:]  # keep field 0 as timestamp metadata</code></pre>
 <section id="generated-example" class="chapter"><p class="eyebrow">From fitted examples to new labeled sweeps</p><h2>A generated event—not a copied experimental label.</h2>
 <p>This example is the first event (array index 0) from an actual run of 2,000 newly generated spectra and 100 varied configurations. Its polarization was sampled by the simulator. The experimentally fitted P values are not copied into the training target array.</p>
 <div class="baseline-figure-scroll" tabindex="0" role="region" aria-label="Generated example; scroll horizontally on small screens"><img class="baseline-fit-image" src="assets/matched-generator-example.svg" width="1100" height="470" alt="First newly generated raw spectrum, physical baseline, and circuit-coupled signal with independent reference noise."></div>
-<p>Raw voltage, clean χ = 0 baseline, clean nuclear response, event noise and independently noisy reference are stored separately. This is a 500-bin, recorded-unit, lineshape-regression dataset. It is not silently converted into the existing 512-bin TE-area benchmark.</p>
+<p>Raw voltage, clean χ = 0 baseline, clean nuclear response, event noise and independently noisy reference are stored separately. This is a 500-bin, recorded-unit, lineshape-regression dataset. The raw/reference network uses these recorded units directly without TE-area calibration.</p>
 </section>
 <!-- END MATCHING RESULTS -->
 
@@ -114,22 +114,38 @@ signals = records[:, 1:]  # keep field 0 as timestamp metadata</code></pre>
 <pre><code>python tools/generate_matched_data.py \
   --matching-report local-results/experimental-matching/matching_report.json \
   --num-samples 2000 --num-configurations 100 --seed 42 \
-  --output local-results/experiment-anchored.npz
+  --output local-results/experiment-anchored-500-v2.npz
 
 python tools/export_signal_matching.py \
   --fit-dir local-results/experimental-matching \
-  --dataset local-results/experiment-anchored.npz</code></pre>
+  --dataset local-results/experiment-anchored-500-v2.npz</code></pre>
 <div class="equation small">B = V_det(χ = 0), &nbsp; S = V_det(χ(P)) − B<br>raw = V_det(χ(P)) + ε_event<br>reference = B + ε_reference / √N_reference</div>
 <p>The nuclear response is included once through susceptibility; it is not added twice. Spectral amplitudes are float64 in recorded units, preserving small differences. Polarization is a float64 fraction, frequencies are float64 in MHz, identifiers are integers, and provenance fields are strings. The default independent reference averages 16 synthetic sweeps and is shared within a simulated configuration. That count is an explicit teaching setting, not a claimed experimental averaging count.</p>
 <p>The NPZ stores <code>signals</code>, <code>clean_raw</code>, <code>clean_baseline</code>, <code>clean_signal</code>, <code>noise</code>, independently noisy <code>baselines</code>, new fractional <code>P</code>, <code>configuration_id</code>, <code>source_scan_1based</code> and the exact <code>frequency_mhz</code>. The companion JSON records every configuration, coverage assumption, source/fit/code/data hash, noise convention and random seed. Output files are protected against overwrite.</p>
-<aside class="note"><h3>The 500-bin network workflow is still pending</h3><p>No TE calibration or TE-area input channel is needed for this lineshape task. The current <code>train_model.py</code>, <code>predict.py</code> and <code>nmr_lab.make_features</code> require the 512-bin simulator version/grid and a <code>calibration</code> array. They do not yet accept this dataset. The next implementation must use the saved 500-bin grid and experimentally available raw/reference inputs, save preprocessing fitted on training data, and retain the clean simulator arrays for diagnostics. No 500-bin trained-network accuracy is claimed. See the <a href="https://github.com/zetanaut/NMR-AI/blob/main/notes/project-status.md">status and remaining milestones</a>.</p></aside>
+<!-- LINESHAPE TRAINING START -->
+<div id="lineshape-network" class="subsection"><h3>Train and predict on the 500-bin lineshapes</h3>
+<p>The trainer selects raw and reference-subtracted recorded-unit channels, with no required TE calibration. It saves the exact frequency grid, channel mode, units, training-only scalers and model weights; prediction reuses and checks that contract. Simulator-only clean arrays are excluded from the inputs.</p>
+<pre><code>python tools/train_model.py --data local-results/experiment-anchored-500-v2.npz \
+  --output-dir local-results/my-lineshape-model --architecture physics_multiscale \
+  --epochs 80 --patience 12 --learning-rate 0.0001 --batch-order-seed 42
+python tools/predict.py --model-dir local-results/my-lineshape-model \
+  --data local-results/experiment-anchored-500-v2.npz --partition test \
+  --output local-results/my-lineshape-test.csv</code></pre>
+<p>Grouping uses <code>source_scan_1based</code>: training sources [3, 4, 5], validation source [2], and test source [1]. All simulated descendants remain with their measured seed. This gives 1,200/400/400 training/validation/test spectra. New simulator truth P spans −0.6 to +0.6; the measured fits' P estimates are not labels.</p>
+<div class="table-wrap"><table><caption>Saved multiscale CNN · synthetic source holdout · errors in percentage points</caption><thead><tr><th>Test spectra</th><th>Bias</th><th>Width</th><th>RMSE</th><th>95th absolute error</th></tr></thead><tbody><tr><td>400</td><td>0.2136</td><td>6.3659</td><td>6.3695</td><td>11.8190</td></tr></tbody></table></div>
+<p>This run selected epoch 6 of 18 by validation MSE. Test error is measured on one held-out source's synthetic descendants. The 6.3695 pp RMSE shows remaining recovery error under this coverage; it does not establish experimental polarization accuracy. The TE-area benchmark uses different input information and P coverage, so its scores are a separate exercise.</p>
+<p>To reproduce this declared run with deferred test evaluation, use <code>python tools/run_model_comparison.py --protocol configs/lineshape-training.json</code>, then <code>python tools/export_lineshape_training.py</code>. Use matching fresh <code>--runs-dir</code> paths for repeated runs.</p>
+<p>For ordinary prediction on measured inputs, supply <code>signals</code> and corresponding <code>baselines</code> arrays of shape <code>(events,500)</code>, the exact <code>frequency_mhz</code>, and strings <code>feature_mode="lineshape"</code> and <code>voltage_unit="recorded units"</code>. P labels and simulator/group identifiers are unnecessary. Inputs from different acquisition grids require their own model contract.</p>
+<p class="provenance">The <a href="assets/lineshape-training.json">verified training record</a> retains every test prediction, source groups, preprocessing contract, history and artifact hashes. Reconstruction uses the saved checkpoint and training-only preprocessing.</p>
+</div>
+<!-- LINESHAPE TRAINING END -->
 </section>
 
 <section id="validation" class="chapter"><p class="eyebrow">Before calling the generator validated</p><h2>Test the physics and the statistical task separately.</h2>
 <ul><li>Check each raw overlay, both intrinsic branches, full residuals, bound status and competing solutions.</li><li>Confirm the selected lineshape model is appropriate for the target material and spin-temperature state.</li><li>Validate noise and acquisition-artifact behavior; white noise alone does not explain the displayed residuals.</li><li>Recover known simulated polarizations over controlled pseudo-experiments, checking bias and width versus P.</li><li>Group by <code>source_scan_1based</code> when testing unseen measured seed configurations. All simulated descendants must stay together, even if they have different <code>configuration_id</code> values. Five development scans do not constitute an independent experimental test set.</li><li>Increase generated counts only after these checks; more samples cannot remove a systematic model error.</li></ul>
 <p>Run <code>python -m unittest discover -s tests -v</code>. Tests cover raw-file preservation, the spin-1 branch-ratio relation, complex circuit readout, capacitor sensitivity, synthetic recovery, covariance validity, reproducibility and reconstruction of the published experimental matches.</p>
 <p>See the <a href="https://github.com/zetanaut/NMR-AI/blob/main/notes/experimental-matching.md">complete matching and generator record</a> for reproducibility and the separation between fitted experimental P and newly generated truth labels.</p>
-<div class="hero-actions"><a class="button" href="index.html#network">Study the 512-bin network example →</a><a class="text-link" href="baseline.html">Review the physical baseline ↗</a></div>
+<div class="hero-actions"><a class="button" href="index.html#network">Study the 500-bin network example →</a><a class="text-link" href="baseline.html">Review the physical baseline ↗</a></div>
 </section>
 <footer><a class="brand" href="index.html">NMR <span>/</span> AI</a><p>Experimental lineshapes → fitted configurations → new labeled spectra</p></footer>
 </main></div></body></html>

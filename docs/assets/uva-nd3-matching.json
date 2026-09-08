@@ -719,27 +719,27 @@
   },
   "publication": {
     "report_sha256": "1a95758fda3b4c8cb42640bc0762228c80cfaf3c2822f4ec8f5a5f14ee7f2ec5",
-    "exporter_sha256": "102493e41dea4863ea49a37b547ef250bee06f7346361a6d1f8100baaa8692e4",
+    "exporter_sha256": "e466782e978925024079917974ffcb319c1512dd64fa4107799a9b78e3a28f7b",
     "numerical_convergence": [
       {
         "source_record_1based": 1,
-        "nphi_32_to_64_max_recorded_units": 1.1995664531139205e-10
+        "nphi_32_to_64_max_recorded_units": 1.199566418419451e-10
       },
       {
         "source_record_1based": 126,
-        "nphi_32_to_64_max_recorded_units": 3.3223476400556784e-10
+        "nphi_32_to_64_max_recorded_units": 3.322347614034826e-10
       },
       {
         "source_record_1based": 251,
-        "nphi_32_to_64_max_recorded_units": 2.572216042592834e-10
+        "nphi_32_to_64_max_recorded_units": 2.572216033919217e-10
       },
       {
         "source_record_1based": 376,
-        "nphi_32_to_64_max_recorded_units": 2.02309308628551e-10
+        "nphi_32_to_64_max_recorded_units": 2.0230930646014667e-10
       },
       {
         "source_record_1based": 501,
-        "nphi_32_to_64_max_recorded_units": 1.8585626744213601e-10
+        "nphi_32_to_64_max_recorded_units": 1.858562661410934e-10
       }
     ],
     "figure_sha256": {
@@ -747,6 +747,11 @@
       "uva-nd3-raw.svg": "812c55478fc000b8d1857c03b3608170c0d70a045977a977fc44914a31a9cf1f"
     },
     "validation_environment": {
+      "numpy": "2.4.6",
+      "scipy": "1.17.1",
+      "matplotlib": "3.11.1"
+    },
+    "figure_environment": {
       "numpy": "1.26.4",
       "scipy": "1.11.4",
       "matplotlib": "3.6.3"

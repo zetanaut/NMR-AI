@@ -13,7 +13,7 @@ five raw sweeps as butanol and requested the additional UVA-ND3 example.
 The [physics](physics-electronics-theory.md), [baseline](baseline-fitting.md),
 and [original matching](experimental-matching.md) records remain the authority
 for the existing circuit and 500-bin measurement contracts. The new fit demos
-do not change either generator, any generated dataset, or the trained 512-bin
+do not change either generator, any generated dataset, or the trained 500-bin
 TE-area benchmark. Extending a full generator would require new data and training
 before changing its performance claims.
 
@@ -130,8 +130,8 @@ establish independence or a noise covariance.
 The measured grid starts at about 32.3000000 MHz and ends at 33.0999878 MHz.
 Digitized frequency intervals range from about 1.550293 to 1.574707 kHz.
 Use the stored arrays. The fact that they contain 512 bins does not make them
-the synthetic 512-bin linspace, and they do not inherit the 500-bin butanol
-contract. Hardware calibration and the recorded-unit-to-volt conversion for
+the 500-bin grid used for generated learning examples, and they do not inherit
+the butanol hardware contract. Hardware calibration and the recorded-unit-to-volt conversion for
 this acquisition remain unresolved. In particular, the butanol cable and tuning
 assumptions are not assigned to this dataset.
 
@@ -211,3 +211,8 @@ The exporter verifies source hashes and reconstruction before writing the two
 new practicals, four SVG figures and two public fit records. Its text templates
 are the source for generated prose. Library versions used for verification are
 saved in each publication record. Existing benchmark artifacts are unchanged.
+
+The butanol comparison retains its byte-identical original
+[single-site reference snapshot](../docs/assets/experimental-matching-single-site-reference.json).
+The current matching publication has updated generation metadata; the fitted
+single-site parameters and residuals agree exactly with this reference.

@@ -6,7 +6,7 @@ import json
 
 import torch
 from torch.utils.benchmark import Timer
-from nmr_lab import ARCHITECTURES, build_model
+from nmr_lab import ARCHITECTURES, build_model, BINS
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -21,7 +21,7 @@ def main():
         parser.error("CUDA is unavailable; use --device cpu")
     torch.set_num_threads(args.threads)
     model = build_model(args.architecture).eval().to(args.device)
-    inputs = torch.randn(args.batch_size, 2, 512, device=args.device)
+    inputs = torch.randn(args.batch_size, 2, BINS, device=args.device)
     # Timer warms up and synchronizes accelerator work. Model/data stay on device.
     with torch.inference_mode():
         measurement = Timer("model(inputs)", globals={"model": model, "inputs": inputs},

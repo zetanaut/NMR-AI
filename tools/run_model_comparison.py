@@ -68,7 +68,7 @@ def main():
                 if digest(ROOT/"tools"/name) != expected:
                     parser.error(f"Training source changed since fitting: {name}")
         record = {
-            "decision": "All three declared architectures retained after validation; no architecture or setting changes. Evaluate each best-validation checkpoint once on the same saved test rows.",
+            "decision": "All declared architectures retained after validation; no architecture or setting changes. Evaluate each best-validation checkpoint once on the same saved test rows.",
             "protocol_sha256": digest(args.protocol),
             "checkpoint_sha256": {arch: digest(folder/arch/"model.pt") for arch in protocol["architectures"]},
             "prediction_device": "cpu", "prediction_threads": 2, "prediction_batch_size": 128,

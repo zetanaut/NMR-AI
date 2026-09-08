@@ -1,0 +1,21 @@
+{
+  "version": "lineshape-network-500-v1",
+  "dataset": "local-results/experiment-anchored-500-v2.npz",
+  "dataset_sha256": "4d529f9c04558a401451856ad7ed62badbfe1b14d658e02583a4bdcc2218380a",
+  "run_directory": "local-results/lineshape-network-500-v1",
+  "architectures": [
+    "physics_multiscale"
+  ],
+  "training": {
+    "epochs": 80,
+    "patience": 12,
+    "batch_size": 128,
+    "learning_rate": 0.0001,
+    "seed": 42,
+    "batch_order_seed": 42,
+    "threads": 2,
+    "defer_test": true
+  },
+  "selection": "Choose each checkpoint by validation MSE. Fix the comparison before evaluating the saved test rows.",
+  "scope": "500-bin recorded-unit raw/reference lineshape regression without TE calibration; hold out whole source scans, including all simulated descendants."
+}

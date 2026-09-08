@@ -1,9 +1,13 @@
 {
-  "version": "mlp-dnn-cnn-512-v1",
-  "dataset": "local-results/qmeter/broad.npz",
-  "dataset_sha256": "5bddd6429b8b9c683a359a2b20f68f717a83302fa851f97a9723d2f6c37afdc1",
-  "run_directory": "local-results/model-comparison-v1",
-  "architectures": ["mlp", "dnn", "physics_multiscale"],
+  "version": "mlp-dnn-cnn-500-v2",
+  "dataset": "local-results/qmeter-500-v1/broad.npz",
+  "dataset_sha256": "af70281eb8bd6efd52dcfe3b764d2bc12712259207342b937bb9e9f2aa157c37",
+  "run_directory": "local-results/model-comparison-500-v2",
+  "architectures": [
+    "mlp",
+    "dnn",
+    "physics_multiscale"
+  ],
   "training": {
     "epochs": 80,
     "patience": 12,
@@ -15,5 +19,5 @@
     "defer_test": true
   },
   "selection": "Choose each checkpoint by validation MSE. Fix the comparison before evaluating the saved test rows.",
-  "scope": "One seed and a common epoch budget on the existing broad 512-bin TE-area benchmark. The CNN includes a train-only ridge estimate from physical summaries; this is a comparison of complete estimators."
+  "scope": "One seed and a common epoch budget on the broad 500-bin TE-area benchmark. The CNN includes a train-only ridge estimate from physical summaries; this is a comparison of complete estimators."
 }

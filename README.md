@@ -6,23 +6,29 @@ A standalone student tutorial on extracting vector polarization from continuous-
 
 The three phases are a physically grounded training-data generator, a progression from MLP to DNN to CNN on the same data, and validation with bias, residual width, and relative errors at a stated polarization scale.
 
-The generators couple complex Dulya/Pake spin-1 susceptibility to a passive Q-meter circuit: coil and stray capacitance, RLGC transmission line, one tuning capacitor, finite-source/input loading, and a phase-sensitive detector. Baseline and signal are computed from the same circuit at χ=0 and χ(P). The new experimental-matching workflow extracts polarization from the spin-1 lineshape without TE calibration. The existing 512-bin learning benchmark separately uses TE-area features.
+The generators couple complex Dulya/Pake spin-1 susceptibility to a passive Q-meter circuit: coil and stray capacitance, RLGC transmission line, one tuning capacitor, finite-source/input loading, and a phase-sensitive detector. Baseline and signal are computed from the same circuit at χ=0 and χ(P). The experimental-matching workflow extracts polarization from the spin-1 lineshape without TE calibration. The 500-bin learning benchmark separately uses TE-area features.
 
 The scientific source is [Seay, Fernando, and Keller, arXiv:2603.10146v5](https://arxiv.org/abs/2603.10146v5). Read the [detailed physics/electronics notes](notes/physics-electronics-theory.md) and [baseline-fitting record](notes/baseline-fitting.md) for derivations, conventions, component assumptions, and measured-fit diagnostics.
 
-## Current status — 2026-09-08
+## The 500-bin acquisition
 
-| Workflow | Available now | Remaining work |
+All generated training examples and learning models use the confirmed grid:
+
+```
+f_j = 32.3 + 0.0015287*j MHz, j = 0..499
+500 samples · first 32.3000000 MHz · last 33.0628213 MHz
+```
+
+The nominal deuteron center is 32.7 MHz. Preserve the offsets and spacing in
+[deuteron-acquisition.json](configs/deuteron-acquisition.json); do not recenter
+a symmetric linspace. Models save and validate the grid and preprocessing.
+
+| Exercise | Inputs | Independent split unit |
 | --- | --- | --- |
-| 500-bin measured baseline | Audited CSV, constrained constant-phase diagnostic, and a separate fitted phase/capacitance comparison | Independent component/readout characterization and residual investigation |
-| 500-bin experimental lineshape | Five full-spectrum fits and a generated dataset of 2,000 events across 100 configurations, using new simulator-known P labels | Dedicated training/prediction preprocessing without a required TE channel, followed by validation |
-| Material examples | Original single-site exercise, two-site butanol comparison on the same sweeps, and UVA-ND3 conditional fits on a separate measured grid | Independent acquisition and model-sensitivity validation; material-specific training is not established |
-| 512-bin synthetic TE-area benchmark | Data generation, MLP and deep dense DNN, two CNN architectures, and a same-data MLP/DNN/CNN comparison alongside the original three runs | Experimental applicability is not established by these simulation results |
+| Experiment-anchored lineshape regression | Raw and reference-subtracted recorded units; no TE calibration required | Measured source scan and all its simulated descendants |
+| Controlled TE-area benchmark | Raw voltage and TE-calibrated, reference-subtracted area contributions | Simulated circuit configuration |
 
-`train_model.py`, `predict.py`, and `nmr_lab.make_features` currently accept only
-the 512-bin TE-area contract. The 500-bin generator is implemented, but its
-network workflow is still pending. See the [project status and next steps](notes/project-status.md)
-for the evidence, local validation status, and remaining scientific checks.
+Both exercises have 500 bins. Their units and calibration assumptions are explicit.
 
 ## Set up
 
@@ -37,12 +43,8 @@ python -m unittest discover -s tests -v
 
 On Windows activate with `.venv\Scripts\activate`. A CPU supports all labs; training automatically uses CUDA when available. No other repository, research data checkout, or pretrained model is required.
 
-The full test suite also imports PyTorch. If `test_physics` fails to import with
-`No module named 'torch'`, check that Python is using the intended environment
-before installing packages. The owner's workstation already has a verified
-environment; see the [session handoff](notes/project-status.md#quick-start-on-the-owners-workstation)
-for its interpreter and test command. In a new environment, install
-`requirements.txt` and rerun the suite before reporting a complete pass.
+The full test suite imports PyTorch. If that import fails, check that the selected
+Python environment contains the packages in `requirements.txt` before rerunning.
 
 ## Fit a measured deuteron baseline
 
@@ -96,8 +98,8 @@ starting-point candidates, residual statistics, and reconstruction information.
 
 The owner authorized this baseline CSV, the five butanol signal sweeps in
 `examples/Sample_RawSignal.csv`, and the new UVA-ND3 teaching excerpt for publication.
-Other measurements and full fit products stay local. The main 512-bin synthetic training benchmark is unchanged;
-it is not silently relabeled as this 500-bin measured acquisition.
+Other measurements and full fit products stay local. Both learning exercises use the confirmed 500-bin grid; their input units and
+calibration assumptions are saved separately.
 
 ## Three experimental examples
 
@@ -142,10 +144,10 @@ python tools/match_experimental_signals.py \
 python tools/generate_matched_data.py \
   --matching-report local-results/experimental-matching/matching_report.json \
   --num-samples 2000 --num-configurations 100 --seed 42 \
-  --output local-results/experiment-anchored.npz
+  --output local-results/experiment-anchored-500-v2.npz
 python tools/export_signal_matching.py \
   --fit-dir local-results/experimental-matching \
-  --dataset local-results/experiment-anchored.npz
+  --dataset local-results/experiment-anchored-500-v2.npz
 ```
 
 This fits the tuning capacitor, frequency-dependent detector phase, readout and
@@ -165,15 +167,43 @@ define a measured population distribution or a large held-out test set.
 The [new practical](https://zetanaut.github.io/NMR-AI/matching.html) shows all
 fits, residuals, physical parameter meanings, and a generated example. The
 [matching record](notes/experimental-matching.md) documents every step.
-This new 500-bin recorded-unit lineshape dataset is separate from the existing
-512-bin TE-area learning benchmark below. The current trainer and predictor reject
-its simulator version/grid and require a `calibration` array that this dataset
-intentionally does not contain. A dedicated workflow must use the saved 500-bin
-grid without a required TE calibration channel. Keep all descendants of a measured
-seed together using `source_scan_1based` when evaluating unseen experimental
-configurations. No 500-bin trained-network accuracy is claimed here.
+The trainer and predictor accept this 500-bin recorded-unit dataset directly.
+They use raw and reference-subtracted channels without a required `calibration`
+array, subtracting in float64 before float32 conversion. Clean simulator arrays
+remain diagnostic products, never model inputs.
 
-## Run the existing 512-bin learning labs
+## Train on experiment-anchored lineshapes
+
+```bash
+python tools/train_model.py --data local-results/experiment-anchored-500-v2.npz \
+  --output-dir local-results/my-lineshape-model --architecture physics_multiscale \
+  --epochs 80 --patience 12 --learning-rate 0.0001 --batch-order-seed 42
+python tools/predict.py --model-dir local-results/my-lineshape-model \
+  --data local-results/experiment-anchored-500-v2.npz --partition test \
+  --output local-results/my-lineshape-test.csv
+```
+
+All scalers and ridge coefficients use training rows only. Splits group by
+`source_scan_1based`, so all descendants of a measured seed stay together.
+Five sources give three training, one validation and one test source. The
+[matching practical](docs/matching.html) includes the saved synthetic evaluation.
+Reproduce its declared run with the commands below, using a matching fresh
+`--runs-dir` for both commands when needed.
+
+```bash
+python tools/run_model_comparison.py --protocol configs/lineshape-training.json
+python tools/export_lineshape_training.py
+```
+
+A held-out synthetic source group is not an independent experimental accuracy test.
+
+For measured inference, provide NPZ arrays `signals` and corresponding `baselines`
+of shape `(events,500)`, the exact `frequency_mhz`, and scalar strings
+`feature_mode="lineshape"` and `voltage_unit="recorded units"`. Ordinary prediction
+needs neither P labels nor simulator/group identifiers. The saved contract checks
+units and preprocessing and predictions are fractional P.
+
+## Run the 500-bin learning labs
 
 ```bash
 python tools/generate_data.py --num-samples 2000 --num-configurations 100 \
@@ -186,12 +216,12 @@ python tools/analyze_predictions.py local-results/smoke_model/test_predictions.c
 python tools/benchmark_network.py --architecture physics_multiscale --device cpu --batch-size 1
 ```
 
-Choose `--architecture mlp` (65,665 parameters), `dnn` (303,617), `compact`
+Choose `--architecture mlp` (64,129 parameters), `dnn` (297,473), `compact`
 (3,889), or the default `physics_multiscale` (82,391, including 26 frozen
 coefficients fitted to training-only physical summaries). Benchmarking measures
 architecture forward passes, not trained accuracy or end-to-end latency.
 
-Generated data contain raw/reference voltages in V, an independent TE calibration per event, fractional P, configuration IDs, the frequency grid, and `qmeter-complex-pake-v2` provenance. Voltage storage is float64; network inputs are float32 after subtraction/calibration. Generation metadata retain all physical configurations and dataset hashes. Existing outputs are protected; use fresh paths.
+Generated data contain raw/reference voltages in V, an independent TE calibration per event, fractional P, configuration IDs, the frequency grid, and `qmeter-complex-pake-500-v3` provenance. Voltage storage is float64; network inputs are float32 after subtraction/calibration. Generation metadata retain all physical configurations and dataset hashes. Existing outputs are protected; use fresh paths.
 
 Training splits entire configurations 80/10/10. Scalers and the ridge estimate use training rows only. Validation selects the best checkpoint and early stopping; the test partition is evaluated afterward. Prediction uses the same saved preprocessing:
 
@@ -209,14 +239,13 @@ MLP, a three-hidden-layer dense DNN, and a multiscale CNN with physical summarie
 It includes runnable code, architecture explanations, an error figure/table,
 and interactive learning curves from the saved runs.
 
-All three use the same broad 512-bin dataset, training-only preprocessing,
-configuration partitions and training settings. On the same 600 test spectra,
-RMSE decreases from **0.06515 percentage points** (MLP) to **0.03840** (DNN)
-to **0.00236** (CNN with summaries). These are one-seed results under an
-80-epoch cap. The CNN includes a train-only ridge estimate, so the comparison
-measures the complete estimators rather than the effect of convolution alone.
+All three use the same broad 500-bin dataset, training-only preprocessing,
+configuration partitions and training settings. The [comparison record](notes/model-comparison.md)
+and the tutorial report measured errors and saved learning curves from the new
+runs. These are one-seed results under an 80-epoch cap. The CNN includes a train-only
+ridge estimate, so the comparison measures the complete estimators.
 
-If `local-results/qmeter/broad.npz` is absent, generate it once with the broad
+If `local-results/qmeter-500-v1/broad.npz` is absent, generate it once with the broad
 dataset command in [Reproduce the published runs](#reproduce-the-published-runs).
 Then use fresh model output paths:
 
@@ -231,13 +260,13 @@ the comparison. Use `--stage train` and then `--stage evaluate` for a separate
 validation review. Checkpoints, preprocessing, partitions and predictions are
 saved together. The exporter verifies them before updating the tutorial assets.
 See [the comparison record](notes/model-comparison.md) for the full metrics,
-provenance and limitations. The original runs below remain available.
+provenance and limitations. The additional 500-bin runs below use the same data contracts.
 
-## 512-bin benchmark scope
+## 500-bin benchmark scope
 
 The deuteron presets are controlled physical sensitivity studies, not experimentally fitted parameter distributions. They use a derived half-wave/tuned operating point near 32.68 MHz and a single-site spin-temperature powder response. Filling factor and susceptibility scale require independent signal calibration; a χ=0 baseline cannot determine them.
 
-Default detector noise is a white-Gaussian reference scenario with σ=10⁻⁹ V. Supply a validated 512×512 output covariance in V² using `--noise-covariance development_covariance_v2.npy`; provide supported joint physical configurations using `--configurations configurations.json`. The generator checks covariance symmetry and positive semidefiniteness. Non-Gaussian pickup and circuit drift need separate characterized extensions.
+Default detector noise is a white-Gaussian reference scenario with σ=10⁻⁹ V. Supply a validated 500×500 output covariance in V² using `--noise-covariance development_covariance_v2.npy`; provide supported joint physical configurations using `--configurations configurations.json`. The generator checks covariance symmetry and positive semidefiniteness. Non-Gaussian pickup and circuit drift need separate characterized extensions.
 
 Each configuration has an independently noisy baseline reference, with 16-sweep averaging by default. The benchmark assumes stable electronics between reference and signal and an ideal TE calibration. It does not include temperature/calibration uncertainty. These conditions make the area-based problem substantially easier than uncontrolled experimental extraction; a small simulated residual is not a complete polarimetry error budget.
 
@@ -247,17 +276,17 @@ Each configuration has an independently noisy baseline reference, with 16-sweep 
 
 ```bash
 python tools/generate_data.py --num-samples 6000 --num-configurations 300 \
-  --coverage narrow --output local-results/qmeter/narrow.npz
+  --coverage narrow --output local-results/qmeter-500-v1/narrow.npz
 python tools/generate_data.py --num-samples 6000 --num-configurations 300 \
-  --coverage broad --output local-results/qmeter/broad.npz
-python tools/train_model.py --data local-results/qmeter/narrow.npz \
-  --output-dir local-results/qmeter/narrow_multiscale --architecture physics_multiscale \
+  --coverage broad --output local-results/qmeter-500-v1/broad.npz
+python tools/train_model.py --data local-results/qmeter-500-v1/narrow.npz \
+  --output-dir local-results/qmeter-500-v1/narrow_multiscale --architecture physics_multiscale \
   --epochs 40 --patience 8 --learning-rate 0.0001
-python tools/train_model.py --data local-results/qmeter/broad.npz \
-  --output-dir local-results/qmeter/broad_multiscale --architecture physics_multiscale \
+python tools/train_model.py --data local-results/qmeter-500-v1/broad.npz \
+  --output-dir local-results/qmeter-500-v1/broad_multiscale --architecture physics_multiscale \
   --epochs 40 --patience 8 --learning-rate 0.0001
-python tools/train_model.py --data local-results/qmeter/broad.npz \
-  --output-dir local-results/qmeter/broad_compact --architecture compact \
+python tools/train_model.py --data local-results/qmeter-500-v1/broad.npz \
+  --output-dir local-results/qmeter-500-v1/broad_compact --architecture compact \
   --epochs 40 --patience 8 --learning-rate 0.0001
 python tools/export_results.py
 ```
@@ -283,7 +312,6 @@ Preview with `python3 -m http.server 8000 --bind 127.0.0.1 --directory docs`. Th
 - `docs/butanol.html`, `docs/uva-nd3.html`, `notes/material-examples.md`: material comparisons, assumptions, measured grids and provenance.
 - `tools/material_lineshapes.py`, `tools/match_butanol.py`, `tools/match_uva_nd3.py`: standalone two-site/full-circuit and reference-subtracted fitting demos.
 - `tools/uva_nd3_data.py`, `tools/export_material_examples.py`: audited UVA-ND3 excerpt reader and verified publication of both material demos.
-- `notes/project-status.md`: dated implementation status, validation evidence, and remaining milestones.
 - `tools/circuit.py`, `tools/lineshape.py`: physical electronics and complex nuclear response.
 - `tools/fit_tuned_baseline.py`, `configs/baseline-setup.template.json`: fit only declared unknowns using independent tuning information.
 - `tools/fit_baseline.py`, `configs/deuteron-baseline-setup.json`: constrained default fit for the supplied n=1, 3.580 m setup.
@@ -291,7 +319,9 @@ Preview with `python3 -m http.server 8000 --bind 127.0.0.1 --directory docs`. Th
 - `tools/experimental_data.py`, `tools/match_experimental_signals.py`: audited raw-signal reader and full-spectrum lineshape/circuit fitting.
 - `tools/generate_matched_data.py`, `tools/export_signal_matching.py`: new 500-bin labeled examples and verified matching figures.
 - `tools/baseline_parameters.py`, `tools/export_baseline_example.py`: physical parameter catalogue and verified measured-fit publication.
-- `tools/nmr_lab.py`: generation, calibration, features, group split, networks.
+- `tools/learning_data.py`: exact 500-bin grid, raw/reference and TE-area preprocessing contracts.
+- `tools/nmr_lab.py`: generation, calibration, group split and networks.
+- `configs/lineshape-training.json`, `tools/export_lineshape_training.py`: source-grouped raw/reference network exercise and verified results.
 - `configs/model-comparison.json`, `tools/run_model_comparison.py`, `tools/export_model_comparison.py`: declared same-data comparison, deferred test evaluation, and verified publication.
 - `notes/model-comparison.md`: MLP/DNN/CNN results, common data, training protocol and limitations.
 - `tools/generate_data.py`, `tools/train_model.py`, `tools/predict.py`: learning workflow.

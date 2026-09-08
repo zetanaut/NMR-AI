@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 
 from analyze_predictions import load_predictions, summarize
-from lineshape import SIMULATOR
+from learning_data import SIMULATOR
 from nmr_lab import FREQUENCY, sample_configurations, simulate
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,7 +23,7 @@ RUNS = [
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--runs-dir", type=Path, default=ROOT / "local-results" / "qmeter")
+    parser.add_argument("--runs-dir", type=Path, default=ROOT / "local-results" / "qmeter-500-v1")
     args = parser.parse_args()
     runs = []
     for run_id, label, directory in RUNS:

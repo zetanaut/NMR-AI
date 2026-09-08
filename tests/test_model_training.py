@@ -12,7 +12,7 @@ import torch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/"tools"))
-from lineshape import SIMULATOR
+from learning_data import SIMULATOR
 from nmr_lab import ARCHITECTURES, FREQUENCY, build_model, make_features
 
 
@@ -22,7 +22,7 @@ class ModelTraining(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             folder = Path(tmp)
             data, protocol_path = folder/"data.npz", folder/"protocol.json"
-            np.savez(data, signals=rng.normal(size=(48, 512)), baselines=np.zeros((48, 512)),
+            np.savez(data, signals=rng.normal(size=(48, 500)), baselines=np.zeros((48, 500)),
                      calibration=np.ones(48), P=rng.uniform(-.2, .2, 48),
                      configuration_id=np.repeat(np.arange(12), 4), frequency_mhz=FREQUENCY, simulator=SIMULATOR)
             protocol = {"dataset": str(data), "dataset_sha256": hashlib.sha256(data.read_bytes()).hexdigest(),
@@ -47,7 +47,7 @@ class ModelTraining(unittest.TestCase):
 
     def test_architectures_learn_and_reload_the_same_input_contract(self):
         torch.set_num_threads(1)
-        x = torch.randn(4, 2, 512)
+        x = torch.randn(4, 2, 500)
         for name in ARCHITECTURES:
             with self.subTest(architecture=name):
                 model = build_model(name)
@@ -67,7 +67,7 @@ class ModelTraining(unittest.TestCase):
     def test_deferred_training_and_partition_prediction_roundtrip(self):
         rng = np.random.default_rng(4)
         groups = np.repeat(np.arange(12), 4)
-        signals = rng.normal(0, .01, (len(groups), 512))
+        signals = rng.normal(0, .01, (len(groups), 500))
         baselines = rng.normal(0, .001, signals.shape)
         labels = rng.uniform(-.25, .25, len(groups))
         calibration = np.ones(len(groups))

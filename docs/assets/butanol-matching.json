@@ -1440,7 +1440,7 @@
   },
   "publication": {
     "report_sha256": "36d1059d12e271ffe1600cb8f5d03331db683f771a6068d45e58cbdb8c6d0e15",
-    "exporter_sha256": "102493e41dea4863ea49a37b547ef250bee06f7346361a6d1f8100baaa8692e4",
+    "exporter_sha256": "e466782e978925024079917974ffcb319c1512dd64fa4107799a9b78e3a28f7b",
     "theory_source": {
       "source": "Owner-supplied butanol_theory directory, reviewed 2026-09-07",
       "files": [
@@ -1497,6 +1497,12 @@
       "butanol-sites.svg": "9be48b06b39f43db4f57a5087da25de6335965d7eaf3b7df73634942590722f5"
     },
     "validation_environment": {
+      "numpy": "2.4.6",
+      "scipy": "1.17.1",
+      "matplotlib": "3.11.1"
+    },
+    "single_site_reference_asset": "experimental-matching-single-site-reference.json",
+    "figure_environment": {
       "numpy": "1.26.4",
       "scipy": "1.11.4",
       "matplotlib": "3.6.3"

@@ -4602,13 +4602,13 @@
   "publication": {
     "source_csv_url": "https://github.com/zetanaut/NMR-AI/blob/main/examples/Sample_RawSignal.csv",
     "matching_report_sha256": "75638d6eb7ed132fe4da2b22455fcc061d1a127a336d587747e35fe8424d1ff9",
-    "exporter_sha256": "f5aea834911d32925f8632709fb4e0d3c4e1ea551530304947d27cc80c18b396",
+    "exporter_sha256": "f71f44bf5d9990218cd4815ccaacaf485cc5051f56f8706a2c5bd1c1a308112a",
     "generation": {
       "version": "experiment-anchored-qmeter-pake-500-v1",
       "matching_report_sha256": "75638d6eb7ed132fe4da2b22455fcc061d1a127a336d587747e35fe8424d1ff9",
       "source_csv_sha256": "cdbb7e3afa6531694a4b97848d295bbb5c7c03ef62d796b053e3b4e16fbaea5a",
       "dataset_sha256": "4d529f9c04558a401451856ad7ed62badbfe1b14d658e02583a4bdcc2218380a",
-      "generator_sha256": "2f843b27601c4d46b124c9a4009738b0deaaf4046ee14bf675b22fa30963dbcf",
+      "generator_sha256": "b0085769b2245971c243d6d7f985a696471309618e65b7a675c5ebe53884fb0d",
       "coverage_sha256": "7f078afa9563fd2a591123125b1f49917bf64366b638d01b5c385ac43c86062a",
       "coverage": {
         "source": "Controlled robustness exercise around jointly fitted experimental seed configurations. Half-ranges below are explicit teaching choices, not measured hardware uncertainties or a five-scan empirical population.",
@@ -7763,7 +7763,7 @@
         "Five development scans do not define a measured population distribution",
         "White-noise reference does not reproduce all structured fit residuals or endpoint artifacts",
         "All descendants of a source scan must stay together in experimental holdout splits",
-        "Lineshape preprocessing uses raw/reference recorded units without the optional TE-area benchmark calibration",
+        "This 500-bin lineshape dataset is separate from the existing 512-bin TE-area teaching benchmark; use grid-aware preprocessing",
         "Simulation test accuracy is not a measured experimental polarization uncertainty"
       ]
     },

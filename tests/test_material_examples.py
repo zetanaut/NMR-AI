@@ -129,10 +129,13 @@ class MaterialExamples(unittest.TestCase):
 
     def test_published_butanol_comparison_reconstructs_all_bins(self):
         report=json.loads((ROOT/"docs/assets/butanol-matching.json").read_text())
-        original=json.loads((ROOT/"docs/assets/experimental-matching.json").read_text())
+        reference=ROOT/"docs/assets"/report["publication"]["single_site_reference_asset"]
+        original=json.loads(reference.read_text())
         records,audit=load_signal_csv(ROOT/"examples/Sample_RawSignal.csv")
         f=acquisition_grid(load_acquisition())/1e6
-        self.assertEqual(report["single_site_report_sha256"],digest(ROOT/"docs/assets/experimental-matching.json"))
+        self.assertEqual(report["single_site_report_sha256"],digest(reference))
+        current=json.loads((ROOT/"docs/assets/experimental-matching.json").read_text())
+        self.assertEqual(original["fits"],current["fits"])
         self.assertEqual(report["config_sha256"],digest(ROOT/"configs/butanol-matching.json"))
         self.assertEqual(report["publication"]["theory_source_sha256"],digest(ROOT/"configs/butanol-theory-source.json"))
         self.assertEqual(report["signal_parsing"],audit)

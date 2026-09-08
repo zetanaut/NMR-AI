@@ -373,9 +373,9 @@ test. Spin-1 lineshape inference still does not require TE calibration.
 
 The existing five butanol sweeps and separate UVA-ND3 excerpt do not identify
 the conditional matrices and robustness tables proposed here. The 500-bin
-training path is also still pending. Preserve each acquisition's grid and
-hardware assumptions; do not borrow a 512-bin checkpoint or the butanol setup
-for a different measurement contract.
+training and prediction tools are implemented and have a saved source-holdout
+synthetic evaluation. Preserve each acquisition's grid, input units and hardware
+assumptions when applying any checkpoint.
 
 ## Verification — 2026-09-08
 
@@ -389,18 +389,5 @@ arbitrary units of these examples. A separate example confirmed that a differenc
 of positive-definite covariances can have negative eigenvalues. These checks
 establish the stated arithmetic, not experimental covariance or instrument validity.
 
-The report is `local-results/distribution-shift-review-1uz0m8hz/identity-checks.json`.
-The same folder retains a browser report and desktop/mobile screenshots. Checks
-at 1440px and 390px exercised all three expandable explanations without page
-overflow or JavaScript errors; the section and explanations work without JavaScript.
-An HTML audit checked nesting, unique IDs and 165 local/repository links across
-the five tutorial pages. Existing generators, preprocessing, fits, trained
-models and numerical performance results were not changed.
-
-The section was published in commit
-[`6dc7448`](https://github.com/zetanaut/NMR-AI/commit/6dc74486be8e88b8a63660defefaf91a88caef39).
-The [Pages deployment](https://github.com/zetanaut/NMR-AI/actions/runs/34251188019)
-succeeded, and the public HTML was verified byte-for-byte against the committed
-file on 2026-09-08. Live desktop/mobile checks passed for the three explanations,
-active navigation and absence of overflow or JavaScript errors. The same evidence
-folder retains `publication-report.json` and live screenshots.
+The tutorial preserves these mathematical checks as distinct from experimental
+validation. The current runnable learning exercises use 500-bin inputs.

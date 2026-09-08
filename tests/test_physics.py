@@ -8,7 +8,8 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/"tools"))
 from circuit import (Circuit, cable_parameters, detector_voltage, line_input, node_voltage,
                      nominal_circuit, resonator_impedance, shunted_coil)
-from lineshape import SIMULATOR, complex_branch, pake_susceptibility, powder_complex, spin_weights
+from learning_data import SIMULATOR
+from lineshape import complex_branch, pake_susceptibility, powder_complex, spin_weights
 from nmr_lab import (FREQUENCY_HZ, clean_response, group_split, integration_weights, make_features,
                      noise_factor, sample_configurations, simulate, te_calibration, thermal_polarization)
 from analyze_predictions import summarize
@@ -101,7 +102,7 @@ class Physics(unittest.TestCase):
     def test_zero_p_and_te_area_calibration(self):
         config = sample_configurations(1)[0]
         e = simulate(0, config, np.random.default_rng(42))
-        np.testing.assert_array_equal(e["lineshape"], np.zeros(512))
+        np.testing.assert_array_equal(e["lineshape"], np.zeros(500))
         np.testing.assert_allclose(e["signal"], e["baseline"]+e["noise"], atol=1e-17)
         p = thermal_polarization(config["center_mhz"]*1e6)
         signal, baseline = clean_response(p, config)
@@ -110,7 +111,7 @@ class Physics(unittest.TestCase):
         self.assertAlmostEqual(100*thermal_polarization(32.7e6), .069748986608294, places=11)
 
     def test_covariance_and_group_partition(self):
-        covariance = np.diag(np.linspace(1, 2, 512))*1e-18
+        covariance = np.diag(np.linspace(1, 2, 500))*1e-18
         factor = noise_factor(covariance)
         np.testing.assert_allclose(factor@factor.T, covariance, atol=1e-30)
         covariance[0,0] = -1e-18

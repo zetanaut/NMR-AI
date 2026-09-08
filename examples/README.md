@@ -109,9 +109,10 @@ exercise. The original raw file and generator are unchanged. See the
 
 The example generation run contains 2,000 events across 100 configurations.
 Its polarization labels are newly sampled simulator truth, not copies of the
-five experimental fit estimates. The current trainer and predictor accept only
-the separate 512-bin TE-area benchmark; a 500-bin workflow without a required
-TE channel remains to be implemented. See the [project status](../notes/project-status.md).
+five experimental fit estimates. The trainer and predictor accept these 500-bin raw/reference arrays without a
+required TE channel. They save the acquisition and preprocessing contract and
+group all descendants of each measured source together. See the
+[training exercise](../README.md#train-on-experiment-anchored-lineshapes).
 
 ## UVA-ND3 data
 
@@ -128,7 +129,7 @@ Excerpt SHA-256:
 
 Each record has **512 measured bins**, with slightly varying digitized spacing,
 from approximately 32.3000000 to 33.0999878 MHz. Preserve its stored frequencies;
-neither the 500-bin butanol mapping nor the 512-bin synthetic linspace applies.
+the 500-bin butanol/generated learning grid does not apply to this acquisition.
 Hardware details and a conversion from recorded units to volts remain unresolved
 for this acquisition. Do not assign the butanol cable/tuning setup to it.
 

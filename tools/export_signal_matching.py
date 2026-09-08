@@ -47,7 +47,7 @@ def verify_products(folder, dataset):
     if generation["dataset_sha256"] != digest(dataset) or generation["matching_report_sha256"] != digest(folder/"matching_report.json"):
         raise ValueError("Generated dataset provenance mismatch")
     if str(generated["simulator"]) != GENERATOR:
-        raise ValueError("Do not publish the unrelated 512-bin benchmark here")
+        raise ValueError("Do not publish the TE-area benchmark in the lineshape exercise here")
     return report, traces, generated, generation
 
 
@@ -160,7 +160,7 @@ def results_html(report, generation):
 <section id="generated-example" class="chapter"><p class="eyebrow">From fitted examples to new labeled sweeps</p><h2>A generated event—not a copied experimental label.</h2>
 <p>This example is the first event (array index 0) from an actual run of {generation['num_samples']:,} newly generated spectra and {len(generation['configurations'])} varied configurations. Its polarization was sampled by the simulator. The experimentally fitted P values are not copied into the training target array.</p>
 <div class="baseline-figure-scroll" tabindex="0" role="region" aria-label="Generated example; scroll horizontally on small screens"><img class="baseline-fit-image" src="assets/matched-generator-example.svg" width="1100" height="470" alt="First newly generated raw spectrum, physical baseline, and circuit-coupled signal with independent reference noise."></div>
-<p>Raw voltage, clean χ = 0 baseline, clean nuclear response, event noise and independently noisy reference are stored separately. This is a 500-bin, recorded-unit, lineshape-regression dataset. It is not silently converted into the existing 512-bin TE-area benchmark.</p>
+<p>Raw voltage, clean χ = 0 baseline, clean nuclear response, event noise and independently noisy reference are stored separately. This is a 500-bin, recorded-unit, lineshape-regression dataset. The raw/reference network uses these recorded units directly without TE-area calibration.</p>
 </section>'''
 
 

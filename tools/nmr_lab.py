@@ -6,19 +6,8 @@ from torch import nn
 from circuit import Circuit, detector_voltage, nominal_circuit
 from lineshape import pake_susceptibility
 
-FREQUENCY = np.linspace(32.3, 33.1, 512)
-FREQUENCY_HZ = FREQUENCY*1e6
+from learning_data import BINS, FREQUENCY, FREQUENCY_HZ, integration_weights, make_features
 ARCHITECTURES = ("mlp", "dnn", "compact", "physics_multiscale")
-
-
-def integration_weights(frequency_hz):
-    f = np.asarray(frequency_hz, dtype=float)
-    if f.ndim != 1 or len(f) < 2 or not np.isfinite(f).all() or np.any(f <= 0) or np.any(np.diff(f) <= 0):
-        raise ValueError("Need a finite, positive, increasing frequency grid")
-    weights = np.empty_like(f)
-    weights[0], weights[-1] = (f[1]-f[0])/2, (f[-1]-f[-2])/2
-    weights[1:-1] = (f[2:]-f[:-2])/2
-    return weights/f
 
 
 def thermal_polarization(frequency_hz, temperature_k=1.5):
@@ -97,8 +86,8 @@ def te_calibration(config):
 
 def noise_factor(covariance_v2):
     covariance = np.asarray(covariance_v2, dtype=float)
-    if covariance.shape != (512, 512) or not np.isfinite(covariance).all():
-        raise ValueError("Noise covariance must be a finite 512x512 matrix in V²")
+    if covariance.shape != (BINS, BINS) or not np.isfinite(covariance).all():
+        raise ValueError("Noise covariance must be a finite 500x500 matrix in V²")
     scale = max(float(np.max(np.abs(covariance))), 1e-30)
     if not np.allclose(covariance, covariance.T, rtol=1e-10, atol=scale*1e-12):
         raise ValueError("Noise covariance must be symmetric")
@@ -113,22 +102,10 @@ def simulate(p, config, rng, center_jitter=0.0, covariance_factor=None):
         raise ValueError("Center jitter must be finite and nonnegative")
     shift = rng.uniform(-center_jitter, center_jitter) if center_jitter else 0.0
     nuclear, baseline = clean_response(p, config, shift)
-    noise = (rng.normal(size=512)*config["noise_rms_v"] if covariance_factor is None
-             else covariance_factor @ rng.normal(size=512))
+    noise = (rng.normal(size=BINS)*config["noise_rms_v"] if covariance_factor is None
+             else covariance_factor @ rng.normal(size=BINS))
     return {"signal": nuclear+baseline+noise, "lineshape": nuclear,
             "baseline": baseline, "noise": noise}
-
-
-def make_features(signals, calibration, baselines):
-    """Independent reference subtraction and trapezoidal TE-calibrated area bins."""
-    signals, baselines = np.asarray(signals, dtype=float), np.asarray(baselines, dtype=float)
-    calibration = np.asarray(calibration, dtype=float)
-    if signals.ndim != 2 or signals.shape[1] != 512 or baselines.shape != signals.shape or calibration.shape != (len(signals),):
-        raise ValueError("Need aligned (events,512) raw/reference voltages and per-event calibration")
-    if not all(np.isfinite(a).all() for a in (signals, baselines, calibration)) or np.any(calibration == 0):
-        raise ValueError("Inputs must be finite with nonzero calibration")
-    residual = (signals-baselines)*calibration[:, None]*integration_weights(FREQUENCY_HZ)
-    return np.stack([signals, residual], axis=1).astype(np.float32)
 
 
 def group_split(groups, seed):
@@ -146,7 +123,7 @@ class BasicPolarizationMLP(nn.Module):
     """One hidden dense layer over the same two channels used by the CNNs."""
     def __init__(self):
         super().__init__()
-        self.net = nn.Sequential(nn.Flatten(), nn.Linear(2*512, 64), nn.GELU(), nn.Linear(64, 1))
+        self.net = nn.Sequential(nn.Flatten(), nn.Linear(2*BINS, 64), nn.GELU(), nn.Linear(64, 1))
 
     def forward(self, x):
         return self.net(x)
@@ -157,7 +134,7 @@ class DeepPolarizationDNN(nn.Module):
     def __init__(self):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Flatten(), nn.Linear(2*512, 256), nn.GELU(),
+            nn.Flatten(), nn.Linear(2*BINS, 256), nn.GELU(),
             nn.Linear(256, 128), nn.GELU(), nn.Linear(128, 64), nn.GELU(), nn.Linear(64, 1),
         )
 
@@ -197,7 +174,7 @@ class PhysicsMultiscaleCNN(nn.Module):
         self.encoder = nn.Sequential(nn.Conv1d(36, 48, 1), nn.GELU(), SpectralBlock(48, 1),
                                      nn.AvgPool1d(2), SpectralBlock(48, 2), nn.AvgPool1d(2),
                                      SpectralBlock(48, 4))
-        self.register_buffer("frequency", torch.linspace(-1.0, 1.0, 512))
+        self.register_buffer("frequency", torch.linspace(-1.0, 1.0, BINS))
         self.register_buffer("physics_mean", torch.zeros(1, 25))
         self.register_buffer("physics_std", torch.ones(1, 25))
         self.physics_head = nn.Linear(25, 1)
