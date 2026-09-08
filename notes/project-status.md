@@ -1,6 +1,7 @@
 # Project status and session handoff
 
-Updated 2026-09-08, including the expanded multiscale-CNN explanation,
+Updated 2026-09-08, including the inference-coverage clarification,
+the expanded multiscale-CNN explanation,
 the material-example and model-comparison publication,
 the matching-uncertainty tutorial addition, and records of available
 `local-results/` artifacts. This is a
@@ -10,7 +11,39 @@ status record; the detailed scientific conventions remain in the
 [experimental-matching record](experimental-matching.md). The new
 [material-model record](material-examples.md) covers the butanol and UVA-ND3 demonstrations.
 
-## Latest tutorial addition — multiscale CNN explained, 2026-09-08
+## Latest tutorial revision — unfamiliar structure at inference, 2026-09-08
+
+The owner clarified that the distribution-shift lesson should foreground new
+experimental structure entering inference. The section now opens with that
+scenario and an illustrative baseline ripple, then connects input novelty to
+training coverage and known-P robustness evaluation. It distinguishes a flag
+on one input from a distribution comparison across acquisitions and from measured
+polarization error. The multiscale CNN's shared filters and physical summaries
+are discussed as possible paths for the unfamiliar structure to affect a prediction.
+
+The formal covariate-shift definition remains in an expandable supporting note:
+new structure can fall into that case, and an unchanged conditional relationship
+does not guarantee an accurate learned approximation in poorly covered regions.
+Detection and sensitivity checks can begin before the cause or experimental P
+is known. The covariance-difference caveat has its own explanation; it is not the
+main response to unfamiliar inputs. The detailed [protocol](distribution-shift.md)
+retains the distinction between proposed diagnostics and implemented capabilities.
+No novelty detector, experimental error result or new covariance was implemented.
+
+On 2026-09-08 the linked primary sources for covariate shift, MMD and uncertainty
+under dataset shift were rechecked. Chromium checks at 1440, 390 and 320 pixels
+passed for all five explanations, including keyboard activation, without page
+overflow or JavaScript errors. The explanations work with JavaScript disabled;
+desktop and mobile screenshots were inspected. The HTML audit checked balanced
+nesting, unique IDs and 167 local/repository links across five pages. All HTML
+outside the distribution-shift section is identical to the preceding commit,
+including the expanded CNN lesson and generated result blocks. `git diff --check`
+passed. Evidence is in `local-results/inference-shift-review-_2e4xptg/`.
+This prose revision changes no numerical definitions, generators, preprocessing,
+models or saved results and does not require retraining or a new full-suite run.
+The dedicated 500-bin training workflow remains the implementation milestone.
+
+## Multiscale CNN explanation addition, 2026-09-08
 
 The `docs/index.html#multiscale-cnn` lesson now explains shared filters,
 all 25 physical summaries, and the 26 frozen ridge coefficients (25 weights

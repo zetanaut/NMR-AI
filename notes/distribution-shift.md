@@ -1,11 +1,38 @@
 # Matching uncertainty, distribution shift and robustness
 
-Added 2026-09-08 for the [tutorial section](../docs/index.html#distribution-shift).
+Added 2026-09-08 for the [tutorial section](../docs/index.html#distribution-shift),
+with a same-day revision emphasizing unfamiliar experimental structure at inference.
 This is a proposed measurement and validation protocol. It does not report
 new experimental covariance estimates, revise either generator, or establish
 new network accuracy. The [physics](physics-electronics-theory.md),
 [baseline](baseline-fitting.md), [matching](experimental-matching.md) and
 [material](material-examples.md) records retain their measurement contracts.
+
+## Start with the incoming experimental spectrum
+
+An experimental input can contain a shoulder, ripple, reference mismatch or
+noise correlation poorly represented or absent in training. Even with the
+expected frequency grid and input channels, passing format checks does not
+establish that the learned estimator handles this structure accurately. This
+is the practical motivation for comparing inference inputs with training coverage.
+Detection does not have to wait for an independently known P or an established
+physical explanation of the new pattern.
+
+As an illustrative scenario, consider a baseline ripple appearing in incoming
+spectra after training on examples without that ripple. The saved preprocessing
+can pass its effects to both the multiscale CNN's convolutional features and
+the 25 physical summaries. The fixed estimator may respond with a changed P
+estimate. Weight sharing and a frozen summary regression do not themselves
+establish tolerance to that structure. This is a proposed failure mechanism
+to test, not a diagnosed ripple or measured prediction error in the supplied data.
+
+The operational sequence is to identify the unfamiliar structure, compare it
+with training coverage, and evaluate its effect on polarization. An unusual
+individual input can motivate an anomaly flag. Recurring differences across
+independent acquisitions support a distribution comparison; chronological
+changes motivate drift monitoring. One unusual sweep does not establish a
+population-level shift. Input novelty and prediction error require separate
+evidence, and either can occur without a large value of the other.
 
 ## What the three deliverables mean
 
@@ -19,19 +46,38 @@ operational, with different mathematical objects in each:
 | Matching and distribution discrepancy | Mean residual, residual covariance and second moment; input-distribution comparisons, support checks and their sampling uncertainty | What remains unexplained, and what differs between experimental inputs and training inputs? |
 | Robustness and temporal monitoring | Conditional prediction-error tables under specified disturbances; chronological input diagnostics and later labeled checks | Which tested deviations can a fixed estimator tolerate, and are acquisition conditions changing? |
 
-A residual covariance is not, by itself, a covariate-shift measurement. In the
-strict definition, covariate shift changes the distribution of inputs X while
-leaving the conditional distribution of P given X unchanged:
+These records connect the new structure to a measured consequence: fit residuals
+describe unexplained patterns, input comparisons describe coverage, and known-P
+robustness tests quantify error. Systematic means and covariances contribute to
+these records; neither alone provides the entire assessment.
+
+### Terminology supports the investigation
+
+New or underrepresented experimental structure can be a case of covariate shift.
+The formal assumption is a change in the input distribution with the same
+conditional relationship between P and the complete input X:
 
 ```
 p_exp(X) != p_train(X), but p_exp(P | X) = p_train(P | X).
 ```
 
 See [Sugiyama, Krauledat and Müller (2007)](https://www.jmlr.org/papers/v8/sugiyama07a.html).
+Even under this assumption, a finite trained model can perform poorly in regions
+of input space that it has learned inadequately. An unchanged conditional
+relationship does not make its learned approximation correct everywhere.
+
 For an inverse problem, changes in detector response, material physics or the
-polarization population can also change P given X. Therefore call the general
-problem **distribution shift** until the narrower assumption is supported.
-Input comparisons without independent labels cannot establish that equality.
+polarization population can also change P given X. The observed structure alone
+does not establish which case applies. **Distribution shift** covers both;
+**temporal drift** describes change over time. These distinctions guide methods
+such as importance weighting; they are not prerequisites for detecting unfamiliar
+inputs or testing prediction sensitivity. Holding true P fixed in a disturbance
+experiment does not by itself prove equality of the two conditional distributions.
+
+Where experimental inputs occupy a region absent from training, the training
+sample provides no direct evidence about that region. Reweighting existing rows
+cannot supply the missing structure. Additional characterization, supported
+generation or new training acquisitions may be needed.
 
 There is no universal “covariate shift matrix” or “covariate drift matrix” that
 also measures network accuracy. A named residual second-moment matrix and a
@@ -192,6 +238,21 @@ interpretable summaries: baseline shape, line position/width, branch structure,
 noise correlation and reference stability. Feature maps and thresholds must be
 chosen on development data. Frequency bins are features; acquisitions are samples.
 
+Inspect raw spectra as well as any compressed feature representation. For the
+existing multiscale estimator, its 25 summaries and learned features provide
+additional views of a compatible input; a compressed representation can hide a
+new pattern. A distance or anomaly score fitted to a training-derived reference
+can assess an individual input, with thresholds and false-alarm behavior checked
+on separate development acquisitions. That individual score is different from
+a two-sample test on batches or chronological windows.
+
+Save a flagged input's raw/reference arrays, timestamp, acquisition information,
+score and model/preprocessing version. Choose the response during validation,
+such as routing unsupported conditions for review. A flag is evidence of a
+coverage concern, not a calibrated P error bar; the absence of a flag is not an
+accuracy guarantee. This record proposes these checks; the current predictor
+does not implement such a novelty flag or response policy.
+
 Save differences in feature means and covariances, marginal distributions,
 tails, joint coverage and support gaps. Matching first and second moments does
 not establish distributional equality. A predeclared two-sample diagnostic such
@@ -201,8 +262,11 @@ and group/block resampling appropriate to the data. A domain classifier, if used
 also needs held-out groups, balanced evaluation and uncertainty on its score.
 Near-chance classification or a nonsignificant test is not proof of agreement.
 
-A covariance difference `C_exp-C_train` may be indefinite and is not an additive
-noise covariance. A large input-distribution difference can also reflect a
+A covariance difference `C_exp-C_train` remains useful for comparing feature
+variation: directions can gain or lose variance, so this difference may be
+indefinite. To generate an added physical disturbance, specify that process's
+mean, valid covariance and dependencies separately; the matrix difference is
+not automatically its additive-noise covariance. A large input difference can also reflect a
 different P population rather than faulty matching; compare both the overall
 population and appropriately conditioned groups. Neither input distances nor
 matching residual RMS directly measure polarization error.
@@ -222,6 +286,21 @@ from appropriate repeat/noise evidence, not structured full-fit RMS. Match the
 definition and averaging convention before comparing SNR strata.
 
 ## 5. Measure robustness and monitor temporal drift
+
+For the illustrative ripple case, construct nominal and disturbed inputs at
+the same simulator-known P, with a stated output disturbance supported by the
+experimental evidence. Vary its amplitude and pattern; preserve justified
+raw/reference sharing and dependencies. Run both inputs through the same frozen
+preprocessing and network. Retain the nominal error, disturbed error and change
+in prediction, with error sign `P_true - P_pred` throughout. This can distinguish
+an input difference that the estimator tolerates from one that biases it.
+
+Use the full forward response for changes to electronics or material physics.
+An arbitrary nuclear peak added to a trace does not automatically preserve its
+label. On an experimental trace with unknown true P, changing the trace under a
+proposed disturbance and observing the output measures sensitivity conditional
+on that scenario. It is not a measured accuracy result. Accuracy requires
+appropriate known-P tests or independent polarization evidence.
 
 Freeze the trained estimator h and its preprocessing T. Generate controlled
 known-P stress cases that change specified baseline/electronic settings, noise
