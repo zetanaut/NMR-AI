@@ -43,6 +43,16 @@ This prose revision changes no numerical definitions, generators, preprocessing,
 models or saved results and does not require retraining or a new full-suite run.
 The dedicated 500-bin training workflow remains the implementation milestone.
 
+Published in commit
+[`0a0a685`](https://github.com/zetanaut/NMR-AI/commit/0a0a6850ab487c7ef8934b48f48b7b5922d4910b),
+with a successful [Pages deployment](https://github.com/zetanaut/NMR-AI/actions/runs/34288176961).
+The live [shift lesson](https://zetanaut.github.io/NMR-AI/#distribution-shift)
+was checked on 2026-09-08: its HTML matched the committed bytes, all five
+explanations opened from the keyboard at 1440, 390 and 320 pixels, and reading
+with JavaScript disabled passed without overflow. Evidence is saved alongside
+the local checks in `publication-report.json`, `deployment-report.json`,
+`live-browser-report.json` and live screenshots.
+
 ## Multiscale CNN explanation addition, 2026-09-08
 
 The `docs/index.html#multiscale-cnn` lesson now explains shared filters,
