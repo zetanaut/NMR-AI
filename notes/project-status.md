@@ -1,19 +1,43 @@
 # Project status and session handoff
 
-Published 2026-09-08 in tutorial commit `75a8699`, including the
-material-example and model-comparison additions, publication assets, and records
-of available `local-results/` artifacts. This is a
+Updated 2026-09-08, including the material-example and model-comparison
+publication, the matching-uncertainty tutorial addition, and records of available
+`local-results/` artifacts. This is a
 status record; the detailed scientific conventions remain in the
 [physics notes](physics-electronics-theory.md),
 [baseline record](baseline-fitting.md), and
 [experimental-matching record](experimental-matching.md). The new
 [material-model record](material-examples.md) covers the butanol and UVA-ND3 demonstrations.
 
-## Latest requested task completed — 2026-09-08
+## Latest tutorial addition — matching uncertainty and shift, 2026-09-08
 
-The owner confirmed that the most recent task is to expand the tutorial's
-building-a-model section from a basic MLP through a deeper dense DNN to a
-multiscale CNN, showing their errors on the same training data. This tutorial
+The new `docs/index.html#distribution-shift` section and
+[detailed protocol](distribution-shift.md) refine the owner's proposed
+noise/baseline/signal covariance, shift and drift records. The three proposed
+deliverables are measurement/joint fit uncertainty, residual-and-input-distribution
+discrepancy, and a conditional robustness table with separate temporal monitoring.
+The section retains systematic means and cross-covariances, distinguishes strict
+covariate shift from general distribution shift, defines SNR/P conditioning and
+propagation to P error, and requires independent validation after mitigation.
+
+This is a documented protocol, not newly estimated experimental matrices or
+new network accuracy. Neither generator nor the existing fit/training results
+changed. The current five butanol scans do not identify the proposed conditional
+covariances; the 500-bin neural-network workflow remains pending.
+
+Numerical identity checks and browser evidence are saved under
+`local-results/distribution-shift-review-1uz0m8hz/`. Constructed examples verified
+the covariance/second-moment and propagation identities to a maximum discrepancy
+of 5.33e-15, including independent whitened least-squares refits for residual
+projection. Desktop/mobile checks covered all three expandable explanations,
+JavaScript-disabled reading and absence of page overflow; an HTML audit checked
+165 local/repository links on five pages. This documentation-only change did
+not require another training run or a new full Python-suite result.
+
+## Model-building tutorial completed — 2026-09-08
+
+The model-building task expanded the tutorial from a basic MLP through a deeper
+dense DNN to a multiscale CNN, showing errors on the same training data. This tutorial
 update is complete and published on GitHub Pages, including final validation. The
 dedicated 500-bin workflow below remains a separate subsequent milestone.
 
@@ -202,6 +226,13 @@ does not isolate the effect of phase alone. Neither fit establishes independent
 hardware calibration. Both use recorded-minus-fitted residuals.
 
 ## Next implementation milestone
+
+The [distribution-shift protocol](distribution-shift.md) now defines the
+experimental validation work alongside this implementation: independent repeats
+and corresponding references, justified full joint fit uncertainty, residual
+means/covariance, distribution diagnostics and conditional known-P stress tests.
+The required empirical matrices must not be fabricated from the five development
+scans or replaced by independent draws from numerical fit bounds.
 
 The new generator version is `experiment-anchored-qmeter-pake-500-v1`.
 `tools/train_model.py`, `tools/predict.py`, and `tools/nmr_lab.py` still implement

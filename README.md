@@ -268,6 +268,14 @@ Residuals are **truth minus prediction**, matching the paper. Positive bias mean
 
 ## Website and code
 
+The tutorial also includes a [matching uncertainty and distribution-shift section](docs/index.html#distribution-shift).
+It explains how to separate noise and joint baseline/signal fit uncertainty,
+retain systematic residuals as well as covariance, compare experimental and
+training input distributions, and measure robustness over signed P, SNR and
+specified disturbances. The [detailed protocol](notes/distribution-shift.md)
+distinguishes these proposed checks from the available experimental evidence;
+it does not claim new measured covariance matrices or network accuracy.
+
 Preview with `python3 -m http.server 8000 --bind 127.0.0.1 --directory docs`. The static Pages workflow deploys only `docs/`. There is no build system, external font, or CDN. Lessons and the summary table remain readable without JavaScript.
 
 - `docs/index.html`, `docs/baseline.html`: three-phase guide and baseline practical.

@@ -32,6 +32,7 @@
     <a href="#network"><span>02</span> Design the network</a>
     <a href="#training"><span>03</span> Train &amp; evaluate</a>
     <a href="#error-lab" class="subnav">Bias &amp; precision lab</a>
+    <a href="#distribution-shift">Matching uncertainty &amp; shift</a>
     <a href="#results" class="subnav">Our experiment notebook</a>
     <a href="#assignment">Your investigation</a>
     <a href="#resources">Code &amp; references</a>
@@ -313,6 +314,59 @@ python tools/predict.py \
   --data local-results/new_spectra.npz \
   --output local-results/new_predictions.csv</code></pre><p>The script reuses saved preprocessing statistics and runs in batches on CPU. If labels are present, the output includes <code>P_true</code> and <code>P_pred</code>, which the analysis helper can read. Running inference on the original full training file is not a held-out accuracy test.</p><p>The helper expects the tutorial's NPZ format. Real scans would require grid, voltage, baseline, and calibration checks and a validated experimental simulator before this learning workflow could be used for measurements.</p></div></details>
   <div class="checkpoint"><span>Phase 03 deliverable</span><p>A saved model with its preprocessing and split, a training/validation curve, and held-out bias, width, RMSE, tails, and relative errors in stated polarization bands.</p></div>
+</section>
+
+<section id="distribution-shift" class="chapter">
+  <p class="eyebrow">From simulation to experiment</p>
+  <h2>Match the distributions.<br>Measure the remaining error.</h2>
+  <p class="lede">Matching a generator to experimental spectra is part of the error budget. Measure what the fits leave unexplained, compare the inputs the network sees, and test how those differences affect its polarization estimates.</p>
+  <aside class="note"><h3>A measurement and validation protocol</h3><p>This section describes the next scientific checks. The five butanol development scans and the separate UVA-ND3 example do not yet establish conditional noise/discrepancy matrices or experimental network accuracy. The saved 512-bin network results remain simulation benchmarks; a compatible 500-bin training workflow is still pending.</p></aside>
+
+  <h3>Keep three distinct records</h3>
+  <div class="table-wrap"><table><caption>What to retain from matching, distribution comparison and robustness evaluation</caption><thead><tr><th>Record</th><th>Quantities to save</th><th>What it establishes</th></tr></thead><tbody>
+  <tr><td>Measurement and fit uncertainty</td><td>Noise/reference covariance; joint parameter uncertainty; baseline/signal curve covariance, including cross terms</td><td>Uncertainty conditional on the fitted model and measurement assumptions</td></tr>
+  <tr><td>Matching and distribution discrepancy</td><td>Mean residual, residual covariance and second moment; input-distribution and coverage diagnostics</td><td>Unexplained structure and differences between experimental and training inputs</td></tr>
+  <tr><td>Robustness and temporal monitoring</td><td>Prediction errors under declared disturbances, by signed P, SNR and setup; chronological drift diagnostics</td><td>Which tested deviations the fixed estimator handles, and whether conditions change with time</td></tr>
+  </tbody></table></div>
+  <p>A residual covariance is useful, but it is not a complete “covariate shift matrix.” Likewise, a “drift matrix” does not by itself measure a network's capacity. A defined residual second-moment matrix and a table of measured prediction errors make those ideas testable.</p>
+
+  <h3>Separate noise, baseline and signal using independent evidence</h3>
+  <p>Write the full-fit residual as <code>r = recorded − fitted</code>. It can contain noise, imperfect baseline and signal models, and effects absorbed by fitted parameters. Subtracting the fitted baseline from the same sweep gives <code>recorded − B̂ − Ŝ</code>, which is still the original residual. It does not uniquely identify three separate errors.</p>
+  <details><summary>What measurements separate the contributions?</summary><div class="details-body">
+  <ul><li><strong>Noise:</strong> use independent repeats of an unchanged signal and setup. For independent, equal-variance repeats, <code>(scan1 − scan2)/√2</code> has single-sweep noise covariance. Check temporal correlation, tails and coherent pickup; common pickup can cancel in the difference.</li>
+  <li><strong>Baseline:</strong> use corresponding signal-off references and characterize changes between reference and signal acquisition. A baseline reconstructed from the polarized fit is not an independent baseline measurement.</li>
+  <li><strong>Signal:</strong> fit signal and electronics jointly, retaining their correlations and reference noise. Keep contributions that the data cannot separate explicitly unidentified.</li></ul>
+  <p>For reference subtraction, retain <code>C<sub>raw−ref</sub> = C<sub>raw</sub> + C<sub>ref</sub> − C<sub>raw,ref</sub> − C<sub>raw,ref</sub><sup>T</sup></code>. A reference shared across events also correlates their errors. The distinction between fitted-parameter uncertainty and model inadequacy is discussed by <a href="https://doi.org/10.1111/1467-9868.00294">Kennedy and O'Hagan</a>.</p>
+  </div></details>
+
+  <h3>Retain systematic mismatch as well as covariance</h3>
+  <p>Within a declared SNR, signed-P and setup group, retain the mean residual vector <i>μ<sub>r</sub></i>, the centered sample covariance <i>C<sub>r</sub></i>, and the second moment <i>M<sub>r</sub></i>. For N spectra on the same grid:</p>
+  <div class="equation small">M<sub>r</sub> = (1/N) Σ<sub>i</sub> r<sub>i</sub>r<sub>i</sub><sup>T</sup><br>= [(N − 1)/N] C<sub>r</sub> + μ<sub>r</sub>μ<sub>r</sub><sup>T</sup></div>
+  <p>An identical residual shape on every sweep has zero centered covariance but a nonzero systematic mismatch. Covariance alone misses that error. The <a href="#error-lab">bias-and-width lab</a> illustrates the same distinction for polarization errors. Spectral residuals are in recorded units here; their covariance is in recorded-units squared, not fractional-P squared.</p>
+  <details><summary>Propagate joint fit uncertainty without losing correlations</summary><div class="details-body">
+  <p>The covariance of fitted parameters is a different object from covariance across frequency bins. Under a locally linear, identifiable model with a justified noise covariance and no active bounds, propagate the full joint parameter covariance through derivatives of B and S. Keep the baseline–signal cross blocks:</p>
+  <div class="equation small">C<sub>fitted sweep</sub> = C<sub>BB</sub> + C<sub>SS</sub> + C<sub>BS</sub> + C<sub>SB</sub></div>
+  <p>The <a href="https://www.iso.org/sites/JCGM/GUM/JCGM100/C045315e-html/C045315e_FILES/MAIN_C045315e/05_e.html">correlated-input uncertainty rule</a> retains these terms. Profiled readout coordinates belong in the joint uncertainty. The existing Jacobian condition numbers and spread among optimizer starts are not statistical covariance estimates. For nonlinear or bounded fits, use justified refit ensembles or profiles and retain failed fits and competing branches.</p>
+  <p>Fitting suppresses residual components that resemble parameter changes. Therefore post-fit residual covariance is not automatically the observation-noise covariance. Validate on independent acquisitions, and compare experimental and simulated residual diagnostics using the same fitting procedure. A small residual can coexist with biased fitted polarization.</p>
+  <p>Save sample counts, rank and any regularization. Five residual vectors yield centered covariance of rank at most four, even before subdividing by SNR or P. The supplied scans are not repeated observations at one unchanged setting. Subtracting noise and fit matrices from residual covariance does not automatically identify a physical discrepancy covariance.</p>
+  </div></details>
+
+  <h3>Compare the distributions actually seen by the network</h3>
+  <p>Use the same grid, units, available raw/reference channels and frozen training preprocessing. Compare baseline and signal summaries, noise correlations, feature means/covariances, tails and joint coverage. A predeclared <a href="https://www.jmlr.org/papers/v13/gretton12a.html">two-sample diagnostic such as MMD</a> can complement these checks. Acquisitions are the samples; frequency bins are features. Use independent acquisition groups to quantify sampling uncertainty.</p>
+  <p><a href="https://www.jmlr.org/papers/v8/sugiyama07a.html">Covariate shift</a> strictly means that the input distribution changes while <code>p(P | input)</code> stays the same. Detector, material or polarization-population changes can violate that assumption. Use the broader term <em>distribution shift</em> unless it is supported. A difference between input covariance matrices may be indefinite; it is not a covariance to inject as extra noise. Matching moments or failing to detect a difference also does not prove the distributions agree.</p>
+
+  <h3>Turn deviations into a measured polarization-error map</h3>
+  <p>Freeze the network and preprocessing. Evaluate known-P simulations under declared changes to noise amplitude/correlation, electronics, reference stability and physically supported signal shapes, including coupled changes beyond training coverage. Each cell of a robustness table should specify <strong>signed P × SNR × setup × disturbance mode/amplitude</strong> and report bias, width, RMSE, tails, tolerance-exceedance rate, independent-group counts and sampling uncertainty. Check interval coverage if intervals are supplied.</p>
+  <details><summary>Define the scale and connect input mismatch to output error</summary><div class="details-body">
+  <p>The simulation convention is <code>SNR<sub>peak</sub> = max|signal| / max|noise|</code>, excluding the baseline. An experimental <code>max|fitted signal| / estimated noise SD</code> is a different proxy and must be labeled separately. Do not estimate its denominator from structured full-fit RMS. Experimental fitted P is also an estimate, not an independent label; retain uncertainty when grouping scans. At P = 0 use absolute errors.</p>
+  <p>For a small input perturbation δw, let g be the sensitivity of the complete saved preprocessing-plus-network map to its raw/reference inputs. With error <code>e = P<sub>true</sub> − P̂</code>, local propagation gives:</p>
+  <div class="equation small">Δbias ≈ −g<sup>T</sup> μ<sub>δw</sub><br>Var(Δe) ≈ g<sup>T</sup> C<sub>δw</sub> g</div>
+  <p>Use full propagation for large or nonlinear changes. Input residual RMS is not a polarization uncertainty. Do not add it in quadrature to test RMSE: units differ, dependencies matter, and the test error may already contain the same noise. Agreement with a fit used to construct the generator is not an independent accuracy test.</p>
+  </div></details>
+  <p>Temporal drift needs a separate chronological comparison with a validated reference period, alarm thresholds checked on stable periods, and independent polarization checks when available. Robustness tests establish performance for their specified disturbances; they cannot certify arbitrary unseen changes.</p>
+
+  <div class="callout"><h3>Broaden coverage, then test again</h3><p>Correct supported model errors, then vary physically justified joint nuisance settings and noise/reference processes. Preserve the simulator's known P when constructing a stress case. Broader training can improve tolerance, but can also reduce precision or create ambiguities; extra variation cannot replace missing physics.</p><p>Reserve independent acquisitions before fitting discrepancy models or choosing augmentation ranges. Keep all descendants of a measured seed together, including <code>source_scan_1based</code> in the 500-bin workflow. After mitigation, test on untouched acquisitions and known-P stress cases. A full generator change requires new data and retraining before its results change.</p></div>
+  <p class="provenance">The <a href="https://github.com/zetanaut/NMR-AI/blob/main/notes/distribution-shift.md">matching uncertainty and distribution-shift record</a> gives the derivations, assumptions, proposed outputs and source references. No new experimental matrices or robustness results are claimed by this section.</p>
 </section>
 
 <section id="results" class="chapter">

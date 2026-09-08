@@ -158,6 +158,13 @@ hashes, acquisition, parsing audit, all candidates and reconstruction parameters
 
 ## Noise is a separate modeling step
 
+The [matching uncertainty and distribution-shift protocol](distribution-shift.md)
+extends the validation plan: noise/reference covariance, full joint baseline/signal
+fit uncertainty, residual means and covariance, input-distribution comparisons,
+and conditional known-P robustness tests are distinct outputs. The present
+matching reports do not yet provide these conditional matrices or an experimental
+network-accuracy test.
+
 The full residual RMS is about 60–66 millionths of a recorded unit. A robust
 high-frequency proxy is about 19–23 millionths:
 
