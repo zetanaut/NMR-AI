@@ -78,6 +78,45 @@ using convolution does not guarantee this ordering on another problem. None of
 these results establishes experimental accuracy, a calibrated uncertainty
 interval, or performance on the 500-bin/material datasets.
 
+## Multiscale explanation expanded — 2026-09-08
+
+The tutorial's `#multiscale-cnn` explanation now separates weight sharing across
+frequency positions from freezing the summary regression. Three independent
+first-layer banks have 12 filters each at widths 5, 15 and 31. Each filter reads
+both input channels and reuses its weights and bias at every position. These
+banks contain 1,260 trainable parameters and produce 36 feature channels.
+The later encoder produces 48 channels; mean, maximum and sample-SD pooling
+concatenate them into 144 inputs to the correction head.
+
+The 25 deterministic summaries are calculated from already standardized inputs.
+Let r be the calibrated reference-subtracted channel, v the raw channel, and u
+the fixed 512-point coordinate from -1 to 1. Define
+`center = sum(abs(r)*u)/max(sum(abs(r)), 1e-6)` and `t = u-center`.
+The vector, in code order, contains:
+
+- 11 signed moments `mean(r*t**k)`, k=0..10.
+- 7 absolute-amplitude moments `mean(abs(r)*t**k)`, k=0..6.
+- Minimum, maximum and sample SD of r.
+- Mean, sample SD, minimum and maximum of v.
+
+These moments retain amplitude and use a dimensionless coordinate; they are
+not normalized by total area or reported as independently fitted physical
+parameters. The feature SD uses denominator 511. Prediction-error width still
+uses population SD. A second standardization uses each summary's training-row
+mean and population SD, replacing SDs below 1e-8 with 1.
+
+Ridge regression fits 25 weights and one unpenalized intercept to training P
+divided by its training-row population SD (floored at 1e-6). Its objective is
+summed squared error plus `1e-3*sum(weights**2)`. These 26 coefficients are
+then frozen with `requires_grad_(False)` while AdamW trains the other 82,365
+parameters. The correction head starts at zero; the combined output is
+`target_scale * (ridge_estimate + convolutional_correction)` in fractional P.
+The coordinate and summary scaling buffers are saved but excluded from the
+82,391 parameter count. Prediction reuses all saved preprocessing and weights.
+
+This is an explanation of the existing implementation; generator, architecture,
+training protocol and published results are unchanged.
+
 ## Reproduce and verify
 
 Use the interpreter in the [session handoff](project-status.md). If the broad

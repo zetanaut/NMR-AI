@@ -1,7 +1,8 @@
 # Project status and session handoff
 
-Updated 2026-09-08, including the material-example and model-comparison
-publication, the matching-uncertainty tutorial addition, and records of available
+Updated 2026-09-08, including the expanded multiscale-CNN explanation,
+the material-example and model-comparison publication,
+the matching-uncertainty tutorial addition, and records of available
 `local-results/` artifacts. This is a
 status record; the detailed scientific conventions remain in the
 [physics notes](physics-electronics-theory.md),
@@ -9,7 +10,35 @@ status record; the detailed scientific conventions remain in the
 [experimental-matching record](experimental-matching.md). The new
 [material-model record](material-examples.md) covers the butanol and UVA-ND3 demonstrations.
 
-## Latest tutorial addition — matching uncertainty and shift, 2026-09-08
+## Latest tutorial addition — multiscale CNN explained, 2026-09-08
+
+The `docs/index.html#multiscale-cnn` lesson now explains shared filters,
+all 25 physical summaries, and the 26 frozen ridge coefficients (25 weights
+plus an intercept). Three expandable explanations give the filter-bank counts,
+the exact summary definitions on standardized input, training-only ridge/scaling,
+and addition of the learned CNN correction before restoring fractional-P units.
+The architecture diagram and model card are clearer; the
+[comparison record](model-comparison.md) retains the implementation detail.
+
+Checks against the saved CNN independently reconstructed all 26 ridge coefficients
+and summary scaling from 4,788 training rows exactly. NumPy summary calculations
+agree with the model to 1.025e-7 maximum absolute difference; direct checks confirm
+1,260 first-layer parameters, 25 summaries, 144 pooled features and
+82,391 total / 82,365 trainable parameters after the ridge fit.
+Both existing comparison-publication tests passed. Chromium checks at 1440,
+390 and 320 pixels passed for all three explanations and all four learning-curve
+selections, with no page overflow or JavaScript errors. The explanations also
+work with JavaScript disabled. An HTML audit checked balanced nesting, unique IDs
+and 166 local/repository links across five pages; `git diff --check` passed.
+Evidence and screenshots are in `local-results/cnn-explanation-review-zudjjx_o/`.
+Browser checks reuse the existing temporary Playwright installation and its
+`/tmp/nmr-tutorial-browser.XH4nRz/browsers` cache with the documented interpreter.
+
+This documentation-only change preserves the models, preprocessing, generators,
+saved predictions and published numerical results. No retraining or new full-suite
+result is required; the 500-bin workflow remains the next implementation milestone.
+
+## Matching uncertainty and shift addition, 2026-09-08
 
 The new `docs/index.html#distribution-shift` section and
 [detailed protocol](distribution-shift.md) refine the owner's proposed
