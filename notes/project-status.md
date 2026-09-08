@@ -38,6 +38,16 @@ This documentation-only change preserves the models, preprocessing, generators,
 saved predictions and published numerical results. No retraining or new full-suite
 result is required; the 500-bin workflow remains the next implementation milestone.
 
+Published in commit
+[`5bd59d7`](https://github.com/zetanaut/NMR-AI/commit/5bd59d7b1b36b0539c02f4c2809fe190dca58179),
+with a successful [Pages deployment](https://github.com/zetanaut/NMR-AI/actions/runs/34287135632).
+The live [multiscale CNN explanation](https://zetanaut.github.io/NMR-AI/#multiscale-cnn)
+was verified on 2026-09-08: served HTML matched the committed bytes, all three
+explanations and four learning-curve selections passed at desktop and phone widths,
+and JavaScript-disabled reading worked. Live screenshots were inspected.
+The same evidence directory retains `publication-report.json`,
+`deployment-report.json`, `live-browser-report.json` and live screenshots.
+
 ## Matching uncertainty and shift addition, 2026-09-08
 
 The new `docs/index.html#distribution-shift` section and
