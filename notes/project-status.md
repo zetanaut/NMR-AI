@@ -1,7 +1,8 @@
 # Project status and session handoff
 
-Updated 2026-09-08 against implementation commit `5000346`, the current local
-material-example and model-comparison additions, publication assets, and available `local-results/` artifacts. This is a
+Published 2026-09-08 in tutorial commit `75a8699`, including the
+material-example and model-comparison additions, publication assets, and records
+of available `local-results/` artifacts. This is a
 status record; the detailed scientific conventions remain in the
 [physics notes](physics-electronics-theory.md),
 [baseline record](baseline-fitting.md), and
@@ -13,10 +14,10 @@ status record; the detailed scientific conventions remain in the
 The owner confirmed that the most recent task is to expand the tutorial's
 building-a-model section from a basic MLP through a deeper dense DNN to a
 multiscale CNN, showing their errors on the same training data. This tutorial
-update is complete in the working tree, including final validation. The
+update is complete and published on GitHub Pages, including final validation. The
 dedicated 500-bin workflow below remains a separate subsequent milestone.
 
-The working tree contains all three model explanations, runnable examples,
+The tutorial contains all three model explanations, runnable examples,
 an error figure/table, and interactive saved learning curves in
 `docs/index.html#network`. `configs/model-comparison.json` declares the protocol.
 The completed runs are in `local-results/model-comparison-v1/{mlp,dnn,physics_multiscale}/`,
@@ -54,8 +55,28 @@ JavaScript. The charts now retain readable labels on phones through keyboard-
 accessible horizontal scrolling. Final desktop/mobile screenshots were inspected.
 Browser evidence is in `local-results/model-comparison-final-review-8dl4_ha8/`.
 HTML nesting, unique IDs and 162 local/repository links were checked across all
-five tutorial pages, and `git diff --check` passed. These are local validation
-results; the changes remain uncommitted and have not been deployed.
+five tutorial pages, and `git diff --check` passed. The exporter also strips
+trailing SVG whitespace; numeric content was independently checked unchanged,
+both comparison-publication tests passed afterward, and the staged diff check
+passed before committing.
+
+## GitHub publication — 2026-09-08
+
+The owner authorized publishing the completed tutorial. Commit
+[`75a8699`](https://github.com/zetanaut/NMR-AI/commit/75a86995a6d86073804210d9ab52227fb4120266)
+was pushed to `main`, and the
+[Pages deployment](https://github.com/zetanaut/NMR-AI/actions/runs/34235972078)
+succeeded. The live [model-building lesson](https://zetanaut.github.io/NMR-AI/#network)
+contains the MLP/DNN/CNN progression, comparison results and learning curves,
+with the supporting code and linked material examples in the repository.
+
+All 18 changed pages/assets were retrieved from the public site and matched
+the committed local bytes. A live Chromium check exercised all four learning-curve
+selections with finite plotted coordinates and no JavaScript errors. The report
+and live screenshot are in `local-results/github-publication-20260908-18scaq63/`.
+The deployment confirms publication; the Python test results above are separate
+validation evidence. Generated datasets, checkpoints and full local fit products
+remain git-ignored reproduction artifacts.
 
 ## Quick start on the owner's workstation
 
@@ -97,9 +118,9 @@ model training/partition round trips and comparison publication checks.
 This supersedes the earlier 49-test and partial checks. Recheck after relevant changes;
 the saved result describes the tested working tree, not future edits.
 
-At handoff, `main` is at `5000346`, with uncommitted butanol/UVA-ND3 and
-MLP/DNN/CNN comparison code, examples, figures, tests, and documentation.
-Preserve that work and inspect the current Git status before editing. The
+The butanol/UVA-ND3 and MLP/DNN/CNN comparison code, examples, figures, tests and
+documentation were published on `main` in `75a8699`; a following documentation
+commit records the deployment evidence. Inspect the current Git status before editing. The
 completed tutorial-comparison task is described above; the dedicated 500-bin
 training/prediction workflow remains pending.
 
@@ -120,6 +141,7 @@ fit, generation, or training run needs a fresh output path.
 | Saved models and preprocessing | `local-results/qmeter/{narrow_multiscale,broad_multiscale,broad_compact}/` |
 | New MLP/DNN/CNN comparison | `local-results/model-comparison-v1/{mlp,dnn,physics_multiscale}/` |
 | Final comparison browser audit | `local-results/model-comparison-final-review-8dl4_ha8/browser-report.json` and adjacent screenshots |
+| GitHub publication verification | `local-results/github-publication-20260908-18scaq63/publication-report.json` and live screenshot |
 
 The butanol development and partial-run directories are not publication inputs.
 On 2026-09-08 the matched dataset hash was checked against its JSON metadata,

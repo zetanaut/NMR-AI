@@ -138,5 +138,14 @@ screenshots were inspected; the browser report and images are saved in
 `local-results/model-comparison-final-review-8dl4_ha8/`. The browser check reused
 existing temporary Playwright tooling; no repository runtime dependency was added.
 An HTML audit checked nesting, unique IDs and 162 local/repository links across
-the five tutorial pages. The requested lesson update is complete locally;
-publication to the hosted site has not been performed in this session.
+the five tutorial pages. Before publication, the exporter was updated to strip
+trailing SVG whitespace. The SVG's numeric content and comparison results were
+verified unchanged, and both comparison-publication tests passed again.
+
+The requested lesson update was published on 2026-09-08 in commit `75a8699`.
+The [Pages deployment](https://github.com/zetanaut/NMR-AI/actions/runs/34235972078)
+succeeded, and the [lesson is live](https://zetanaut.github.io/NMR-AI/#network).
+All 18 changed pages/assets matched the committed local bytes when retrieved
+from the hosted site. Live browser checks exercised all four learning-curve
+selections without JavaScript errors. Publication evidence is saved in
+`local-results/github-publication-20260908-18scaq63/`.
