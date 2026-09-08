@@ -2,6 +2,8 @@
 """Apply a saved tutorial model to another tutorial-format NPZ spectrum file."""
 
 import argparse
+import hashlib
+import json
 from pathlib import Path
 
 import numpy as np
@@ -16,6 +18,8 @@ def main():
     parser.add_argument("--data", type=Path, required=True)
     parser.add_argument("--output", type=Path, default=Path("local-results/predictions.csv"))
     parser.add_argument("--batch-size", type=int, default=128)
+    parser.add_argument("--partition", choices=["validation", "test"],
+                        help="Evaluate only saved partition rows, verifying the original dataset hash")
     args = parser.parse_args()
     if args.batch_size < 1 or args.output.exists():
         parser.error("Use a positive batch size and a new output path")
@@ -33,6 +37,14 @@ def main():
             parser.error("Dataset frequency grid does not match the model contract")
         features = make_features(data["signals"], data["calibration"], data["baselines"])
         truth = data["P"] if "P" in data.files else None
+        groups = data["configuration_id"] if args.partition else None
+    if args.partition:
+        config = json.loads((args.model_dir/"config.json").read_text())
+        if hashlib.sha256(args.data.read_bytes()).hexdigest() != config.get("dataset_sha256"):
+            parser.error("Saved-partition evaluation requires the original hashed dataset")
+        with np.load(args.model_dir/"partition.npz", allow_pickle=False) as partition:
+            rows = partition[args.partition]
+        features, truth, groups = features[rows], truth[rows], groups[rows]
     with np.load(args.model_dir / "scaler.npz", allow_pickle=False) as scaler:
         x = ((features - scaler["feature_mean"]) / scaler["feature_std"]).astype(np.float32)
         target_scale = float(scaler["target_scale"][0])
@@ -43,7 +55,11 @@ def main():
                                      for i in range(0, len(x), args.batch_size)])[:, 0] * target_scale
     args.output.parent.mkdir(parents=True, exist_ok=True)
     columns = prediction if truth is None else np.column_stack([truth, prediction])
-    np.savetxt(args.output, columns, delimiter=",", comments="", header="P_pred" if truth is None else "P_true,P_pred")
+    header = "P_pred" if truth is None else "P_true,P_pred"
+    if args.partition:
+        columns = np.column_stack([truth, prediction, truth-prediction, groups])
+        header = "P_true,P_pred,P_residual,configuration_id"
+    np.savetxt(args.output, columns, delimiter=",", comments="", header=header)
     print(f"Saved {len(prediction)} predictions to {args.output}")
 
 

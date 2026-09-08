@@ -83,6 +83,37 @@
   $("spectrum-select").addEventListener("change", renderSpectrum);
   renderSpectrum();
 
+  function renderModelComparison() {
+    const snapshot = window.MODEL_COMPARISON;
+    const select = $("model-curve-select"), svg = $("model-curve-chart");
+    if (!snapshot?.runs?.length || !select || !svg) return;
+    const colors = [rust, "#57786e", "#173c3a"];
+    const selected = select.value;
+    const runs = snapshot.runs;
+    const rmse = (row, key, run) => 100 * Math.sqrt(row[key]) * run.target_scale;
+    const domain = runs.flatMap(run => run.history.flatMap(row => [rmse(row, "train_loss", run), rmse(row, "val_loss", run)]));
+    const a = axes(svg, 1, snapshot.protocol.training.epochs, Math.min(...domain) * 0.7, Math.max(...domain) * 1.3,
+                   "Epoch", v => String(Math.round(v)), v => v.toPrecision(2), true);
+    const chosen = runs.find(run => run.architecture === selected);
+    const series = chosen
+      ? [{run: chosen, key: "train_loss", color: green}, {run: chosen, key: "val_loss", color: rust, dashed: true}]
+      : runs.map((run, index) => ({run, key: "val_loss", color: colors[index]}));
+    let markup = `<title>Saved learning curves in percentage points; a shared logarithmic error axis</title>${a.markup}`;
+    for (const {run, key, color, dashed} of series) {
+      markup += `<path d="${path(run.history.map(row => [row.epoch, rmse(row, key, run)]), a.x, a.y)}" fill="none" stroke="${color}" stroke-width="2.3"${dashed ? ' stroke-dasharray="5 3"' : ""}/>`;
+      if (key === "val_loss") {
+        const best = run.history.find(row => row.epoch === run.best_epoch);
+        markup += `<circle cx="${a.x(best.epoch)}" cy="${a.y(rmse(best, key, run))}" r="4" fill="${color}"><title>${escape(run.label)}: best epoch ${best.epoch}</title></circle>`;
+      }
+    }
+    svg.innerHTML = markup + `<text x="${a.left}" y="13">RMSE (percentage points) · log scale</text>`;
+    $("model-curve-caption").textContent = chosen
+      ? `${chosen.label}. Green: training; dashed rust: validation. Best epoch ${chosen.best_epoch} of ${chosen.history.length}; training stops by the common patience/epoch rules. ${chosen.architecture === "physics_multiscale" ? "The CNN uses dropout during training and begins from a train-only ridge estimate." : "This dense model uses no dropout."} All selections share the same axes.`
+      : `Validation: rust = MLP, sage = DNN, dark green = CNN + physical summaries. Dots mark each best checkpoint. Best/total epochs: ${runs.map(run => `${run.architecture === "physics_multiscale" ? "CNN" : run.architecture.toUpperCase()} ${run.best_epoch}/${run.history.length}`).join("; ")}. The MLP and DNN reach the common 80-epoch cap; their scores describe this budget. No test errors enter these curves.`;
+  }
+  $("model-curve-select")?.addEventListener("change", renderModelComparison);
+  renderModelComparison();
+
   function renderRun(run) {
     const history = run.history;
     const losses = history.flatMap(row => [row.train_loss, row.val_loss]);

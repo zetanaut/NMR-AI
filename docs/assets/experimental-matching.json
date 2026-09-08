@@ -4602,7 +4602,7 @@
   "publication": {
     "source_csv_url": "https://github.com/zetanaut/NMR-AI/blob/main/examples/Sample_RawSignal.csv",
     "matching_report_sha256": "75638d6eb7ed132fe4da2b22455fcc061d1a127a336d587747e35fe8424d1ff9",
-    "exporter_sha256": "304536b11ac5e1c0668f946e050f336092c453c79ddec11706566cb84b5fe21e",
+    "exporter_sha256": "f71f44bf5d9990218cd4815ccaacaf485cc5051f56f8706a2c5bd1c1a308112a",
     "generation": {
       "version": "experiment-anchored-qmeter-pake-500-v1",
       "matching_report_sha256": "75638d6eb7ed132fe4da2b22455fcc061d1a127a336d587747e35fe8424d1ff9",

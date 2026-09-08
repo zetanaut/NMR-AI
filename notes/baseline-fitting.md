@@ -10,7 +10,18 @@ polarized scans. That next model fits the slow detector phase as well as the
 tuning capacitor, improving the earlier baseline comparison while retaining
 n=1. Spin-1 polarization comes from the lineshape; TE calibration is not needed.
 The constant-phase fit below remains explicitly a diagnostic of that simpler
-electronics assumption, not a prerequisite capacitor measurement.
+electronics assumption, not a prerequisite capacitor measurement. The separate
+matching model gives baseline RMS about 6.3643e-5 recorded units and fitted
+C_tune about 544.84 pF; it also fixes the cable at 3.580 m and C_stray at zero.
+This changes several assumptions, so the comparison does not isolate phase
+alone or establish hardware calibration. See the [project status](project-status.md)
+for the remaining training and validation work.
+
+The owner has identified the five polarized sweeps as butanol. The
+[three material examples](material-examples.md) retain the original exercise,
+add its two-site butanol comparison, and introduce UVA-ND3 data from another
+acquisition. That ND3 excerpt preserves its own measured 512-bin grid and
+recorded reference; its hardware setup is not inferred from this baseline.
 
 ## Establish acquisition metadata first
 
@@ -27,7 +38,7 @@ nonfinite values, and wrong field counts are rejected. All 500 samples and the
 timestamp are preserved; neither fitter interprets the first row as a header.
 See [the example README](../examples/README.md) for source provenance and loading.
 
-The owner confirmed that every baseline has 500 bins and retains the original
+The owner confirmed that this baseline and the butanol sweeps have 500 bins and retain the original
 proton sweep offsets and spacing, with nominal center changed from 213 MHz to
 32.7 MHz. This gives:
 
@@ -214,7 +225,10 @@ The exporter requires a tuning-informed deuteron report, validates code hashes
 and saved-curve reconstruction, and publishes all 500 points, residuals, physical
 parameter meanings and provenance. For multiple distinct scans it selects the
 median whole-scan RMS, not the best. The supplied CSV (including its timestamp)
-is explicitly authorized for publication; other raw data are not published.
+is explicitly authorized for publication. The owner also authorized the five
+raw sweeps in `examples/Sample_RawSignal.csv`, used by the separate matching
+practical. Other raw data require their own authorization; full local fit
+products remain in `local-results/`.
 
 The existing 512-bin synthetic teaching benchmark is unchanged. It already
 uses a derived n=1 operating point, but its nominal cable and component settings

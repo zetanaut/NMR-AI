@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""Measure forward-pass cost of the two standalone tutorial architectures."""
+"""Measure forward-pass cost of the standalone tutorial architectures."""
 
 import argparse
 import json
 
 import torch
 from torch.utils.benchmark import Timer
-from nmr_lab import build_model
+from nmr_lab import ARCHITECTURES, build_model
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--architecture", choices=["physics_multiscale", "compact"], default="physics_multiscale")
+    parser.add_argument("--architecture", choices=ARCHITECTURES, default="physics_multiscale")
     parser.add_argument("--device", choices=["cpu", "cuda"], default="cpu")
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--threads", type=int, default=1)

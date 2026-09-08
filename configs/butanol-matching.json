@@ -1,0 +1,13 @@
+{
+  "description": "Owner-confirmed butanol sample: compare C-D/O-D susceptibility with the existing single-site fit on the same five raw scans.",
+  "theory": "Supplied fit_multisite.py: weak-quadrupole two-site option, common P and physical Lorentzian HWHM, distinct EFG asymmetries and splittings; 1/split relative site normalization.",
+  "electronics": "Unchanged full-circuit topology and shared parameter bounds from experimental-matching.json. No additional voltage polynomial, frequency rescaling or empirical gain tilt.",
+  "amplitude_convention": "log10_signal_scale_cgs retains the existing C-D peak-scale convention; multiply by split_cd_mhz to obtain the integrated susceptibility scale in cgs*MHz.",
+  "additional_parameters": {
+    "od_split_ratio": {"initial": 1.5760869565217392, "bounds": [1.05, 2.5], "source": "Ordering the O-D scale above C-D fixes site identity; initial ratio 1.45/0.92 from supplied demonstration, numerical bounds are not measured material constants."},
+    "eta_od": {"initial": 0.12, "bounds": [0, 0.5], "source": "Supplied demonstration seed; fitted O-D EFG asymmetry, numerical search interval."},
+    "od_fraction": {"initial": 0.07, "bounds": [0, 0.4], "source": "Supplied demonstration seed and interval; effective O-D susceptibility weight, not independently measured chemical fraction."}
+  },
+  "max_nfev": 700,
+  "limitations": ["Shared spin temperature and common site linewidth are hypotheses", "Weak-quadrupole intensity option; frequency-dependent population corrections are not included", "Three extra fitted coordinates can reduce training residuals; validate material identification and polarization independently"]
+}

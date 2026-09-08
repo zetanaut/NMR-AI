@@ -5,6 +5,16 @@ Read the [circuit and lineshape conventions](physics-electronics-theory.md)
 and [baseline practical](baseline-fitting.md) first. The reference is
 [Seay, Fernando and Keller, arXiv:2603.10146](https://arxiv.org/pdf/2603.10146):
 Fig. 1 and Eqs. (1)–(14) for electronics; Eqs. (15)–(26) for the spin-1 model.
+See the [project status](project-status.md) for the completed generation run,
+the pending 500-bin network workflow, and local verification limits.
+
+This remains **Example 1: the single-site starting model**. The owner has now
+identified its five sweeps as butanol. [Example 2](../docs/butanol.html) applies
+the supplied C–D/O–D theory to those exact samples; [Example 3](../docs/uva-nd3.html)
+uses a separate UVA-ND3 acquisition and its recorded reference subtraction.
+The [material-model record](material-examples.md) documents both additions.
+The original single-site fits and generator below remain unchanged; they are
+not a new material-specific training or experimental-accuracy result.
 
 ## Experimental data and confirmed setup
 
@@ -132,9 +142,12 @@ not a confidence interval. The scaled profiled Jacobian conditions are roughly
 
 The same phase-capacitance model fits the earlier baseline with RMS about
 6.3643e-5 recorded units and C_tune about 544.84 pF, while remaining at n=1.
-The change from the constant-phase fit illustrates dependence of inferred
-capacitance on the electronics model. Do not mistake a fitted capacitance for
-an independently measured knob setting or impose the previous fit as a prior.
+This model also fixes cable length at 3.580 m and C_stray at zero, while the
+constant-phase diagnostic fits a bounded cable trim and stray capacitance.
+The comparison illustrates dependence of inferred capacitance on the complete
+electronics model; it does not isolate phase alone. Do not mistake a fitted
+capacitance for an independently measured knob setting or impose the previous
+fit as a prior.
 
 `scan_N.csv` contains frequency, recorded, fitted, baseline, signal, residual.
 The residual is recorded minus fitted; the display subtraction is recorded
@@ -201,20 +214,34 @@ event noise is added, and an independent baseline reference is averaged over
 a teaching setting, not a newly inferred acquisition count.
 
 NPZ outputs retain raw/noisy, raw/clean, baseline/clean, nuclear/clean, event
-noise, independent noisy references, newly drawn P, configuration and source
-scan identifiers and the exact 500-bin grid, all in float64 recorded units.
+noise, and independent noisy references as float64 arrays in recorded units.
+Newly drawn P is a float64 fraction; the exact 500-bin frequency grid is float64
+in MHz. Configuration and source-scan identifiers are integer arrays, and
+provenance fields are strings. There is no `calibration` array.
 The adapter uses the circuit's legacy detector/DC field names for the effective
 readout: detector gain is recorded-units per node volt, and `dc_offset_v` carries
 the recorded-unit offset in these matched configurations, not a claimed DAQ
 voltage conversion. The companion metadata state the output units explicitly.
 
-This is a new 500-bin lineshape-regression dataset, not a relabeling of the
-512-bin TE-area benchmark. It needs grid-aware network preprocessing without a
-required TE calibration channel. The old benchmark and trained results remain
-unchanged. No new neural-network performance is claimed in this practical.
+## Training handoff: implementation still pending
 
-Keep all descendants of each experimental seed together when evaluating unseen
-measured configurations. Synthetic pseudo-experiments can test recovery, bias
+This is a new 500-bin lineshape-regression dataset. `train_model.py` and
+`predict.py` currently require the old `qmeter-complex-pake-v2` simulator tag,
+the exact 512-bin `nmr_lab.FREQUENCY` grid, and a TE `calibration` array.
+`nmr_lab.make_features` and the multiscale model's frequency summaries are also
+tied to that grid. The generated 500-bin NPZ cannot be passed directly to them.
+
+The next implementation must save grid-aware preprocessing and compatible
+training/prediction paths without a required TE calibration channel. Use
+experimentally available raw/reference inputs; reserve simulator-only clean
+arrays for diagnostics. Fit scalers on the training partition and reuse them
+at inference. The existing 512-bin benchmark and trained results remain
+unchanged. No 500-bin neural-network performance is claimed in this practical.
+
+Keep all descendants of each experimental seed together using `source_scan_1based`
+when evaluating unseen measured configurations. Splitting only by simulated
+`configuration_id` would allow descendants of one measured seed into different
+partitions. Synthetic pseudo-experiments can test recovery, bias
 and width at a fixed known P, but these five development spectra alone are not
 a held-out experimental performance benchmark. Larger generation counts do
 not compensate for unsupported parameter/noise distributions or model mismatch.

@@ -1,0 +1,755 @@
+{
+  "version": "uva-nd3-reference-subtracted-lineshape-v1",
+  "dataset": "UVA-ND3 data",
+  "material": "ND3",
+  "audit": {
+    "source_sha256": "af5a4358bae2aa48cc3c7d16967816679ae15f9c863511c9c96daa729885e4bb",
+    "parent_sha256": "57b5755108b05109d54bc5e1b40c11f07a6fefa59e4e35ecad05e5d9a7a77afc",
+    "rows": 5,
+    "bins": 512,
+    "source_record_numbers_1based": [
+      1,
+      126,
+      251,
+      376,
+      501
+    ],
+    "frequency_policy": "Use each supplied frequency array exactly; no interpolation or relabeling",
+    "subtraction_check": "phase - baseline equals basesub for every bin",
+    "selection": "Five records evenly spaced in file order: 1, 126, 251, 376, 501; selected before fitting, not by fit quality",
+    "units": "Frequencies in MHz; phase, baseline and basesub retain recorded units; no independently supplied voltage conversion",
+    "repair_count": 0,
+    "records_sorted_or_removed": false
+  },
+  "config": {
+    "description": "Conditional spin-1 lineshape fits to five UVA-ND3 reference-subtracted records on their supplied frequency arrays.",
+    "material_source": "Owner-confirmed ND3",
+    "readout": "Constant absorption/dispersion mixture, with a cubic residual background jointly profiled on all measured bins after subtraction of the recorded baseline reference.",
+    "background_convention": "b0+b1*t+b2*t^2+b3*t^3, t=(f_MHz-32.7)/0.4. This describes residual mismatch after measured reference subtraction; it is not a substitute for a calibrated circuit model.",
+    "fit_parameters": {
+      "center_mhz": {
+        "initial": 32.685,
+        "bounds": [
+          32.66,
+          32.71
+        ],
+        "source": "Visible doublet location; numerical interval, not a field measurement"
+      },
+      "split_mhz": {
+        "initial": 0.078,
+        "bounds": [
+          0.055,
+          0.105
+        ],
+        "source": "Initial feature spacing; fitted reduced-frequency scale"
+      },
+      "g": {
+        "initial": 0.025,
+        "bounds": [
+          0.002,
+          0.2
+        ],
+        "source": "Lorentzian HWHM/splitting; numerical interval"
+      },
+      "eta": {
+        "initial": 0.08,
+        "bounds": [
+          0,
+          0.3
+        ],
+        "source": "Fitted single-site EFG asymmetry; no empirical horn corrections"
+      },
+      "P_model": {
+        "initial": -0.3,
+        "bounds": [
+          -0.95,
+          0.95
+        ],
+        "source": "Spin-temperature branch-ratio fit; stored acquisition pol and cc are not used"
+      }
+    },
+    "noise_proxy_window_mhz": [
+      32.48,
+      32.88
+    ],
+    "max_nfev": 700,
+    "limitations": [
+      "Hardware tuning/propagation constants are not independently supplied for this setup",
+      "Constant complex readout and cubic residual background are conditional approximations",
+      "All five records are development examples from one acquisition period, not independent held-out experiments"
+    ]
+  },
+  "config_sha256": "bb8220a0e03c939a436427cd72e1959891e71a1f445fd2af2e01a31777e3b3ce",
+  "fits": [
+    {
+      "model_version": "uva-nd3-reference-subtracted-lineshape-v1",
+      "parameters": {
+        "center_mhz": 32.68467823882797,
+        "split_mhz": 0.08152702554851818,
+        "g": 0.038031591058156664,
+        "eta": 0.11517464798749044,
+        "P_model": -0.250291529864047
+      },
+      "readout_background_coefficients": [
+        0.0002069279843878573,
+        -3.3705387764045025e-06,
+        -0.026108805448670086,
+        0.0006792805932253125,
+        0.00021941051965904883,
+        -4.157369788691402e-06
+      ],
+      "coefficient_order": [
+        "absorption_area",
+        "dispersion_area",
+        "b0",
+        "b1",
+        "b2",
+        "b3"
+      ],
+      "n_free": 11,
+      "nonlinear_parameters": [
+        "center_mhz",
+        "split_mhz",
+        "g",
+        "eta",
+        "P_model"
+      ],
+      "all_512_bins_fitted": true,
+      "success": true,
+      "candidates": [
+        {
+          "parameters": {
+            "center_mhz": 32.68467823935901,
+            "split_mhz": 0.08152702547647697,
+            "g": 0.0380315910438273,
+            "eta": 0.11517463833980146,
+            "P_model": -0.2502915232441907
+          },
+          "range_normalized_sse": 0.04801384182827814,
+          "success": true,
+          "evaluations": 11
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.684678238217884,
+            "split_mhz": 0.08152702556696727,
+            "g": 0.0380315996471437,
+            "eta": 0.11517463656807733,
+            "P_model": -0.25029153560891815
+          },
+          "range_normalized_sse": 0.04801384182827204,
+          "success": true,
+          "evaluations": 12
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.68467823882797,
+            "split_mhz": 0.08152702554851818,
+            "g": 0.038031591058156664,
+            "eta": 0.11517464798749044,
+            "P_model": -0.250291529864047
+          },
+          "range_normalized_sse": 0.048013841828261655,
+          "success": true,
+          "evaluations": 12
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.684678238717254,
+            "split_mhz": 0.08152702556122528,
+            "g": 0.03803159817679237,
+            "eta": 0.11517463977279449,
+            "P_model": -0.25029153177881636
+          },
+          "range_normalized_sse": 0.04801384182826852,
+          "success": true,
+          "evaluations": 11
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.684678238223924,
+            "split_mhz": 0.08152702552334648,
+            "g": 0.03803159606936879,
+            "eta": 0.11517463424068225,
+            "P_model": -0.25029153345401967
+          },
+          "range_normalized_sse": 0.04801384182827327,
+          "success": true,
+          "evaluations": 13
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.68467823975557,
+            "split_mhz": 0.08152702550452184,
+            "g": 0.038031592866116876,
+            "eta": 0.11517464171333902,
+            "P_model": -0.2502915216846212
+          },
+          "range_normalized_sse": 0.04801384182828375,
+          "success": true,
+          "evaluations": 11
+        }
+      ],
+      "near_bounds": {},
+      "scaled_profiled_jacobian_condition": 5.215689871041481,
+      "diagnostics": {
+        "rms_recorded_units": 1.7199722258906345e-05,
+        "max_absolute_recorded_units": 0.00011484111432299993,
+        "lag1": 0.7417445132278464,
+        "wing_second_difference_sigma_proxy": 1.7995544795469987e-06,
+        "sigma_proxy_triplets": 252,
+        "sigma_proxy_assumption": "MAD(second differences)/(0.67449 sqrt(6)); iid Gaussian noise and locally smooth mean. Not a validated noise covariance."
+      },
+      "P_status": "Conditional spin-temperature lineshape estimate; independent of stored DAQ pol/cc; no calibrated uncertainty claim",
+      "hardware_status": "Reference-subtracted response approximation; not a full-circuit fit or a calibration to the butanol apparatus",
+      "source_record_1based": 1,
+      "start_time": "2022-09-23 00:54:02.524992+00:00",
+      "sweeps": 4000
+    },
+    {
+      "model_version": "uva-nd3-reference-subtracted-lineshape-v1",
+      "parameters": {
+        "center_mhz": 32.68465653604904,
+        "split_mhz": 0.08179103211541781,
+        "g": 0.038865198911081034,
+        "eta": 0.1119515456494386,
+        "P_model": -0.3442146911266706
+      },
+      "readout_background_coefficients": [
+        0.00038980222759991566,
+        -5.011655188583153e-06,
+        -0.008939906571751682,
+        -0.0002348613467071104,
+        0.00016446590457087104,
+        3.1522287575859705e-05
+      ],
+      "coefficient_order": [
+        "absorption_area",
+        "dispersion_area",
+        "b0",
+        "b1",
+        "b2",
+        "b3"
+      ],
+      "n_free": 11,
+      "nonlinear_parameters": [
+        "center_mhz",
+        "split_mhz",
+        "g",
+        "eta",
+        "P_model"
+      ],
+      "all_512_bins_fitted": true,
+      "success": true,
+      "candidates": [
+        {
+          "parameters": {
+            "center_mhz": 32.68465653677841,
+            "split_mhz": 0.08179103210343183,
+            "g": 0.03886520641616408,
+            "eta": 0.11195154919550863,
+            "P_model": -0.34421469011699657
+          },
+          "range_normalized_sse": 0.061237479764079714,
+          "success": true,
+          "evaluations": 11
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.684656535611566,
+            "split_mhz": 0.08179103227206952,
+            "g": 0.038865211447728816,
+            "eta": 0.1119515364685552,
+            "P_model": -0.34421469970880425
+          },
+          "range_normalized_sse": 0.06123747976406473,
+          "success": true,
+          "evaluations": 12
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.68465653604904,
+            "split_mhz": 0.08179103211541781,
+            "g": 0.038865198911081034,
+            "eta": 0.1119515456494386,
+            "P_model": -0.3442146911266706
+          },
+          "range_normalized_sse": 0.06123747976405619,
+          "success": true,
+          "evaluations": 13
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.684656535984104,
+            "split_mhz": 0.0817910320421344,
+            "g": 0.03886520613532646,
+            "eta": 0.11195154914754978,
+            "P_model": -0.34421469666096494
+          },
+          "range_normalized_sse": 0.061237479764066995,
+          "success": true,
+          "evaluations": 11
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.684656535269454,
+            "split_mhz": 0.08179103225745847,
+            "g": 0.03886519996026673,
+            "eta": 0.11195153557803575,
+            "P_model": -0.3442146958396708
+          },
+          "range_normalized_sse": 0.06123747976406669,
+          "success": true,
+          "evaluations": 13
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.68465653661515,
+            "split_mhz": 0.08179103205443086,
+            "g": 0.03886519882040504,
+            "eta": 0.11195155087803867,
+            "P_model": -0.34421468757529405
+          },
+          "range_normalized_sse": 0.06123747976407016,
+          "success": true,
+          "evaluations": 12
+        }
+      ],
+      "near_bounds": {},
+      "scaled_profiled_jacobian_condition": 5.300227888666976,
+      "diagnostics": {
+        "rms_recorded_units": 3.23231211651396e-05,
+        "max_absolute_recorded_units": 0.0002273160681808377,
+        "lag1": 0.7584991748235145,
+        "wing_second_difference_sigma_proxy": 1.7214272932039458e-06,
+        "sigma_proxy_triplets": 252,
+        "sigma_proxy_assumption": "MAD(second differences)/(0.67449 sqrt(6)); iid Gaussian noise and locally smooth mean. Not a validated noise covariance."
+      },
+      "P_status": "Conditional spin-temperature lineshape estimate; independent of stored DAQ pol/cc; no calibrated uncertainty claim",
+      "hardware_status": "Reference-subtracted response approximation; not a full-circuit fit or a calibration to the butanol apparatus",
+      "source_record_1based": 126,
+      "start_time": "2022-09-23 04:11:46.056318+00:00",
+      "sweeps": 4000
+    },
+    {
+      "model_version": "uva-nd3-reference-subtracted-lineshape-v1",
+      "parameters": {
+        "center_mhz": 32.6846610358682,
+        "split_mhz": 0.08182274287204236,
+        "g": 0.03938448287471522,
+        "eta": 0.11129590841501526,
+        "P_model": -0.3351371399866977
+      },
+      "readout_background_coefficients": [
+        0.00038013871308864697,
+        -5.054736091532341e-06,
+        -0.009976432318184585,
+        -0.00024098374239577236,
+        0.00016547950682819997,
+        3.293527267196414e-05
+      ],
+      "coefficient_order": [
+        "absorption_area",
+        "dispersion_area",
+        "b0",
+        "b1",
+        "b2",
+        "b3"
+      ],
+      "n_free": 11,
+      "nonlinear_parameters": [
+        "center_mhz",
+        "split_mhz",
+        "g",
+        "eta",
+        "P_model"
+      ],
+      "all_512_bins_fitted": true,
+      "success": true,
+      "candidates": [
+        {
+          "parameters": {
+            "center_mhz": 32.684661036378266,
+            "split_mhz": 0.08182274279381566,
+            "g": 0.03938448684341405,
+            "eta": 0.11129591378427697,
+            "P_model": -0.33513713904429954
+          },
+          "range_normalized_sse": 0.060309782263203854,
+          "success": true,
+          "evaluations": 11
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.684661035954335,
+            "split_mhz": 0.08182274282205095,
+            "g": 0.03938448193025375,
+            "eta": 0.11129591092258134,
+            "P_model": -0.33513713932234923
+          },
+          "range_normalized_sse": 0.06030978226318866,
+          "success": true,
+          "evaluations": 13
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.68466103598139,
+            "split_mhz": 0.08182274288949158,
+            "g": 0.03938448509393587,
+            "eta": 0.11129590810355992,
+            "P_model": -0.3351371401481985
+          },
+          "range_normalized_sse": 0.060309782263186625,
+          "success": true,
+          "evaluations": 12
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.6846610358682,
+            "split_mhz": 0.08182274287204236,
+            "g": 0.03938448287471522,
+            "eta": 0.11129590841501526,
+            "P_model": -0.3351371399866977
+          },
+          "range_normalized_sse": 0.060309782263185535,
+          "success": true,
+          "evaluations": 12
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.68466103580271,
+            "split_mhz": 0.08182274282002991,
+            "g": 0.03938448207574226,
+            "eta": 0.11129591045634281,
+            "P_model": -0.33513714064785216
+          },
+          "range_normalized_sse": 0.06030978226318689,
+          "success": true,
+          "evaluations": 12
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.684661035764634,
+            "split_mhz": 0.08182274283433204,
+            "g": 0.03938448631525371,
+            "eta": 0.11129590976416533,
+            "P_model": -0.3351371432185948
+          },
+          "range_normalized_sse": 0.06030978226318758,
+          "success": true,
+          "evaluations": 12
+        }
+      ],
+      "near_bounds": {},
+      "scaled_profiled_jacobian_condition": 5.330260603288876,
+      "diagnostics": {
+        "rms_recorded_units": 3.1174123787142805e-05,
+        "max_absolute_recorded_units": 0.00021343142475905783,
+        "lag1": 0.7720053465158483,
+        "wing_second_difference_sigma_proxy": 1.5806908727731637e-06,
+        "sigma_proxy_triplets": 252,
+        "sigma_proxy_assumption": "MAD(second differences)/(0.67449 sqrt(6)); iid Gaussian noise and locally smooth mean. Not a validated noise covariance."
+      },
+      "P_status": "Conditional spin-temperature lineshape estimate; independent of stored DAQ pol/cc; no calibrated uncertainty claim",
+      "hardware_status": "Reference-subtracted response approximation; not a full-circuit fit or a calibration to the butanol apparatus",
+      "source_record_1based": 251,
+      "start_time": "2022-09-23 07:32:43.955578+00:00",
+      "sweeps": 4000
+    },
+    {
+      "model_version": "uva-nd3-reference-subtracted-lineshape-v1",
+      "parameters": {
+        "center_mhz": 32.6846968494659,
+        "split_mhz": 0.08183238829191439,
+        "g": 0.03997118420552604,
+        "eta": 0.11127389153932347,
+        "P_model": -0.33201620711912505
+      },
+      "readout_background_coefficients": [
+        0.00037816690265404866,
+        -4.237429379707822e-06,
+        -0.003590470898704556,
+        -0.000366496500902748,
+        0.00013870129316272193,
+        3.4533702425612606e-05
+      ],
+      "coefficient_order": [
+        "absorption_area",
+        "dispersion_area",
+        "b0",
+        "b1",
+        "b2",
+        "b3"
+      ],
+      "n_free": 11,
+      "nonlinear_parameters": [
+        "center_mhz",
+        "split_mhz",
+        "g",
+        "eta",
+        "P_model"
+      ],
+      "all_512_bins_fitted": true,
+      "success": true,
+      "candidates": [
+        {
+          "parameters": {
+            "center_mhz": 32.68469684995251,
+            "split_mhz": 0.08183238813589173,
+            "g": 0.039971181253784537,
+            "eta": 0.11127389974069819,
+            "P_model": -0.33201620313354796
+          },
+          "range_normalized_sse": 0.05284470641880945,
+          "success": true,
+          "evaluations": 11
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.6846968494659,
+            "split_mhz": 0.08183238829191439,
+            "g": 0.03997118420552604,
+            "eta": 0.11127389153932347,
+            "P_model": -0.33201620711912505
+          },
+          "range_normalized_sse": 0.05284470641879775,
+          "success": true,
+          "evaluations": 12
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.68469684993811,
+            "split_mhz": 0.08183238811465754,
+            "g": 0.03997117831611016,
+            "eta": 0.11127390059173417,
+            "P_model": -0.332016201809179
+          },
+          "range_normalized_sse": 0.05284470641880848,
+          "success": true,
+          "evaluations": 12
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.684696849218994,
+            "split_mhz": 0.0818323882941398,
+            "g": 0.0399711848161232,
+            "eta": 0.11127389048765927,
+            "P_model": -0.33201620948466326
+          },
+          "range_normalized_sse": 0.05284470641879793,
+          "success": true,
+          "evaluations": 12
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.6846968495326,
+            "split_mhz": 0.08183238818577723,
+            "g": 0.03997117833897359,
+            "eta": 0.11127389614928772,
+            "P_model": -0.3320162043882108
+          },
+          "range_normalized_sse": 0.05284470641879824,
+          "success": true,
+          "evaluations": 11
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.684696849614724,
+            "split_mhz": 0.08183238820775343,
+            "g": 0.039971178964702876,
+            "eta": 0.11127389556849969,
+            "P_model": -0.33201620382374464
+          },
+          "range_normalized_sse": 0.052844706418798265,
+          "success": true,
+          "evaluations": 12
+        }
+      ],
+      "near_bounds": {},
+      "scaled_profiled_jacobian_condition": 5.3588138427068825,
+      "diagnostics": {
+        "rms_recorded_units": 3.069068319403699e-05,
+        "max_absolute_recorded_units": 0.0002117941752232933,
+        "lag1": 0.7780939435497166,
+        "wing_second_difference_sigma_proxy": 1.6185090904587414e-06,
+        "sigma_proxy_triplets": 252,
+        "sigma_proxy_assumption": "MAD(second differences)/(0.67449 sqrt(6)); iid Gaussian noise and locally smooth mean. Not a validated noise covariance."
+      },
+      "P_status": "Conditional spin-temperature lineshape estimate; independent of stored DAQ pol/cc; no calibrated uncertainty claim",
+      "hardware_status": "Reference-subtracted response approximation; not a full-circuit fit or a calibration to the butanol apparatus",
+      "source_record_1based": 376,
+      "start_time": "2022-09-23 10:53:40.694022+00:00",
+      "sweeps": 4000
+    },
+    {
+      "model_version": "uva-nd3-reference-subtracted-lineshape-v1",
+      "parameters": {
+        "center_mhz": 32.684698244908624,
+        "split_mhz": 0.08181770010718366,
+        "g": 0.040150056236662644,
+        "eta": 0.11139611926865169,
+        "P_model": -0.3264651756666215
+      },
+      "readout_background_coefficients": [
+        0.00037481622789278075,
+        -4.5289863815078935e-06,
+        -0.005682532375244281,
+        -0.0004638130975137811,
+        0.00014475911430140198,
+        3.633623049985488e-05
+      ],
+      "coefficient_order": [
+        "absorption_area",
+        "dispersion_area",
+        "b0",
+        "b1",
+        "b2",
+        "b3"
+      ],
+      "n_free": 11,
+      "nonlinear_parameters": [
+        "center_mhz",
+        "split_mhz",
+        "g",
+        "eta",
+        "P_model"
+      ],
+      "all_512_bins_fitted": true,
+      "success": true,
+      "candidates": [
+        {
+          "parameters": {
+            "center_mhz": 32.68469824520735,
+            "split_mhz": 0.08181769993683961,
+            "g": 0.04015005518895288,
+            "eta": 0.1113961272121285,
+            "P_model": -0.3264651743370349
+          },
+          "range_normalized_sse": 0.04834344155397261,
+          "success": true,
+          "evaluations": 11
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.684698244908624,
+            "split_mhz": 0.08181770010718366,
+            "g": 0.040150056236662644,
+            "eta": 0.11139611926865169,
+            "P_model": -0.3264651756666215
+          },
+          "range_normalized_sse": 0.04834344155396435,
+          "success": true,
+          "evaluations": 11
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.68469824480243,
+            "split_mhz": 0.08181770007028108,
+            "g": 0.040150058643186326,
+            "eta": 0.11139612059183711,
+            "P_model": -0.32646517837326505
+          },
+          "range_normalized_sse": 0.04834344155396541,
+          "success": true,
+          "evaluations": 13
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.68469824435297,
+            "split_mhz": 0.08181770037240459,
+            "g": 0.0401500616334406,
+            "eta": 0.11139610674276641,
+            "P_model": -0.32646518067542185
+          },
+          "range_normalized_sse": 0.04834344155398024,
+          "success": true,
+          "evaluations": 11
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.684698244237346,
+            "split_mhz": 0.08181770022090828,
+            "g": 0.04015005262028524,
+            "eta": 0.11139611249205962,
+            "P_model": -0.3264651782080502
+          },
+          "range_normalized_sse": 0.048343441553975484,
+          "success": true,
+          "evaluations": 12
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.684698244747054,
+            "split_mhz": 0.08181770009028232,
+            "g": 0.04015005921557016,
+            "eta": 0.11139611961421571,
+            "P_model": -0.3264651789629931
+          },
+          "range_normalized_sse": 0.04834344155396532,
+          "success": true,
+          "evaluations": 12
+        }
+      ],
+      "near_bounds": {},
+      "scaled_profiled_jacobian_condition": 5.36581277384648,
+      "diagnostics": {
+        "rms_recorded_units": 3.015624744975313e-05,
+        "max_absolute_recorded_units": 0.0002044368116301083,
+        "lag1": 0.784984737394356,
+        "wing_second_difference_sigma_proxy": 1.5078530462084429e-06,
+        "sigma_proxy_triplets": 252,
+        "sigma_proxy_assumption": "MAD(second differences)/(0.67449 sqrt(6)); iid Gaussian noise and locally smooth mean. Not a validated noise covariance."
+      },
+      "P_status": "Conditional spin-temperature lineshape estimate; independent of stored DAQ pol/cc; no calibrated uncertainty claim",
+      "hardware_status": "Reference-subtracted response approximation; not a full-circuit fit or a calibration to the butanol apparatus",
+      "source_record_1based": 501,
+      "start_time": "2022-09-23 14:11:25.779933+00:00",
+      "sweeps": 4000
+    }
+  ],
+  "starts_per_scan": 6,
+  "seed": 42,
+  "unit": "recorded units",
+  "residual_sign": "recorded reference-subtracted spectrum minus fitted",
+  "code_sha256": {
+    "match_uva_nd3.py": "6c1b0a59c9061fc1a04ab1d62fcf6d0806fef74476538234488ff19115c26a37",
+    "uva_nd3_data.py": "846b738ed5df44341b6bb9969e0023ee57ffb804fb62686bfa302bbae6a9ae11",
+    "lineshape.py": "81b653731a06f166c965b39eb8787cd0abe57cb2784d124d77c9b797d4541521",
+    "match_experimental_signals.py": "63cfa71a7f63d168e949b4cf4ba2345a13d1f0e07cb1da760480639a32c170b0"
+  },
+  "publication": {
+    "report_sha256": "1a95758fda3b4c8cb42640bc0762228c80cfaf3c2822f4ec8f5a5f14ee7f2ec5",
+    "exporter_sha256": "102493e41dea4863ea49a37b547ef250bee06f7346361a6d1f8100baaa8692e4",
+    "numerical_convergence": [
+      {
+        "source_record_1based": 1,
+        "nphi_32_to_64_max_recorded_units": 1.1995664531139205e-10
+      },
+      {
+        "source_record_1based": 126,
+        "nphi_32_to_64_max_recorded_units": 3.3223476400556784e-10
+      },
+      {
+        "source_record_1based": 251,
+        "nphi_32_to_64_max_recorded_units": 2.572216042592834e-10
+      },
+      {
+        "source_record_1based": 376,
+        "nphi_32_to_64_max_recorded_units": 2.02309308628551e-10
+      },
+      {
+        "source_record_1based": 501,
+        "nphi_32_to_64_max_recorded_units": 1.8585626744213601e-10
+      }
+    ],
+    "figure_sha256": {
+      "uva-nd3-matches.svg": "42ec4817000ac110c1f963bb8d614cfe9c37ab9d0aa34e7deabb84c38ed499d6",
+      "uva-nd3-raw.svg": "812c55478fc000b8d1857c03b3608170c0d70a045977a977fc44914a31a9cf1f"
+    },
+    "validation_environment": {
+      "numpy": "1.26.4",
+      "scipy": "1.11.4",
+      "matplotlib": "3.6.3"
+    }
+  }
+}

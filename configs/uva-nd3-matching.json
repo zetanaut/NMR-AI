@@ -1,0 +1,16 @@
+{
+  "description": "Conditional spin-1 lineshape fits to five UVA-ND3 reference-subtracted records on their supplied frequency arrays.",
+  "material_source": "Owner-confirmed ND3",
+  "readout": "Constant absorption/dispersion mixture, with a cubic residual background jointly profiled on all measured bins after subtraction of the recorded baseline reference.",
+  "background_convention": "b0+b1*t+b2*t^2+b3*t^3, t=(f_MHz-32.7)/0.4. This describes residual mismatch after measured reference subtraction; it is not a substitute for a calibrated circuit model.",
+  "fit_parameters": {
+    "center_mhz": {"initial": 32.685, "bounds": [32.66, 32.71], "source": "Visible doublet location; numerical interval, not a field measurement"},
+    "split_mhz": {"initial": 0.078, "bounds": [0.055, 0.105], "source": "Initial feature spacing; fitted reduced-frequency scale"},
+    "g": {"initial": 0.025, "bounds": [0.002, 0.2], "source": "Lorentzian HWHM/splitting; numerical interval"},
+    "eta": {"initial": 0.08, "bounds": [0, 0.3], "source": "Fitted single-site EFG asymmetry; no empirical horn corrections"},
+    "P_model": {"initial": -0.3, "bounds": [-0.95, 0.95], "source": "Spin-temperature branch-ratio fit; stored acquisition pol and cc are not used"}
+  },
+  "noise_proxy_window_mhz": [32.48, 32.88],
+  "max_nfev": 700,
+  "limitations": ["Hardware tuning/propagation constants are not independently supplied for this setup", "Constant complex readout and cubic residual background are conditional approximations", "All five records are development examples from one acquisition period, not independent held-out experiments"]
+}

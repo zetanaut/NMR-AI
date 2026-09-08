@@ -1,0 +1,19 @@
+{
+  "version": "mlp-dnn-cnn-512-v1",
+  "dataset": "local-results/qmeter/broad.npz",
+  "dataset_sha256": "5bddd6429b8b9c683a359a2b20f68f717a83302fa851f97a9723d2f6c37afdc1",
+  "run_directory": "local-results/model-comparison-v1",
+  "architectures": ["mlp", "dnn", "physics_multiscale"],
+  "training": {
+    "epochs": 80,
+    "patience": 12,
+    "batch_size": 128,
+    "learning_rate": 0.0001,
+    "seed": 42,
+    "batch_order_seed": 42,
+    "threads": 2,
+    "defer_test": true
+  },
+  "selection": "Choose each checkpoint by validation MSE. Fix the comparison before evaluating the saved test rows.",
+  "scope": "One seed and a common epoch budget on the existing broad 512-bin TE-area benchmark. The CNN includes a train-only ridge estimate from physical summaries; this is a comparison of complete estimators."
+}

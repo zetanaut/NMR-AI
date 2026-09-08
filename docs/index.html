@@ -8,6 +8,7 @@
   <title>NMR / AI — From spectra to predictions</title>
   <link rel="stylesheet" href="assets/style.css">
   <script defer src="assets/results.js"></script>
+  <script defer src="assets/model-comparison.js"></script>
   <script defer src="assets/tutorial.js"></script>
 </head>
 <body>
@@ -22,8 +23,11 @@
   <p class="eyebrow">The learning path</p>
   <nav aria-label="Tutorial chapters">
     <a href="#start" class="active">Before you begin</a>
+    <a href="#project-status" class="subnav">Current project status</a>
     <a href="baseline.html" class="subnav">Baseline-fitting practical ↗</a>
     <a href="matching.html" class="subnav">Experimental lineshape matching ↗</a>
+    <a href="butanol.html" class="subnav">Butanol: two-site comparison ↗</a>
+    <a href="uva-nd3.html" class="subnav">UVA-ND3 data ↗</a>
     <a href="#generator"><span>01</span> Build the generator</a>
     <a href="#network"><span>02</span> Design the network</a>
     <a href="#training"><span>03</span> Train &amp; evaluate</a>
@@ -48,7 +52,10 @@
     <a href="#training"><span class="route-number">03</span><strong>Validate</strong><span>An honest error budget</span></a>
   </div>
   <div class="intro-grid"><div><h2>What you are measuring</h2><p>A polarized target has unequal populations of nuclear spin states. Its NMR spectrum contains information about that imbalance. We train a network to map a measured voltage sweep to the vector polarization, <i>P</i>.</p><p>For a spin-1 system, <i>P = n<sub>+</sub> − n<sub>−</sub></i>, where the populations sum to one. Our labels are fractions: <code>P = 0.05</code> means <strong>5% polarization</strong>.</p></div><div class="note"><h3>Who this is for</h3><p>You know basic Python, arrays, and introductory physics. You can start without prior neural-network experience. The reading and coding labs are self-contained.</p><p>All three learning phases concern vector extraction. The simulator uses a theoretical spin-1 Dulya/Pake powder doublet. Instrument settings and parameter ranges are teaching assumptions; matching them to measurements remains a separate scientific requirement.</p></div></div>
-  <details id="setup" class="setup"><summary>Set up the tutorial and Python environment</summary><div class="details-body"><p>Everything needed for the coding labs is in this repository. Clone it once and create an environment for NumPy, PyTorch, and Matplotlib.</p>
+  <div id="project-status" class="subsection"><h2>Current status · 8 September 2026</h2>
+  <div class="table-wrap"><table><caption>Experimental examples and separate learning workflows</caption><thead><tr><th>Workflow</th><th>Available now</th><th>Next milestone</th></tr></thead><tbody><tr><td>Three experimental examples</td><td>Original single-site exercise, same-data butanol two-site comparison, and UVA-ND3 fits on its measured grid</td><td>Independent acquisition and model-sensitivity validation</td></tr><tr><td>500-bin experimental lineshape</td><td>Five full-spectrum fits and 2,000 generated events across 100 configurations, with new simulator-known P labels</td><td>Implement compatible preprocessing, training and prediction without a required TE-area channel; then validate</td></tr><tr><td>512-bin synthetic TE-area benchmark</td><td>Generation, training and prediction; a same-data MLP/DNN/CNN comparison with saved learning curves, plus the original three CNN runs</td><td>Experimental applicability requires independent validation</td></tr></tbody></table></div>
+  <p>The network labs and performance results below use the 512-bin benchmark. The current trainer and predictor do not accept the 500-bin matched dataset. Experimental noise, parameter coverage, and held-out accuracy remain under investigation. Read the <a href="https://github.com/zetanaut/NMR-AI/blob/main/notes/project-status.md">status and next-step record</a> for the implementation evidence and local verification limits.</p></div>
+  <details id="setup" class="setup"><summary>Set up the tutorial and Python environment</summary><div class="details-body"><p>Everything needed for the coding labs is in this repository. Clone it once and create an environment for NumPy, SciPy, PyTorch, and Matplotlib.</p>
 <pre><code>git clone https://github.com/zetanaut/NMR-AI.git
 cd NMR-AI
 python3 -m venv .venv
@@ -65,7 +72,7 @@ python -c "import torch; print(torch.__version__); print('CUDA:', torch.cuda.is_
   <div class="equation">B(f) = V<sub>det</sub>(f, χ = 0)<br>S(f; P) = V<sub>det</sub>(f, χ(P)) − B(f)<br>V<sub>measured</sub>(f) = B(f) + S(f; P) + ε(f)</div>
   <p>The same circuit generates the baseline and signal-on response. Absorption changes coil losses; dispersion changes reactance. The cable and detector phase transform both. The nuclear response is included once, through complex susceptibility—not added again afterward.</p>
   <p><a class="button" href="baseline.html">Practical 01A · Derive and fit the Q-curve →</a></p>
-  <aside class="note"><h3>New: match five real spin-1 scans and generate training data</h3><p><a href="matching.html">Practical 01B</a> fits the capacitor, detector phase and complex Pake lineshape on the confirmed 500-bin deuteron grid. Polarization is inferred from the branch shapes without TE calibration. It shows every measured fit, residual diagnostics and an actual 2,000-event generation run. This lineshape-regression workflow is separate from the 512-bin TE-area learning benchmark illustrated below.</p></aside>
+  <aside class="note"><h3>Three experimental examples: material and setup matter</h3><p><a href="matching.html">Example 1</a> preserves the original single-site full-circuit exercise and its 500-bin generator. The owner identified those sweeps as butanol: <a href="butanol.html">Example 2 applies the supplied C–D/O–D theory</a> to the same five records and compares all residuals. <a href="uva-nd3.html">Example 3 uses UVA-ND3 data</a> from another acquisition, preserving its measured 512-bin frequencies and recorded reference subtraction.</p><p>Polarization is inferred from spin-temperature branch shapes without a required TE calibration. These are three worked examples across two datasets. The material comparisons do not change the generators or the separate synthetic 512-bin TE-area network results below.</p></aside>
   <p>The practical starts from <a href="https://arxiv.org/pdf/2603.10146v5#page=4">Fig. 1 and Eqs. (1)–(14) of Seay, Fernando, and Keller</a>. It covers frequency and voltage conventions, passive parameter bounds, multi-start fitting, duplicate records, residual plots, and parameter identifiability. A close overlay is the beginning of validation, not its conclusion.</p>
   <div class="results-panel"><div class="panel-heading"><div><p class="eyebrow">Look inside a generated spectrum</p><label class="select-label" for="spectrum-select">View</label><select id="spectrum-select"><option value="residual">Circuit-coupled Pake signal + noise</option><option value="raw">Full sweep + physical Q-curve</option><option value="noise">Detector noise only</option></select></div><span class="badge">Physical forward model</span></div><svg id="spectrum-chart" class="chart" viewBox="0 0 850 290" role="img" aria-label="Complex Pake susceptibility propagated through a physical Q-meter circuit"></svg><p class="chart-caption" id="spectrum-caption">Generated P = 5% example. Voltage is in V; vertical scales change between views.</p><p class="provenance">An explicitly specified deuteron operating point, not a measured instrument calibration. The viewer subtracts the noiseless circuit baseline to expose the signal. Training uses a separate reference with its own noise.</p></div>
   <h3>1. Connect spin populations to a real powder lineshape</h3>
@@ -105,13 +112,63 @@ python -c "import torch; print(torch.__version__); print('CUDA:', torch.cuda.is_
 
 <section id="network" class="chapter">
   <div class="chapter-label"><span>02</span><p>Phase two · Network design</p></div>
-  <h2>Enough capacity to learn.<br>Small enough to use.</h2>
-  <p class="lede">Choose the simplest model that captures the relevant spectral structure and meets your measured inference-time budget. Parameter count alone tells you neither.</p>
-  <p>A neural network is a sequence of adjustable transformations. Training chooses its weights so that predicted <i>P</i> agrees with known labels. A deep neural network (DNN) has multiple layers; a convolutional neural network (CNN) is a DNN whose filters share weights across positions.</p>
-  <p>For a one-dimensional voltage sweep, a 1D CNN is a natural candidate. Nearby bins jointly describe peaks and shoulders, while broader patterns describe the baseline. Shared filters can detect a feature in different parts of a sweep. This helps with shifts, but does not make the full estimator perfectly shift-invariant.</p>
-  <div class="table-wrap"><table><caption>Models worth comparing</caption><thead><tr><th>Candidate</th><th>What it contributes</th><th>Tradeoff to measure</th></tr></thead><tbody><tr><td>Linear / analytic estimator</td><td>A simple reference and physical interpretability</td><td>How much do baseline and shape assumptions limit accuracy?</td></tr><tr><td>Dense MLP</td><td>Global interactions between input bins</td><td>Does it need more examples to learn shifts and local structure?</td></tr><tr><td>Compact 1D CNN</td><td>Local filters shared across the sweep</td><td>Is its receptive field large enough?</td></tr><tr><td>Physics-guided multiscale CNN</td><td>Several spectral scales plus explicit summary features</td><td>Does its validation gain justify its measured cost?</td></tr></tbody></table></div>
-  <h3>Inside the tutorial networks</h3>
-  <details><summary>Code your first small 1D CNN</summary><div class="details-body"><p>This standalone example shows the essential PyTorch structure. <code>__init__</code> defines the layers; <code>forward</code> defines how a batch flows through them. Two input channels correspond to raw and detrended spectra. Start here before reading the larger multiscale model.</p>
+  <h2>Start with an MLP.<br>Add depth. Learn spectral structure.</h2>
+  <p class="lede">Build three estimators, give them the same training data, and measure what each improvement buys you. Our progression moves from a basic dense network to a deeper DNN and a multiscale CNN with physical summaries.</p>
+  <p>A neural network is a sequence of adjustable transformations. Training chooses its weights so that predicted <i>P</i> agrees with known labels. A multilayer perceptron (MLP) connects each layer densely to the next. Here the first MLP has one hidden layer; the middle model is a deep dense neural network (DNN) with three hidden layers. A convolutional neural network (CNN) is also a DNN, with filters that share weights across frequency positions.</p>
+  <p>Every model receives the same <code>(batch, 2, 512)</code> input: raw voltage and TE-calibrated, reference-subtracted area contributions. Both channels use standardization fitted on the training rows. This worked comparison uses the existing <strong>512-bin synthetic benchmark</strong>; the 500-bin experimental workflow has its own pending training contract.</p>
+  <div class="model-path" aria-label="Three stages of the model comparison">
+    <a href="#basic-mlp"><span class="eyebrow">01 · Establish a reference</span><strong>Basic MLP</strong><span>1,024 → 64 → 1</span><small>65,665 parameters</small></a>
+    <a href="#deep-dnn"><span class="eyebrow">02 · Add nonlinear depth</span><strong>Deep dense DNN</strong><span>1,024 → 256 → 128 → 64 → 1</span><small>303,617 parameters</small></a>
+    <a href="#multiscale-cnn"><span class="eyebrow">03 · Use spectral structure</span><strong>Multiscale CNN</strong><span>Shared filters + physical summaries</span><small>82,391 parameters · 26 frozen</small></a>
+  </div>
+  <h3 id="basic-mlp">1. Build a basic MLP</h3>
+  <p>Flatten the two channels into 1,024 values, mix them into 64 hidden features, apply a nonlinear GELU activation, and produce one polarization estimate. Each hidden unit can use every input bin. This is a useful first reference because its data flow is easy to follow.</p>
+  <details><summary>Code the one-hidden-layer MLP</summary><div class="details-body"><p><code>__init__</code> defines the layers and <code>forward</code> passes a batch through them. This is the model used by <code>--architecture mlp</code>.</p>
+<pre><code>import torch
+from torch import nn
+
+class BasicPolarizationMLP(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(2 * 512, 64),
+            nn.GELU(),
+            nn.Linear(64, 1),
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+model = BasicPolarizationMLP()
+print(model(torch.randn(8, 2, 512)).shape)  # torch.Size([8, 1])</code></pre>
+  <p>The random input only checks the shape. A usable prediction requires training and the saved preprocessing.</p></div></details>
+  <h3 id="deep-dnn">2. Add a deeper dense DNN</h3>
+  <p>Now use hidden layers of 256, 128, and 64 units. Successive nonlinear transformations can express more complicated relationships among baseline shape, amplitude, and spectral structure. Every layer still uses dense connections; the model must learn positional relationships from the examples.</p>
+  <details><summary>Code the three-hidden-layer DNN</summary><div class="details-body"><p>The input and output contract stays the same. This is <code>--architecture dnn</code>; the extra capacity is judged using the same validation rows.</p>
+<pre><code>import torch
+from torch import nn
+
+class DeepPolarizationDNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(2 * 512, 256), nn.GELU(),
+            nn.Linear(256, 128), nn.GELU(),
+            nn.Linear(128, 64), nn.GELU(),
+            nn.Linear(64, 1),
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+model = DeepPolarizationDNN()
+print(model(torch.randn(8, 2, 512)).shape)  # torch.Size([8, 1])</code></pre>
+  <p>More parameters do not guarantee a smaller error. The common training budget and saved learning curves make that tradeoff visible.</p></div></details>
+  <h3 id="multiscale-cnn">3. Use a multiscale CNN with physical summaries</h3>
+  <p>Nearby frequency bins jointly describe peaks and shoulders. Convolution reuses a local filter across the sweep, while several filter widths and dilated residual blocks capture broader structure. Shared filters help with spectral shifts, although the complete estimator is not perfectly shift-invariant.</p>
+  <details><summary>Optional stepping stone: code a compact 1D CNN</summary><div class="details-body"><p>This smaller convolutional model shows how filters replace dense connections. It remains available as an additional control; the third model in our new comparison is the more capable multiscale architecture diagrammed below.</p>
 <pre><code>import torch
 from torch import nn
 
@@ -135,18 +192,58 @@ class SmallPolarizationCNN(nn.Module):
 model = SmallPolarizationCNN()
 example_batch = torch.randn(8, 2, 512)
 print(model(example_batch).shape)  # torch.Size([8, 1])
-print(sum(p.numel() for p in model.parameters()))</code></pre><p>The numbers are untrained outputs, not polarization estimates you can use. This same model is available in the trainer as <code>--architecture compact</code>. Both teaching networks are defined in <code>tools/nmr_lab.py</code>. To add another architecture, extend <code>build_model()</code> and the CLI choices, then compare validation error and latency with the same data and split.</p></div></details>
+print(sum(p.numel() for p in model.parameters()))</code></pre><p>The numbers are untrained outputs. This model is available as <code>--architecture compact</code>. All four networks are defined in <a href="https://github.com/zetanaut/NMR-AI/blob/main/tools/nmr_lab.py"><code>tools/nmr_lab.py</code></a>; the factory <code>build_model()</code> selects the requested architecture.</p></div></details>
   <p>The default <code>PhysicsMultiscaleCNN</code> combines learned filters with spectral summaries. The raw channel retains the voltage sweep. The second channel subtracts an independent reference and multiplies each bin by its trapezoidal df/f weight and TE calibration. Its sum is the conventional calibrated area estimate. Training-set standardization is then applied to both channels.</p>
   <figure class="architecture"><div class="arch-input">512 voltage bins</div><div class="arch-arrow" aria-hidden="true">↓</div><div class="arch-input">Raw + TE-calibrated, reference-subtracted channels · shape (batch, 2, 512)</div><div class="arch-branches"><div><span class="eyebrow">Learned spectral branch</span><strong>Filters of width 5, 15, 31</strong><span>Dilated residual blocks · group normalization</span><span>Mean, maximum &amp; SD pooling</span><strong>Small dense correction head</strong></div><div><span class="eyebrow">Physics feature branch</span><strong>25 spectral summaries</strong><span>Centered moments · amplitudes · spread</span><span>Calibrated on training data only</span><strong>Frozen linear estimate</strong></div></div><div class="arch-arrow" aria-hidden="true">↓ &nbsp; add the two estimates &nbsp; ↓</div><div class="arch-output">Predicted vector polarization P̂</div><figcaption>The standalone multiscale teaching model. “Residual” in a residual block means a skip connection; the input residual channel is a baseline-subtracted spectrum.</figcaption></figure>
-  <p>Different filter widths see different spectral scales. Dilation expands the context without proportionally increasing weights. Pooling compresses the frequency axis before the dense head. The physics estimate gives the CNN a useful starting point, and the correction head learns what the summaries miss.</p>
-  <div class="two-up"><div class="note"><h4>Keep physical information</h4><p>Feature means and standard deviations are fitted on the training partition and reused later. Independently rescaling every spectrum to unit amplitude could erase the amplitude information needed to recover polarization.</p></div><div class="note"><h4>Keep inference measurable</h4><p>The multiscale teaching model has <strong>82,391 parameters</strong>; the compact CNN has <strong>3,889</strong>. These counts include all weights, including frozen ones. Neither count is a latency measurement.</p></div></div>
-  <h3>Lab 02 · Measure the cost of your architecture</h3>
-  <p>Decide the required response time and target hardware first. Measure batch size one for a live scan, and a larger batch for offline throughput. The helper uses PyTorch’s benchmark timer, evaluation mode, and disabled gradient tracking.</p>
-<pre><code>python tools/benchmark_network.py \
-  --architecture physics_multiscale --device cpu --batch-size 1
-python tools/benchmark_network.py \
-  --architecture compact --device cpu --batch-size 1</code></pre>
-  <p>The helper times randomly initialized versions of the exact architectures. It measures forward-pass cost, not accuracy. It excludes file loading, baseline preprocessing, transfers, and startup; measure those too before making a deployment claim. Divide batch time by batch size to report throughput cost per event, not single-event latency. See the <a href="https://docs.pytorch.org/tutorials/recipes/recipes/benchmark.html">PyTorch benchmarking guide</a>.</p>
+  <p>Different filter widths see different spectral scales. Dilation expands the context without proportionally increasing weights. Pooling compresses the frequency axis before the dense head. A ridge regression on 25 spectral summaries is fitted using training rows only, then frozen. Its 26 coefficients provide an initial estimate; a dense correction head adds an estimate from the learned convolutional features.</p>
+  <div class="two-up"><div class="note"><h4>Keep physical information</h4><p>Feature means and standard deviations are fitted on the training partition and reused later. Independently rescaling every spectrum to unit amplitude could erase the amplitude information needed to recover polarization.</p></div><div class="note"><h4>Explain the source of the gain</h4><p>This CNN combines shared filters with an explicit physical feature branch. Its accuracy measures both contributions together. Comparing it with the dense networks does not show how much of the gain comes from convolution alone.</p></div></div>
+<!-- MODEL COMPARISON START -->
+  <div id="model-comparison" class="subsection">
+  <h3>One dataset. Three measured errors.</h3>
+  <p>All three models use the same 6,000 broad-variation spectra: 4,788 training,
+  612 validation, and 600 test events. The same 240/30/30
+  configuration groups, two input channels, training-only scalers, batch-order seed, AdamW settings,
+  and 80-epoch cap are used throughout. Each checkpoint minimizes validation MSE; the test rows are
+  evaluated after fixing the comparison.</p>
+  <figure class="architecture"><div class="model-chart-scroll" tabindex="0" role="region" aria-label="Test error chart; scroll horizontally on small screens"><img class="chart" src="assets/model-comparison.svg"
+  alt="Held-out RMSE for the basic MLP, deep dense DNN and multiscale CNN; exact values are in the following table."
+  width="950" height="420"></div><figcaption>Absolute error in percentage points (pp), on a logarithmic axis.
+  All 600 test events enter each value. One seed; points have no uncertainty intervals.</figcaption></figure>
+  <p>In this run, the DNN reduces test RMSE by a factor of <strong>1.70</strong> relative to the basic MLP. The CNN with physical summaries reduces it by a further factor of <strong>16.25</strong>.</p>
+  <div class="table-wrap"><table><caption>Same-data comparison · all errors in percentage points · residual = truth − prediction</caption>
+  <thead><tr><th>Estimator</th><th>Validation RMSE</th><th>Test RMSE</th><th>Test bias</th><th>Test width</th><th>Test 95th |error|</th></tr></thead>
+  <tbody id="model-comparison-table"><tr><td>Basic MLP</td><td>0.09055</td><td>0.06515</td><td>-0.00125</td><td>0.06513</td><td>0.12616</td></tr><tr><td>Deep dense DNN</td><td>0.04030</td><td>0.03840</td><td>-0.00228</td><td>0.03834</td><td>0.07555</td></tr><tr><td>Multiscale CNN + summaries</td><td>0.00196</td><td>0.00236</td><td>-0.00008</td><td>0.00236</td><td>0.00501</td></tr></tbody></table></div>
+  <p>The CNN's result includes the contribution of its ridge estimate from physical summaries.
+  This comparison measures the complete estimators. It does not isolate convolution, establish a universal
+  ordering, or measure experimental polarization accuracy. The generator assumes ideal TE calibration
+  and a stable, independently noisy reference.</p>
+  <div class="results-panel"><div class="panel-heading"><div><p class="eyebrow">Watch learning on the same data</p>
+  <label for="model-curve-select" class="select-label">Learning curves</label>
+  <select id="model-curve-select"><option value="all">Compare all validation curves</option><option value="mlp">Basic MLP</option><option value="dnn">Deep dense DNN</option><option value="physics_multiscale">Multiscale CNN + summaries</option></select></div>
+  <span class="badge">Saved training histories</span></div>
+  <div class="model-chart-scroll" tabindex="0" role="region" aria-label="Learning curve chart; scroll horizontally on small screens"><svg id="model-curve-chart" class="chart" viewBox="0 0 850 330" role="img" aria-label="Saved model learning curves"></svg></div>
+  <p id="model-curve-caption" class="chart-caption">Enable JavaScript to explore the saved learning curves. The error figure and table above remain available.</p></div>
+  <p class="provenance">Verified against saved checkpoints, exact partition rows, training-only preprocessing,
+  and prediction CSVs. Download the <a href="assets/model-comparison.json">comparison record</a> or
+  <a href="assets/model-comparison.svg">error figure</a>. The record includes every synthetic test prediction,
+  hashes, settings, histories, parameter counts, and numerical reconstruction checks.</p>
+  </div>
+<!-- MODEL COMPARISON END -->
+  <h3>Lab 02 · Reproduce the progression</h3>
+  <p>Generate the broad-variation dataset once if it is absent. The comparison runner reads <code>configs/model-comparison.json</code>, trains the three declared architectures, and then evaluates their best validation checkpoints on the saved test partition. It saves each run's history, predictions, preprocessing, exact partition rows, and provenance.</p>
+<pre><code>python tools/generate_data.py --num-samples 6000 \
+  --num-configurations 300 --coverage broad \
+  --output local-results/qmeter/broad.npz
+python tools/run_model_comparison.py
+python tools/export_model_comparison.py</code></pre>
+  <p>Reuse an existing dataset rather than rerunning the first command. Existing outputs are protected. Use <code>--runs-dir local-results/my-comparison</code> on both comparison commands for a fresh run. For deliberate validation review, run <code>--stage train</code> first and <code>--stage evaluate</code> after fixing your choices. Keep test scores out of architecture and hyperparameter selection.</p>
+  <p class="provenance">The <a href="https://github.com/zetanaut/NMR-AI/blob/main/notes/model-comparison.md">comparison record</a> documents the architectures, shared protocol, full metrics, and saved artifacts.</p>
+  <details><summary>Measure the cost of all three architectures</summary><div class="details-body"><p>Parameter counts are not latency measurements. Use batch size one for a live scan and larger batches for offline throughput. The helper uses PyTorch's benchmark timer, evaluation mode, and disabled gradient tracking.</p>
+<pre><code>for architecture in mlp dnn physics_multiscale; do
+  python tools/benchmark_network.py \
+    --architecture "$architecture" --device cpu --batch-size 1
+done</code></pre>
+  <p>The helper times randomly initialized versions of the exact architectures. It excludes file loading, preprocessing, transfers, and startup. Divide batch time by batch size to report throughput cost per event; that is different from single-event latency. See the <a href="https://docs.pytorch.org/tutorials/recipes/recipes/benchmark.html">PyTorch benchmarking guide</a>.</p></div></details>
   <details><summary>When calibration varies between events</summary><div class="details-body"><p>Every event carries its independently determined <code>calibration</code> and reference baseline. Training and inference use the same <code>make_features()</code>. The generated reference is noisy and shared by configuration; the TE calibration is ideal in this benchmark. Real calibration errors remain a separate part of the error budget.</p></div></details>
   <div class="checkpoint"><span>Phase 02 deliverable</span><p>An architecture diagram, a fair comparison against a simpler model, and measured latency/throughput on the intended hardware—with a stated timing scope.</p></div>
 </section>
@@ -155,6 +252,7 @@ python tools/benchmark_network.py \
   <div class="chapter-label"><span>03</span><p>Phase three · Training &amp; evaluation</p></div>
   <h2>Learn when to stop.<br>Then learn what the errors mean.</h2>
   <p class="lede">Training reduces a loss. Validation chooses a model. A held-out evaluation measures how that choice generalizes. These are different jobs.</p>
+  <aside class="note"><h3>These runnable labs use the 512-bin benchmark</h3><p>The trainer requires its saved grid, simulator version and TE calibration array. The 500-bin dataset from <a href="matching.html#generate">Practical 01B</a> needs a dedicated training/prediction path. When evaluating unseen measured seed configurations there, group by <code>source_scan_1based</code> so all simulated descendants stay together; grouping only by their individual <code>configuration_id</code> values would not hold out the measured seed.</p></aside>
   <h3>Split by the source of variation</h3>
   <p>Several simulated spectra can share the same parameter configuration. If those near-relatives appear in both training and test data, a random row split can give an optimistic estimate of performance on unfamiliar configurations.</p>
   <div class="split-diagram" aria-label="80 percent training, 10 percent validation, 10 percent test"><div><strong>80%</strong><span>Train weights &amp; scalers</span></div><div><strong>10%</strong><span>Choose checkpoint</span></div><div><strong>10%</strong><span>Evaluate</span></div></div>
@@ -220,13 +318,13 @@ python tools/predict.py \
 <section id="results" class="chapter">
   <p class="eyebrow">Experiment notebook · physical forward model</p>
   <h2>Measure the error.<br>State the conditions.</h2>
-  <p class="lede">Three newly generated and trained runs of the complex-susceptibility Q-meter model. These measure generalization within stated simulation conditions, not experimental polarimetry accuracy or reproduction of the paper's networks.</p>
-  <p class="provenance">The full generator, datasets, checkpoints, and snapshot use <code>qmeter-complex-pake-v2</code>. Each dataset contains 6,000 spectra from 300 configurations.</p>
+  <p class="lede">Three saved training runs of the 512-bin complex-susceptibility Q-meter benchmark. These measure generalization within stated simulation conditions, not experimental polarimetry accuracy or reproduction of the paper's networks.</p>
+  <p class="provenance">The 512-bin generator, datasets, checkpoints, and snapshot use <code>qmeter-complex-pake-v2</code>. Each of the two datasets contains 6,000 spectra from 300 configurations; the two broad-variation runs share one dataset. These results do not evaluate the new 500-bin generator.</p>
   <div class="table-wrap"><table><caption>Held-out circuit-coupled Pake simulations · fractional P · 6,000 events and 300 configurations per dataset</caption><thead><tr><th>Experiment</th><th>Test events</th><th>Bias</th><th>Width</th><th>RMSE</th></tr></thead><tbody id="results-table"><tr><td>Narrow variation · multiscale CNN</td><td>600</td><td>-0.0000008</td><td>0.0000116</td><td>0.0000116</td></tr><tr><td>Broad variation · multiscale CNN</td><td>600</td><td>-0.0000015</td><td>0.0000237</td><td>0.0000237</td></tr><tr><td>Broad variation · compact CNN</td><td>600</td><td>0.0002011</td><td>0.0017714</td><td>0.0017828</td></tr></tbody></table></div>
   <div class="results-panel"><div class="panel-heading"><div><p class="eyebrow">Inspect a saved tutorial run</p><label for="run-select" class="select-label">Experiment</label><select id="run-select"><option value="narrow">Narrow variation · multiscale CNN</option><option value="broad">Broad variation · multiscale CNN</option><option value="compact">Broad variation · compact CNN</option></select></div><span class="badge">Teaching results</span></div>
     <div class="two-up charts"><figure><h3>Training &amp; validation</h3><svg id="history-chart" class="chart" viewBox="0 0 620 300" role="img" aria-label="Saved normalized training and validation losses by epoch"></svg><figcaption id="history-caption">Training loss and validation loss; the best validation epoch selects the checkpoint.</figcaption></figure><figure><h3>Held-out residuals</h3><svg id="residual-chart" class="chart" viewBox="0 0 620 300" role="img" aria-label="Histogram of actual held-out prediction residuals"></svg><figcaption id="residual-caption">Residuals in percentage points. Full metrics include all events, including tails outside the plot.</figcaption></figure></div>
     <div class="local-result" id="local-result" aria-live="polite"></div>
-    <p class="provenance">Computed from the standalone lab's <code>test_predictions.csv</code>, <code>history.csv</code>, and <code>split.json</code>. The <a href="assets/results.js">downloadable snapshot</a> records generation/training settings and prediction-file hashes. The <a href="https://github.com/zetanaut/NMR-AI#data-provenance-and-interpretation">README provides the commands</a> to regenerate all three runs.</p>
+    <p class="provenance">Computed from the standalone lab's <code>test_predictions.csv</code>, <code>history.csv</code>, and <code>split.json</code>. The <a href="assets/results.js">downloadable snapshot</a> records generation/training settings and prediction-file hashes. The <a href="https://github.com/zetanaut/NMR-AI#reproduce-the-published-runs">README provides the commands</a> to regenerate all three runs.</p>
   </div>
   <div class="two-up"><div><h3>Read the comparison correctly</h3><p>The broad runs use the same dataset and grouped partition. They compare these two architectures under the recorded optimizer and stopping settings, not every possible compact or multiscale network.</p><p>A pooled relative conversion at 5% is not a conditional measurement at 5%. Inspect the signed local band, its count, and tail behavior.</p></div><div><h3>Keep the error budget complete</h3><p>These runs use an epoch cap of 40, validation-selected weights, a stable baseline reference, and ideal TE calibration. The default white noise is a reference scenario, not fitted covariance. Real deployment needs independently held-out scans and calibration, drift, and model-mismatch checks.</p></div></div>
 </section>

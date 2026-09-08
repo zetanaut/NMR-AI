@@ -8,6 +8,7 @@ from lineshape import pake_susceptibility
 
 FREQUENCY = np.linspace(32.3, 33.1, 512)
 FREQUENCY_HZ = FREQUENCY*1e6
+ARCHITECTURES = ("mlp", "dnn", "compact", "physics_multiscale")
 
 
 def integration_weights(frequency_hz):
@@ -141,6 +142,29 @@ def group_split(groups, seed):
     return [np.flatnonzero(np.isin(groups, partition)) for partition in partitions]
 
 
+class BasicPolarizationMLP(nn.Module):
+    """One hidden dense layer over the same two channels used by the CNNs."""
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(nn.Flatten(), nn.Linear(2*512, 64), nn.GELU(), nn.Linear(64, 1))
+
+    def forward(self, x):
+        return self.net(x)
+
+
+class DeepPolarizationDNN(nn.Module):
+    """Three hidden dense layers learn successive global spectral features."""
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Flatten(), nn.Linear(2*512, 256), nn.GELU(),
+            nn.Linear(256, 128), nn.GELU(), nn.Linear(128, 64), nn.GELU(), nn.Linear(64, 1),
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+
 class SmallPolarizationCNN(nn.Module):
     def __init__(self):
         super().__init__()
@@ -215,6 +239,10 @@ class PhysicsMultiscaleCNN(nn.Module):
 
 
 def build_model(architecture):
+    if architecture == "mlp":
+        return BasicPolarizationMLP()
+    if architecture == "dnn":
+        return DeepPolarizationDNN()
     if architecture == "compact":
         return SmallPolarizationCNN()
     if architecture == "physics_multiscale":

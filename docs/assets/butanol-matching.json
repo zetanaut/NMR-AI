@@ -1,0 +1,1505 @@
+{
+  "version": "butanol-two-site-full-circuit-v1",
+  "material": "butanol",
+  "config": {
+    "description": "Owner-confirmed butanol sample: compare C-D/O-D susceptibility with the existing single-site fit on the same five raw scans.",
+    "theory": "Supplied fit_multisite.py: weak-quadrupole two-site option, common P and physical Lorentzian HWHM, distinct EFG asymmetries and splittings; 1/split relative site normalization.",
+    "electronics": "Unchanged full-circuit topology and shared parameter bounds from experimental-matching.json. No additional voltage polynomial, frequency rescaling or empirical gain tilt.",
+    "amplitude_convention": "log10_signal_scale_cgs retains the existing C-D peak-scale convention; multiply by split_cd_mhz to obtain the integrated susceptibility scale in cgs*MHz.",
+    "additional_parameters": {
+      "od_split_ratio": {
+        "initial": 1.5760869565217392,
+        "bounds": [
+          1.05,
+          2.5
+        ],
+        "source": "Ordering the O-D scale above C-D fixes site identity; initial ratio 1.45/0.92 from supplied demonstration, numerical bounds are not measured material constants."
+      },
+      "eta_od": {
+        "initial": 0.12,
+        "bounds": [
+          0,
+          0.5
+        ],
+        "source": "Supplied demonstration seed; fitted O-D EFG asymmetry, numerical search interval."
+      },
+      "od_fraction": {
+        "initial": 0.07,
+        "bounds": [
+          0,
+          0.4
+        ],
+        "source": "Supplied demonstration seed and interval; effective O-D susceptibility weight, not independently measured chemical fraction."
+      }
+    },
+    "max_nfev": 700,
+    "limitations": [
+      "Shared spin temperature and common site linewidth are hypotheses",
+      "Weak-quadrupole intensity option; frequency-dependent population corrections are not included",
+      "Three extra fitted coordinates can reduce training residuals; validate material identification and polarization independently"
+    ]
+  },
+  "config_sha256": "a42d58e7230b8df82f5a663f4e20067e2215d8d3fc6a1aa4d093735e0cc63902",
+  "single_site_report_sha256": "a34e20d63f82053387a6b0bf1f566cc85249cd6139afe4d0b3a6f388bcb571d5",
+  "acquisition": {
+    "nucleus": "deuteron",
+    "bins": 500,
+    "reference_hz": 32700000.0,
+    "start_mhz": 32.3,
+    "step_mhz": 0.0015287,
+    "frequency_source": "Repository owner: every baseline is timestamp plus 500 bins; retain the original proton sweep's bin offsets and spacing, replacing its nominal 213 MHz center with 32.7 MHz.",
+    "derivation": "f_j = (212.6 + 0.0015287*j) - (213 - 32.7) = 32.3 + 0.0015287*j MHz, j=0..499. The last sample is 33.0628213 MHz; 32.7 MHz is the nominal center, not the endpoint midpoint.",
+    "configuration_sha256": "daa69f3ba3bf9b886587531e983869213e37014c29bca2e8c55e6aed077d881c"
+  },
+  "signal_parsing": {
+    "source_sha256": "cdbb7e3afa6531694a4b97848d295bbb5c7c03ef62d796b053e3b4e16fbaea5a",
+    "encoding": "UTF-8",
+    "rows": 5,
+    "samples_per_row": 500,
+    "record_logical_lines_1based": [
+      1,
+      6,
+      11,
+      16,
+      22
+    ],
+    "unicode_line_separators": [
+      {
+        "character_offset": 6510,
+        "codepoint": "U+2028"
+      },
+      {
+        "character_offset": 6511,
+        "codepoint": "U+2028"
+      },
+      {
+        "character_offset": 19540,
+        "codepoint": "U+2028"
+      },
+      {
+        "character_offset": 19541,
+        "codepoint": "U+2028"
+      },
+      {
+        "character_offset": 19542,
+        "codepoint": "U+2028"
+      }
+    ],
+    "blank_logical_lines_1based": [
+      2,
+      3,
+      4,
+      5,
+      7,
+      8,
+      9,
+      10,
+      12,
+      13,
+      14,
+      15,
+      17,
+      18,
+      19,
+      20,
+      21,
+      23
+    ],
+    "decimal_whitespace_repairs": [],
+    "duplicate_of_record_1based": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "timestamp_order": "not strictly increasing; input order retained",
+    "policy": "Preserve every record and all 500 values; audit U+2028 and blank separators; no smoothing, rescaling or deduplication",
+    "frequency_grid": "Not stored in CSV; supplied separately as an acquisition contract"
+  },
+  "single_site_matching_config": {
+    "description": "Match the five experimental spin-1 sweeps and infer polarization from the complex lineshape. No TE calibration is required. These five scans are development examples, not a held-out performance benchmark.",
+    "acquisition": "configs/deuteron-acquisition.json",
+    "grid_status": "confirmed",
+    "grid_source": "Experimental set up details: signal scans use the same 500-bin frequency grid and n=1, 358.0 cm cable setup as the baseline example.",
+    "component_setup": "configs/deuteron-baseline-setup.json",
+    "hardware_hypothesis": "Use the stated n=1 half-wave at nominal length 3.580 m, nominal coil and resistances, and zero shunt stray capacitance as an explicit first-model assumption. FIT the tuning capacitance and slow detector phase as in paper Eqs. 10-14. Other fixed component seeds remain assumptions, not new measurements. Do not inherit the previous bound-saturated baseline solution as known hardware.",
+    "spin_hypothesis": "Single-site deuteron Pake powder, complex absorption and dispersion, spin-temperature Q(P). No independent tensor enhancement assumed.",
+    "initial_signal_window_mhz": [
+      32.5,
+      32.85
+    ],
+    "fit_parameters": {
+      "center_mhz": {
+        "initial": 32.674,
+        "bounds": [
+          32.64,
+          32.71
+        ],
+        "source": "Initial position estimated from localized features; numerical search range on the confirmed acquisition grid."
+      },
+      "split_mhz": {
+        "initial": 0.065,
+        "bounds": [
+          0.045,
+          0.085
+        ],
+        "source": "Half-separation scale in the reduced-frequency Pake model; initial feature spacing, not a quadrupole calibration."
+      },
+      "g": {
+        "initial": 0.03,
+        "bounds": [
+          0.004,
+          0.2
+        ],
+        "source": "Lorentzian HWHM divided by splitting scale; numerical model-development interval."
+      },
+      "eta": {
+        "initial": 0.03,
+        "bounds": [
+          0,
+          0.25
+        ],
+        "source": "Single-site EFG asymmetry hypothesis; numerical interval, not measured material composition."
+      },
+      "P_model": {
+        "initial": 0.3,
+        "bounds": [
+          -0.95,
+          0.95
+        ],
+        "source": "Polarization inferred by fitting the spin-temperature Pake branch shapes and their integrated intensity ratio; no TE calibration required."
+      },
+      "log10_signal_scale_cgs": {
+        "initial": -4,
+        "bounds": [
+          -8,
+          -1
+        ],
+        "source": "Log10 effective susceptibility amplitude with filling factor held nominal; not independent material calibration."
+      },
+      "phase_slope_rad_per_mhz": {
+        "initial": 0,
+        "bounds": [
+          -1,
+          1
+        ],
+        "source": "Unknown slow detector-phase slope; explicit sensitivity bounds, not measured phase uncertainty."
+      },
+      "phase_curvature_rad_per_mhz2": {
+        "initial": 0,
+        "bounds": [
+          -3,
+          3
+        ],
+        "source": "Unknown slow detector-phase curvature from paper Eq. 10; explicit numerical bounds, not a voltage polynomial."
+      },
+      "log10_tune_capacitance_pf": {
+        "initial": 1.6989700043360187,
+        "bounds": [
+          1,
+          3.3010299956639813
+        ],
+        "source": "Unknown tuning capacitor, fitted with an initial 50 pF scale close to the earlier fit. Search interval 10-2000 pF is numerical, not a measured tolerance."
+      }
+    }
+  },
+  "fits": [
+    {
+      "model_version": "butanol-two-site-full-circuit-v1",
+      "record_1based": 1,
+      "fixed_circuit": {
+        "reference_hz": 32700000,
+        "drive_v": 0.382652652,
+        "drive_resistance_ohm": 619,
+        "input_resistance_ohm": 50,
+        "damping_resistance_ohm": 10,
+        "coil_resistance_ohm": 0.35,
+        "coil_inductance_h": 3e-08,
+        "tune_capacitance_f": 4.999999999999999e-11,
+        "stray_capacitance_f": 0.0,
+        "cable_resistance_ohm_per_m": 3.43,
+        "cable_inductance_h_per_m": 2.133918035950722e-07,
+        "cable_conductance_s_per_m": 0,
+        "cable_capacitance_f_per_m": 8.535672143802888e-11,
+        "cable_length_m": 3.579999999999999,
+        "filling_factor": 0.098563235,
+        "susceptibility_scale_cgs": 1.0,
+        "detector_gain": 1.0,
+        "detector_phase_rad": 0.0,
+        "detector_phase_slope_rad_per_hz": 0,
+        "detector_phase_curvature_rad_per_hz2": 0,
+        "dc_offset_v": 0.0
+      },
+      "parameters": {
+        "center_mhz": 32.67913374973269,
+        "split_mhz": 0.06236826606230657,
+        "g": 0.01884901193637541,
+        "eta": 0.06439360009598895,
+        "P_model": 0.3527372381862488,
+        "log10_signal_scale_cgs": -3.304566290665715,
+        "log10_tune_capacitance_pf": 2.796350527764255,
+        "phase_slope_rad_per_mhz": -0.1594702142068818,
+        "phase_curvature_rad_per_mhz2": -0.08531500394587788,
+        "od_split_ratio": 1.8456691962413863,
+        "eta_od": 0.3329703742234774,
+        "od_fraction": 0.16634986922036496
+      },
+      "quadrature_coefficients": [
+        -7225.591305460531,
+        -1307.286872194917,
+        53.800500753155575
+      ],
+      "n_free": 15,
+      "nonlinear_parameters": [
+        "center_mhz",
+        "split_mhz",
+        "g",
+        "eta",
+        "P_model",
+        "log10_signal_scale_cgs",
+        "log10_tune_capacitance_pf",
+        "phase_slope_rad_per_mhz",
+        "phase_curvature_rad_per_mhz2",
+        "od_split_ratio",
+        "eta_od",
+        "od_fraction"
+      ],
+      "profiled_readout_parameters": [
+        "a",
+        "b",
+        "d"
+      ],
+      "all_500_bins_fitted": true,
+      "success": true,
+      "near_bounds": {},
+      "active_bounds": {
+        "center_mhz": 0,
+        "split_mhz": 0,
+        "g": 0,
+        "eta": 0,
+        "P_model": 0,
+        "log10_signal_scale_cgs": 0,
+        "log10_tune_capacitance_pf": 0,
+        "phase_slope_rad_per_mhz": 0,
+        "phase_curvature_rad_per_mhz2": 0,
+        "od_split_ratio": 0,
+        "eta_od": 0,
+        "od_fraction": 0
+      },
+      "candidates": [
+        {
+          "parameters": {
+            "center_mhz": 32.67905702342012,
+            "split_mhz": 0.06241339020503191,
+            "g": 0.017154271558956394,
+            "eta": 0.06441818349653625,
+            "P_model": 0.3564747949629252,
+            "log10_signal_scale_cgs": -3.343417028298086,
+            "log10_tune_capacitance_pf": 2.7986727760339836,
+            "phase_slope_rad_per_mhz": -0.15833376751396366,
+            "phase_curvature_rad_per_mhz2": -0.08625956308127858,
+            "od_split_ratio": 1.47709288640461,
+            "eta_od": 0.16674005523264623,
+            "od_fraction": 0.08864190093401682
+          },
+          "range_normalized_sse": 5.285642061637939e-05,
+          "success": true,
+          "evaluations": 49,
+          "quadrature_coefficients": [
+            -6978.559888192153,
+            -1176.9842468892255,
+            52.03005132743715
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.67913374973269,
+            "split_mhz": 0.06236826606230657,
+            "g": 0.01884901193637541,
+            "eta": 0.06439360009598895,
+            "P_model": 0.3527372381862488,
+            "log10_signal_scale_cgs": -3.304566290665715,
+            "log10_tune_capacitance_pf": 2.796350527764255,
+            "phase_slope_rad_per_mhz": -0.1594702142068818,
+            "phase_curvature_rad_per_mhz2": -0.08531500394587788,
+            "od_split_ratio": 1.8456691962413863,
+            "eta_od": 0.3329703742234774,
+            "od_fraction": 0.16634986922036496
+          },
+          "range_normalized_sse": 5.2389253733609376e-05,
+          "success": true,
+          "evaluations": 15,
+          "quadrature_coefficients": [
+            -7225.591305460531,
+            -1307.286872194917,
+            53.800500753155575
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.679106814596665,
+            "split_mhz": 0.06236940345317645,
+            "g": 0.01815755209759555,
+            "eta": 0.06431587886225515,
+            "P_model": 0.3561618238773472,
+            "log10_signal_scale_cgs": -3.326650697836711,
+            "log10_tune_capacitance_pf": 2.797535824583129,
+            "phase_slope_rad_per_mhz": -0.15891100168152328,
+            "phase_curvature_rad_per_mhz2": -0.08580662057567601,
+            "od_split_ratio": 1.7004038554077212,
+            "eta_od": 0.28614567850118067,
+            "od_fraction": 0.1264121911311933
+          },
+          "range_normalized_sse": 5.2925234164616475e-05,
+          "success": true,
+          "evaluations": 18,
+          "quadrature_coefficients": [
+            -7099.057822022099,
+            -1240.0493922384276,
+            52.89433703831514
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.67912635323645,
+            "split_mhz": 0.06235488716596231,
+            "g": 0.019623648361397295,
+            "eta": 0.06438636522530655,
+            "P_model": 0.35006341675480224,
+            "log10_signal_scale_cgs": -3.29537428825227,
+            "log10_tune_capacitance_pf": 2.7977018155339257,
+            "phase_slope_rad_per_mhz": -0.1595672777427849,
+            "phase_curvature_rad_per_mhz2": -0.0860842407391531,
+            "od_split_ratio": 1.6965641767541482,
+            "eta_od": 0.44159761414059234,
+            "od_fraction": 0.19344982778548594
+          },
+          "range_normalized_sse": 5.2640811484092105e-05,
+          "success": true,
+          "evaluations": 20,
+          "quadrature_coefficients": [
+            -7151.681088885366,
+            -1262.0479684688555,
+            53.27843072238011
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.67905966161377,
+            "split_mhz": 0.062412812885966895,
+            "g": 0.017219260352600088,
+            "eta": 0.06439807579129474,
+            "P_model": 0.3569705382657862,
+            "log10_signal_scale_cgs": -3.341702158490903,
+            "log10_tune_capacitance_pf": 2.798466854117479,
+            "phase_slope_rad_per_mhz": -0.158432662152299,
+            "phase_curvature_rad_per_mhz2": -0.08617618538003269,
+            "od_split_ratio": 1.5117778840623861,
+            "eta_od": 0.19526454891482192,
+            "od_fraction": 0.09570556840120902
+          },
+          "range_normalized_sse": 5.2861982426956065e-05,
+          "success": true,
+          "evaluations": 23,
+          "quadrature_coefficients": [
+            -6999.504103998938,
+            -1187.9497169950866,
+            52.180288496037065
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.67913897071026,
+            "split_mhz": 0.06236886221513473,
+            "g": 0.019130659339139322,
+            "eta": 0.06437438413381705,
+            "P_model": 0.35145122644699844,
+            "log10_signal_scale_cgs": -3.29792123921599,
+            "log10_tune_capacitance_pf": 2.796186336297751,
+            "phase_slope_rad_per_mhz": -0.15956081215102524,
+            "phase_curvature_rad_per_mhz2": -0.08524934454819233,
+            "od_split_ratio": 1.8891095301696814,
+            "eta_od": 0.34878104685524103,
+            "od_fraction": 0.17509457329365835
+          },
+          "range_normalized_sse": 5.247021812103917e-05,
+          "success": true,
+          "evaluations": 47,
+          "quadrature_coefficients": [
+            -7244.8891889579845,
+            -1317.4756839380182,
+            53.93876085983038
+          ]
+        }
+      ],
+      "scaled_profiled_jacobian_condition": 11296.420145773438,
+      "diagnostics": {
+        "rms_recorded_units": 5.857979531308888e-05,
+        "max_absolute_recorded_units": 0.0008078167810974674,
+        "lag1": 0.39810337429107323,
+        "wing_second_difference_sigma_proxy": 1.9502984342978435e-05,
+        "sigma_proxy_triplets": 267,
+        "sigma_proxy_assumption": "MAD(second differences)/(0.67449 sqrt(6)); iid Gaussian noise and locally smooth mean. Not a validated noise covariance."
+      },
+      "single_site_rms_recorded_units": 6.0125779270840115e-05,
+      "rms_reduction_percent": 2.5712497642438215,
+      "P_status": "Common site spin-temperature lineshape estimate; no TE prerequisite; not independent truth",
+      "material_status": "Owner-confirmed butanol; fitted O-D weight is an effective signal fraction, not a measured chemical abundance"
+    },
+    {
+      "model_version": "butanol-two-site-full-circuit-v1",
+      "record_1based": 2,
+      "fixed_circuit": {
+        "reference_hz": 32700000,
+        "drive_v": 0.382652652,
+        "drive_resistance_ohm": 619,
+        "input_resistance_ohm": 50,
+        "damping_resistance_ohm": 10,
+        "coil_resistance_ohm": 0.35,
+        "coil_inductance_h": 3e-08,
+        "tune_capacitance_f": 4.999999999999999e-11,
+        "stray_capacitance_f": 0.0,
+        "cable_resistance_ohm_per_m": 3.43,
+        "cable_inductance_h_per_m": 2.133918035950722e-07,
+        "cable_conductance_s_per_m": 0,
+        "cable_capacitance_f_per_m": 8.535672143802888e-11,
+        "cable_length_m": 3.579999999999999,
+        "filling_factor": 0.098563235,
+        "susceptibility_scale_cgs": 1.0,
+        "detector_gain": 1.0,
+        "detector_phase_rad": 0.0,
+        "detector_phase_slope_rad_per_hz": 0,
+        "detector_phase_curvature_rad_per_hz2": 0,
+        "dc_offset_v": 0.0
+      },
+      "parameters": {
+        "center_mhz": 32.67875610693714,
+        "split_mhz": 0.06229859242861293,
+        "g": 0.020986144975036862,
+        "eta": 0.06377914568545802,
+        "P_model": -0.05763245960159091,
+        "log10_signal_scale_cgs": -2.286584758697745,
+        "log10_tune_capacitance_pf": 3.068480442105716,
+        "phase_slope_rad_per_mhz": -0.10507831755763586,
+        "phase_curvature_rad_per_mhz2": -0.21728568799585046,
+        "od_split_ratio": 1.5505831828225873,
+        "eta_od": 0.16132569007433362,
+        "od_fraction": 0.042322125813292456
+      },
+      "quadrature_coefficients": [
+        -1425.6976293777013,
+        418.76736087668786,
+        10.647805093964905
+      ],
+      "n_free": 15,
+      "nonlinear_parameters": [
+        "center_mhz",
+        "split_mhz",
+        "g",
+        "eta",
+        "P_model",
+        "log10_signal_scale_cgs",
+        "log10_tune_capacitance_pf",
+        "phase_slope_rad_per_mhz",
+        "phase_curvature_rad_per_mhz2",
+        "od_split_ratio",
+        "eta_od",
+        "od_fraction"
+      ],
+      "profiled_readout_parameters": [
+        "a",
+        "b",
+        "d"
+      ],
+      "all_500_bins_fitted": true,
+      "success": true,
+      "near_bounds": {},
+      "active_bounds": {
+        "center_mhz": 0,
+        "split_mhz": 0,
+        "g": 0,
+        "eta": 0,
+        "P_model": 0,
+        "log10_signal_scale_cgs": 0,
+        "log10_tune_capacitance_pf": 0,
+        "phase_slope_rad_per_mhz": 0,
+        "phase_curvature_rad_per_mhz2": 0,
+        "od_split_ratio": 0,
+        "eta_od": 0,
+        "od_fraction": 0
+      },
+      "candidates": [
+        {
+          "parameters": {
+            "center_mhz": 32.67875610693714,
+            "split_mhz": 0.06229859242861293,
+            "g": 0.020986144975036862,
+            "eta": 0.06377914568545802,
+            "P_model": -0.05763245960159091,
+            "log10_signal_scale_cgs": -2.286584758697745,
+            "log10_tune_capacitance_pf": 3.068480442105716,
+            "phase_slope_rad_per_mhz": -0.10507831755763586,
+            "phase_curvature_rad_per_mhz2": -0.21728568799585046,
+            "od_split_ratio": 1.5505831828225873,
+            "eta_od": 0.16132569007433362,
+            "od_fraction": 0.042322125813292456
+          },
+          "range_normalized_sse": 6.545071663289175e-05,
+          "success": true,
+          "evaluations": 62,
+          "quadrature_coefficients": [
+            -1425.6976293777013,
+            418.76736087668786,
+            10.647805093964905
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.67874701741846,
+            "split_mhz": 0.06230876536340843,
+            "g": 0.022071293711305357,
+            "eta": 0.06351191655142249,
+            "P_model": -0.05664682473612792,
+            "log10_signal_scale_cgs": -2.290439936772704,
+            "log10_tune_capacitance_pf": 3.064602899539774,
+            "phase_slope_rad_per_mhz": -0.10571261790411213,
+            "phase_curvature_rad_per_mhz2": -0.21665119207221206,
+            "od_split_ratio": 1.7799733899282066,
+            "eta_od": 0.0005835507731931632,
+            "od_fraction": 0.01618796636135724
+          },
+          "range_normalized_sse": 6.550069061394356e-05,
+          "success": false,
+          "evaluations": 700,
+          "quadrature_coefficients": [
+            -1437.1889987083737,
+            419.28160115558995,
+            10.738552990324138
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.6787488234746,
+            "split_mhz": 0.06228517866591983,
+            "g": 0.02229299298728236,
+            "eta": 0.06347646922815141,
+            "P_model": -0.05345671885150938,
+            "log10_signal_scale_cgs": -2.24100429558829,
+            "log10_tune_capacitance_pf": 3.0690477255544297,
+            "phase_slope_rad_per_mhz": -0.104954243105008,
+            "phase_curvature_rad_per_mhz2": -0.21713138442895552,
+            "od_split_ratio": 1.9379797611013414,
+            "eta_od": 0.3386868869211072,
+            "od_fraction": 0.05819739980482857
+          },
+          "range_normalized_sse": 6.548739954140156e-05,
+          "success": true,
+          "evaluations": 33,
+          "quadrature_coefficients": [
+            -1425.3416834159555,
+            418.92656859236723,
+            10.644400647910686
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.67875027335953,
+            "split_mhz": 0.06228795981382189,
+            "g": 0.021931708398897565,
+            "eta": 0.06353781279191037,
+            "P_model": -0.05571397538721368,
+            "log10_signal_scale_cgs": -2.268364311693598,
+            "log10_tune_capacitance_pf": 3.0681072239370732,
+            "phase_slope_rad_per_mhz": -0.10512524163940118,
+            "phase_curvature_rad_per_mhz2": -0.2171201890132366,
+            "od_split_ratio": 1.786521965057029,
+            "eta_od": 0.2759057394524706,
+            "od_fraction": 0.04303777510257223
+          },
+          "range_normalized_sse": 6.548902047455717e-05,
+          "success": true,
+          "evaluations": 39,
+          "quadrature_coefficients": [
+            -1427.3456451727725,
+            418.9179628088157,
+            10.660569665096602
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.67875043165236,
+            "split_mhz": 0.06230964172404737,
+            "g": 0.021788854693307543,
+            "eta": 0.06344945076043298,
+            "P_model": -0.05687296774498063,
+            "log10_signal_scale_cgs": -2.290767283565083,
+            "log10_tune_capacitance_pf": 3.064741906171261,
+            "phase_slope_rad_per_mhz": -0.10568183477870285,
+            "phase_curvature_rad_per_mhz2": -0.21661477824233133,
+            "od_split_ratio": 1.5462934860930455,
+            "eta_od": 0.4816367349022606,
+            "od_fraction": 0.025302710190641314
+          },
+          "range_normalized_sse": 6.551565852692845e-05,
+          "success": true,
+          "evaluations": 237,
+          "quadrature_coefficients": [
+            -1437.093637455563,
+            419.32157871914825,
+            10.73765578294217
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.678752269697256,
+            "split_mhz": 0.062286178315535456,
+            "g": 0.022078325235838393,
+            "eta": 0.06352169516510198,
+            "P_model": -0.054632738471797615,
+            "log10_signal_scale_cgs": -2.254483759471907,
+            "log10_tune_capacitance_pf": 3.0688639428243087,
+            "phase_slope_rad_per_mhz": -0.10499234714363537,
+            "phase_curvature_rad_per_mhz2": -0.21716592990848493,
+            "od_split_ratio": 1.8552477514745283,
+            "eta_od": 0.3031630874313045,
+            "od_fraction": 0.05169137428928679
+          },
+          "range_normalized_sse": 6.54844603362521e-05,
+          "success": true,
+          "evaluations": 57,
+          "quadrature_coefficients": [
+            -1425.5405168534373,
+            418.8903480034078,
+            10.646125246873453
+          ]
+        }
+      ],
+      "scaled_profiled_jacobian_condition": 9012.490772800702,
+      "diagnostics": {
+        "rms_recorded_units": 6.639405815166355e-05,
+        "max_absolute_recorded_units": 0.0009237076676243336,
+        "lag1": 0.5172266038498118,
+        "wing_second_difference_sigma_proxy": 2.2916559834192193e-05,
+        "sigma_proxy_triplets": 267,
+        "sigma_proxy_assumption": "MAD(second differences)/(0.67449 sqrt(6)); iid Gaussian noise and locally smooth mean. Not a validated noise covariance."
+      },
+      "single_site_rms_recorded_units": 6.642960119359069e-05,
+      "rms_reduction_percent": 0.0535048250907888,
+      "P_status": "Common site spin-temperature lineshape estimate; no TE prerequisite; not independent truth",
+      "material_status": "Owner-confirmed butanol; fitted O-D weight is an effective signal fraction, not a measured chemical abundance"
+    },
+    {
+      "model_version": "butanol-two-site-full-circuit-v1",
+      "record_1based": 3,
+      "fixed_circuit": {
+        "reference_hz": 32700000,
+        "drive_v": 0.382652652,
+        "drive_resistance_ohm": 619,
+        "input_resistance_ohm": 50,
+        "damping_resistance_ohm": 10,
+        "coil_resistance_ohm": 0.35,
+        "coil_inductance_h": 3e-08,
+        "tune_capacitance_f": 4.999999999999999e-11,
+        "stray_capacitance_f": 0.0,
+        "cable_resistance_ohm_per_m": 3.43,
+        "cable_inductance_h_per_m": 2.133918035950722e-07,
+        "cable_conductance_s_per_m": 0,
+        "cable_capacitance_f_per_m": 8.535672143802888e-11,
+        "cable_length_m": 3.579999999999999,
+        "filling_factor": 0.098563235,
+        "susceptibility_scale_cgs": 1.0,
+        "detector_gain": 1.0,
+        "detector_phase_rad": 0.0,
+        "detector_phase_slope_rad_per_hz": 0,
+        "detector_phase_curvature_rad_per_hz2": 0,
+        "dc_offset_v": 0.0
+      },
+      "parameters": {
+        "center_mhz": 32.680492806697,
+        "split_mhz": 0.0623103342434802,
+        "g": 0.018687754952691482,
+        "eta": 0.06571503833595607,
+        "P_model": 0.37263928570033555,
+        "log10_signal_scale_cgs": -3.538977963050324,
+        "log10_tune_capacitance_pf": 2.772071712229627,
+        "phase_slope_rad_per_mhz": -0.1578882698024059,
+        "phase_curvature_rad_per_mhz2": -0.07403294797134485,
+        "od_split_ratio": 1.9168269778603584,
+        "eta_od": 0.38065718562301865,
+        "od_fraction": 0.2649335650467784
+      },
+      "quadrature_coefficients": [
+        -8657.37396473188,
+        -2262.646640545207,
+        63.66321132360736
+      ],
+      "n_free": 15,
+      "nonlinear_parameters": [
+        "center_mhz",
+        "split_mhz",
+        "g",
+        "eta",
+        "P_model",
+        "log10_signal_scale_cgs",
+        "log10_tune_capacitance_pf",
+        "phase_slope_rad_per_mhz",
+        "phase_curvature_rad_per_mhz2",
+        "od_split_ratio",
+        "eta_od",
+        "od_fraction"
+      ],
+      "profiled_readout_parameters": [
+        "a",
+        "b",
+        "d"
+      ],
+      "all_500_bins_fitted": true,
+      "success": true,
+      "near_bounds": {},
+      "active_bounds": {
+        "center_mhz": 0,
+        "split_mhz": 0,
+        "g": 0,
+        "eta": 0,
+        "P_model": 0,
+        "log10_signal_scale_cgs": 0,
+        "log10_tune_capacitance_pf": 0,
+        "phase_slope_rad_per_mhz": 0,
+        "phase_curvature_rad_per_mhz2": 0,
+        "od_split_ratio": 0,
+        "eta_od": 0,
+        "od_fraction": 0
+      },
+      "candidates": [
+        {
+          "parameters": {
+            "center_mhz": 32.68027868421418,
+            "split_mhz": 0.06244857786389262,
+            "g": 0.015687105516984313,
+            "eta": 0.0662256002099131,
+            "P_model": 0.37737026791874095,
+            "log10_signal_scale_cgs": -3.606323323249776,
+            "log10_tune_capacitance_pf": 2.780083717633522,
+            "phase_slope_rad_per_mhz": -0.15698140502722957,
+            "phase_curvature_rad_per_mhz2": -0.07723735980339885,
+            "od_split_ratio": 1.4927614936649198,
+            "eta_od": 0.1473385647336222,
+            "od_fraction": 0.11106655210258987
+          },
+          "range_normalized_sse": 5.497433277523679e-05,
+          "success": true,
+          "evaluations": 19,
+          "quadrature_coefficients": [
+            -8009.700667559599,
+            -1827.8534610297258,
+            59.1755339147262
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.680231825069306,
+            "split_mhz": 0.06240263146401201,
+            "g": 0.014016247437238382,
+            "eta": 0.06627813144426402,
+            "P_model": 0.37485750749245916,
+            "log10_signal_scale_cgs": -3.6124164638146095,
+            "log10_tune_capacitance_pf": 2.78170975512562,
+            "phase_slope_rad_per_mhz": -0.15672704412256033,
+            "phase_curvature_rad_per_mhz2": -0.07789982599300593,
+            "od_split_ratio": 1.3205736450374,
+            "eta_od": 0.11006842071515509,
+            "od_fraction": 0.09535181461959417
+          },
+          "range_normalized_sse": 5.52496691329416e-05,
+          "success": true,
+          "evaluations": 25,
+          "quadrature_coefficients": [
+            -7877.9073371455725,
+            -1743.824683529732,
+            58.254358438305644
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.680492806111026,
+            "split_mhz": 0.0623103339194477,
+            "g": 0.018687756634506097,
+            "eta": 0.0657150336697245,
+            "P_model": 0.3726392743987299,
+            "log10_signal_scale_cgs": -3.538977929010785,
+            "log10_tune_capacitance_pf": 2.77207172459127,
+            "phase_slope_rad_per_mhz": -0.15788827107595604,
+            "phase_curvature_rad_per_mhz2": -0.07403295312744129,
+            "od_split_ratio": 1.9168263730152413,
+            "eta_od": 0.3806573803569828,
+            "od_fraction": 0.2649336200141524
+          },
+          "range_normalized_sse": 5.412568122921138e-05,
+          "success": true,
+          "evaluations": 67,
+          "quadrature_coefficients": [
+            -8657.373312502421,
+            -2262.646132706736,
+            63.66320692339832
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.68023795359719,
+            "split_mhz": 0.06240754593637657,
+            "g": 0.014174118921934294,
+            "eta": 0.06626412529971047,
+            "P_model": 0.3751842737232145,
+            "log10_signal_scale_cgs": -3.610500818436309,
+            "log10_tune_capacitance_pf": 2.781217596595762,
+            "phase_slope_rad_per_mhz": -0.15680067332355707,
+            "phase_curvature_rad_per_mhz2": -0.07769767108985359,
+            "od_split_ratio": 1.3593615255706308,
+            "eta_od": 0.138573413229907,
+            "od_fraction": 0.10297808120553427
+          },
+          "range_normalized_sse": 5.521085859549228e-05,
+          "success": true,
+          "evaluations": 15,
+          "quadrature_coefficients": [
+            -7917.036307545674,
+            -1768.7192066877371,
+            58.52797514191798
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.680492806697,
+            "split_mhz": 0.0623103342434802,
+            "g": 0.018687754952691482,
+            "eta": 0.06571503833595607,
+            "P_model": 0.37263928570033555,
+            "log10_signal_scale_cgs": -3.538977963050324,
+            "log10_tune_capacitance_pf": 2.772071712229627,
+            "phase_slope_rad_per_mhz": -0.1578882698024059,
+            "phase_curvature_rad_per_mhz2": -0.07403294797134485,
+            "od_split_ratio": 1.9168269778603584,
+            "eta_od": 0.38065718562301865,
+            "od_fraction": 0.2649335650467784
+          },
+          "range_normalized_sse": 5.4125681227958295e-05,
+          "success": true,
+          "evaluations": 50,
+          "quadrature_coefficients": [
+            -8657.37396473188,
+            -2262.646640545207,
+            63.66321132360736
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.68049280881693,
+            "split_mhz": 0.062310337178010766,
+            "g": 0.018687839110168976,
+            "eta": 0.06571505332158867,
+            "P_model": 0.3726392986400131,
+            "log10_signal_scale_cgs": -3.538977623505863,
+            "log10_tune_capacitance_pf": 2.772071665869311,
+            "phase_slope_rad_per_mhz": -0.15788827271093964,
+            "phase_curvature_rad_per_mhz2": -0.07403292975244646,
+            "od_split_ratio": 1.9168312302121953,
+            "eta_od": 0.3806559198020097,
+            "od_fraction": 0.2649336330788809
+          },
+          "range_normalized_sse": 5.412568122883321e-05,
+          "success": true,
+          "evaluations": 72,
+          "quadrature_coefficients": [
+            -8657.377568415135,
+            -2262.649179702849,
+            63.66323607251661
+          ]
+        }
+      ],
+      "scaled_profiled_jacobian_condition": 22246.86353132101,
+      "diagnostics": {
+        "rms_recorded_units": 5.990732690513511e-05,
+        "max_absolute_recorded_units": 0.0008198299039598733,
+        "lag1": 0.3941618956513963,
+        "wing_second_difference_sigma_proxy": 2.054419439731457e-05,
+        "sigma_proxy_triplets": 267,
+        "sigma_proxy_assumption": "MAD(second differences)/(0.67449 sqrt(6)); iid Gaussian noise and locally smooth mean. Not a validated noise covariance."
+      },
+      "single_site_rms_recorded_units": 6.136255314191422e-05,
+      "rms_reduction_percent": 2.371521656560771,
+      "P_status": "Common site spin-temperature lineshape estimate; no TE prerequisite; not independent truth",
+      "material_status": "Owner-confirmed butanol; fitted O-D weight is an effective signal fraction, not a measured chemical abundance"
+    },
+    {
+      "model_version": "butanol-two-site-full-circuit-v1",
+      "record_1based": 4,
+      "fixed_circuit": {
+        "reference_hz": 32700000,
+        "drive_v": 0.382652652,
+        "drive_resistance_ohm": 619,
+        "input_resistance_ohm": 50,
+        "damping_resistance_ohm": 10,
+        "coil_resistance_ohm": 0.35,
+        "coil_inductance_h": 3e-08,
+        "tune_capacitance_f": 4.999999999999999e-11,
+        "stray_capacitance_f": 0.0,
+        "cable_resistance_ohm_per_m": 3.43,
+        "cable_inductance_h_per_m": 2.133918035950722e-07,
+        "cable_conductance_s_per_m": 0,
+        "cable_capacitance_f_per_m": 8.535672143802888e-11,
+        "cable_length_m": 3.579999999999999,
+        "filling_factor": 0.098563235,
+        "susceptibility_scale_cgs": 1.0,
+        "detector_gain": 1.0,
+        "detector_phase_rad": 0.0,
+        "detector_phase_slope_rad_per_hz": 0,
+        "detector_phase_curvature_rad_per_hz2": 0,
+        "dc_offset_v": 0.0
+      },
+      "parameters": {
+        "center_mhz": 32.67995208507048,
+        "split_mhz": 0.06237573602850603,
+        "g": 0.01153974765235115,
+        "eta": 0.06804614765030392,
+        "P_model": 0.4144163036366866,
+        "log10_signal_scale_cgs": -3.2651398325108785,
+        "log10_tune_capacitance_pf": 2.808305328200549,
+        "phase_slope_rad_per_mhz": -0.157182940917319,
+        "phase_curvature_rad_per_mhz2": -0.09148911843282859,
+        "od_split_ratio": 1.3472682761745964,
+        "eta_od": 0.0742008474958062,
+        "od_fraction": 0.07668292743743117
+      },
+      "quadrature_coefficients": [
+        -6322.824864697724,
+        -834.9746550467186,
+        47.30674944321163
+      ],
+      "n_free": 15,
+      "nonlinear_parameters": [
+        "center_mhz",
+        "split_mhz",
+        "g",
+        "eta",
+        "P_model",
+        "log10_signal_scale_cgs",
+        "log10_tune_capacitance_pf",
+        "phase_slope_rad_per_mhz",
+        "phase_curvature_rad_per_mhz2",
+        "od_split_ratio",
+        "eta_od",
+        "od_fraction"
+      ],
+      "profiled_readout_parameters": [
+        "a",
+        "b",
+        "d"
+      ],
+      "all_500_bins_fitted": true,
+      "success": true,
+      "near_bounds": {},
+      "active_bounds": {
+        "center_mhz": 0,
+        "split_mhz": 0,
+        "g": 0,
+        "eta": 0,
+        "P_model": 0,
+        "log10_signal_scale_cgs": 0,
+        "log10_tune_capacitance_pf": 0,
+        "phase_slope_rad_per_mhz": 0,
+        "phase_curvature_rad_per_mhz2": 0,
+        "od_split_ratio": 0,
+        "eta_od": 0,
+        "od_fraction": 0
+      },
+      "candidates": [
+        {
+          "parameters": {
+            "center_mhz": 32.67995208507048,
+            "split_mhz": 0.06237573602850603,
+            "g": 0.01153974765235115,
+            "eta": 0.06804614765030392,
+            "P_model": 0.4144163036366866,
+            "log10_signal_scale_cgs": -3.2651398325108785,
+            "log10_tune_capacitance_pf": 2.808305328200549,
+            "phase_slope_rad_per_mhz": -0.157182940917319,
+            "phase_curvature_rad_per_mhz2": -0.09148911843282859,
+            "od_split_ratio": 1.3472682761745964,
+            "eta_od": 0.0742008474958062,
+            "od_fraction": 0.07668292743743117
+          },
+          "range_normalized_sse": 5.484324448022802e-05,
+          "success": true,
+          "evaluations": 41,
+          "quadrature_coefficients": [
+            -6322.824864697724,
+            -834.9746550467186,
+            47.30674944321163
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.6800000489052,
+            "split_mhz": 0.06237383270881218,
+            "g": 0.014104725889106096,
+            "eta": 0.06787216741498181,
+            "P_model": 0.4135974894462011,
+            "log10_signal_scale_cgs": -3.240408874403637,
+            "log10_tune_capacitance_pf": 2.8071270897473686,
+            "phase_slope_rad_per_mhz": -0.15835931296447525,
+            "phase_curvature_rad_per_mhz2": -0.09123150401579005,
+            "od_split_ratio": 1.7595464910096656,
+            "eta_od": 0.29885686672304124,
+            "od_fraction": 0.12052620220120035
+          },
+          "range_normalized_sse": 5.6860655117837644e-05,
+          "success": true,
+          "evaluations": 217,
+          "quadrature_coefficients": [
+            -6469.449252018124,
+            -902.3068951985616,
+            48.370738697037496
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.68000874178065,
+            "split_mhz": 0.062375066595605544,
+            "g": 0.014450635167045903,
+            "eta": 0.06785678555834684,
+            "P_model": 0.41185897298269625,
+            "log10_signal_scale_cgs": -3.231297120959889,
+            "log10_tune_capacitance_pf": 2.8066080678820304,
+            "phase_slope_rad_per_mhz": -0.1586893289393444,
+            "phase_curvature_rad_per_mhz2": -0.0910351730940171,
+            "od_split_ratio": 1.8326855485969418,
+            "eta_od": 0.3246638508279475,
+            "od_fraction": 0.13774341792542652
+          },
+          "range_normalized_sse": 5.664597692233919e-05,
+          "success": true,
+          "evaluations": 21,
+          "quadrature_coefficients": [
+            -6523.110362339733,
+            -927.9231592687579,
+            48.759067232308325
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.68000874298477,
+            "split_mhz": 0.0623750658771409,
+            "g": 0.014450635296073752,
+            "eta": 0.06785678039752488,
+            "P_model": 0.4118590345990145,
+            "log10_signal_scale_cgs": -3.2312972684729235,
+            "log10_tune_capacitance_pf": 2.8066080489036622,
+            "phase_slope_rad_per_mhz": -0.15868933166709043,
+            "phase_curvature_rad_per_mhz2": -0.09103516240255516,
+            "od_split_ratio": 1.8326839703461322,
+            "eta_od": 0.3246643572506102,
+            "od_fraction": 0.13774356359590353
+          },
+          "range_normalized_sse": 5.664597692344705e-05,
+          "success": true,
+          "evaluations": 19,
+          "quadrature_coefficients": [
+            -6523.111637984997,
+            -927.9238213878057,
+            48.75907640845071
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.680008742763235,
+            "split_mhz": 0.06237506587370724,
+            "g": 0.014450633858270664,
+            "eta": 0.06785677914475306,
+            "P_model": 0.41185902774428573,
+            "log10_signal_scale_cgs": -3.2312972009586005,
+            "log10_tune_capacitance_pf": 2.806608038967208,
+            "phase_slope_rad_per_mhz": -0.15868933534445984,
+            "phase_curvature_rad_per_mhz2": -0.09103515759333014,
+            "od_split_ratio": 1.8326842326085246,
+            "eta_od": 0.32466497715514375,
+            "od_fraction": 0.13774381732444135
+          },
+          "range_normalized_sse": 5.6645976922220186e-05,
+          "success": true,
+          "evaluations": 20,
+          "quadrature_coefficients": [
+            -6523.112474818909,
+            -927.9242369547136,
+            48.759082447639344
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.67995208513501,
+            "split_mhz": 0.06237573595691661,
+            "g": 0.01153974207061477,
+            "eta": 0.0680461480699128,
+            "P_model": 0.41441630459308754,
+            "log10_signal_scale_cgs": -3.2651398451307436,
+            "log10_tune_capacitance_pf": 2.8083053247373773,
+            "phase_slope_rad_per_mhz": -0.15718294118801213,
+            "phase_curvature_rad_per_mhz2": -0.09148911640338175,
+            "od_split_ratio": 1.3472682717615616,
+            "eta_od": 0.07420077991380718,
+            "od_fraction": 0.07668296592142039
+          },
+          "range_normalized_sse": 5.484324448031238e-05,
+          "success": true,
+          "evaluations": 104,
+          "quadrature_coefficients": [
+            -6322.825067606234,
+            -834.9747600259225,
+            47.30675090404554
+          ]
+        }
+      ],
+      "scaled_profiled_jacobian_condition": 4077.589454532026,
+      "diagnostics": {
+        "rms_recorded_units": 5.9638486648284395e-05,
+        "max_absolute_recorded_units": 0.0008378018605100512,
+        "lag1": 0.37960926842650994,
+        "wing_second_difference_sigma_proxy": 1.9313857042598816e-05,
+        "sigma_proxy_triplets": 267,
+        "sigma_proxy_assumption": "MAD(second differences)/(0.67449 sqrt(6)); iid Gaussian noise and locally smooth mean. Not a validated noise covariance."
+      },
+      "single_site_rms_recorded_units": 6.235239721150375e-05,
+      "rms_reduction_percent": 4.35253604446606,
+      "P_status": "Common site spin-temperature lineshape estimate; no TE prerequisite; not independent truth",
+      "material_status": "Owner-confirmed butanol; fitted O-D weight is an effective signal fraction, not a measured chemical abundance"
+    },
+    {
+      "model_version": "butanol-two-site-full-circuit-v1",
+      "record_1based": 5,
+      "fixed_circuit": {
+        "reference_hz": 32700000,
+        "drive_v": 0.382652652,
+        "drive_resistance_ohm": 619,
+        "input_resistance_ohm": 50,
+        "damping_resistance_ohm": 10,
+        "coil_resistance_ohm": 0.35,
+        "coil_inductance_h": 3e-08,
+        "tune_capacitance_f": 4.999999999999999e-11,
+        "stray_capacitance_f": 0.0,
+        "cable_resistance_ohm_per_m": 3.43,
+        "cable_inductance_h_per_m": 2.133918035950722e-07,
+        "cable_conductance_s_per_m": 0,
+        "cable_capacitance_f_per_m": 8.535672143802888e-11,
+        "cable_length_m": 3.579999999999999,
+        "filling_factor": 0.098563235,
+        "susceptibility_scale_cgs": 1.0,
+        "detector_gain": 1.0,
+        "detector_phase_rad": 0.0,
+        "detector_phase_slope_rad_per_hz": 0,
+        "detector_phase_curvature_rad_per_hz2": 0,
+        "dc_offset_v": 0.0
+      },
+      "parameters": {
+        "center_mhz": 32.67898593891834,
+        "split_mhz": 0.06228637326541803,
+        "g": 0.014255672283442579,
+        "eta": 0.0675727549148899,
+        "P_model": -0.0809830354868395,
+        "log10_signal_scale_cgs": -2.4023367554880677,
+        "log10_tune_capacitance_pf": 3.068964378165285,
+        "phase_slope_rad_per_mhz": -0.10539816666969715,
+        "phase_curvature_rad_per_mhz2": -0.21652382648418467,
+        "od_split_ratio": 1.5160696503103817,
+        "eta_od": 0.14255600538623417,
+        "od_fraction": 0.07953102801529822
+      },
+      "quadrature_coefficients": [
+        -1419.4556917866776,
+        416.1365631496726,
+        10.587096079627031
+      ],
+      "n_free": 15,
+      "nonlinear_parameters": [
+        "center_mhz",
+        "split_mhz",
+        "g",
+        "eta",
+        "P_model",
+        "log10_signal_scale_cgs",
+        "log10_tune_capacitance_pf",
+        "phase_slope_rad_per_mhz",
+        "phase_curvature_rad_per_mhz2",
+        "od_split_ratio",
+        "eta_od",
+        "od_fraction"
+      ],
+      "profiled_readout_parameters": [
+        "a",
+        "b",
+        "d"
+      ],
+      "all_500_bins_fitted": true,
+      "success": true,
+      "near_bounds": {},
+      "active_bounds": {
+        "center_mhz": 0,
+        "split_mhz": 0,
+        "g": 0,
+        "eta": 0,
+        "P_model": 0,
+        "log10_signal_scale_cgs": 0,
+        "log10_tune_capacitance_pf": 0,
+        "phase_slope_rad_per_mhz": 0,
+        "phase_curvature_rad_per_mhz2": 0,
+        "od_split_ratio": 0,
+        "eta_od": 0,
+        "od_fraction": 0
+      },
+      "candidates": [
+        {
+          "parameters": {
+            "center_mhz": 32.67898593891834,
+            "split_mhz": 0.06228637326541803,
+            "g": 0.014255672283442579,
+            "eta": 0.0675727549148899,
+            "P_model": -0.0809830354868395,
+            "log10_signal_scale_cgs": -2.4023367554880677,
+            "log10_tune_capacitance_pf": 3.068964378165285,
+            "phase_slope_rad_per_mhz": -0.10539816666969715,
+            "phase_curvature_rad_per_mhz2": -0.21652382648418467,
+            "od_split_ratio": 1.5160696503103817,
+            "eta_od": 0.14255600538623417,
+            "od_fraction": 0.07953102801529822
+          },
+          "range_normalized_sse": 6.468305690798462e-05,
+          "success": true,
+          "evaluations": 27,
+          "quadrature_coefficients": [
+            -1419.4556917866776,
+            416.1365631496726,
+            10.587096079627031
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.67897303345335,
+            "split_mhz": 0.0623012357404385,
+            "g": 0.015741281793171233,
+            "eta": 0.06733725777401375,
+            "P_model": -0.07812204307992077,
+            "log10_signal_scale_cgs": -2.4222680170431,
+            "log10_tune_capacitance_pf": 3.054604237500967,
+            "phase_slope_rad_per_mhz": -0.10773283145050094,
+            "phase_curvature_rad_per_mhz2": -0.21378265697055543,
+            "od_split_ratio": 2.106149421782056,
+            "eta_od": 0.028847026081954292,
+            "od_fraction": 0.014376849239818577
+          },
+          "range_normalized_sse": 6.502910531696731e-05,
+          "success": true,
+          "evaluations": 55,
+          "quadrature_coefficients": [
+            -1465.3513545325607,
+            418.24122714151457,
+            10.948419138198233
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.67897647531472,
+            "split_mhz": 0.06226075529765807,
+            "g": 0.01505647777432395,
+            "eta": 0.06756511988908191,
+            "P_model": -0.07811389167273441,
+            "log10_signal_scale_cgs": -2.3683255234269973,
+            "log10_tune_capacitance_pf": 3.071211321419266,
+            "phase_slope_rad_per_mhz": -0.1049854098610623,
+            "phase_curvature_rad_per_mhz2": -0.21650167704198386,
+            "od_split_ratio": 1.7374069832331644,
+            "eta_od": 0.253158761981367,
+            "od_fraction": 0.10360962218509165
+          },
+          "range_normalized_sse": 6.47474606038061e-05,
+          "success": true,
+          "evaluations": 29,
+          "quadrature_coefficients": [
+            -1415.0065660390007,
+            416.20972162636593,
+            10.551021649940367
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.67897647105313,
+            "split_mhz": 0.06226074233751789,
+            "g": 0.015056299656318536,
+            "eta": 0.067565188388864,
+            "P_model": -0.07811369973506621,
+            "log10_signal_scale_cgs": -2.3683065182264382,
+            "log10_tune_capacitance_pf": 3.071219982617674,
+            "phase_slope_rad_per_mhz": -0.10498409555045296,
+            "phase_curvature_rad_per_mhz2": -0.21650360563111537,
+            "od_split_ratio": 1.7374085274309294,
+            "eta_od": 0.25316766142265806,
+            "od_fraction": 0.10363081702513184
+          },
+          "range_normalized_sse": 6.47474606202659e-05,
+          "success": true,
+          "evaluations": 29,
+          "quadrature_coefficients": [
+            -1414.978826819687,
+            416.208034872679,
+            10.550803833030727
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.67897490809049,
+            "split_mhz": 0.062285382552199994,
+            "g": 0.01582771298180574,
+            "eta": 0.06749219932371092,
+            "P_model": -0.07384108795688138,
+            "log10_signal_scale_cgs": -2.3528941350536963,
+            "log10_tune_capacitance_pf": 3.0648616975830594,
+            "phase_slope_rad_per_mhz": -0.10598836370982323,
+            "phase_curvature_rad_per_mhz2": -0.21527322911199098,
+            "od_split_ratio": 1.9677520330455307,
+            "eta_od": 0.3338056492719556,
+            "od_fraction": 0.08777848886754724
+          },
+          "range_normalized_sse": 6.494948854401316e-05,
+          "success": true,
+          "evaluations": 28,
+          "quadrature_coefficients": [
+            -1434.662981663856,
+            417.22189719469696,
+            10.705781154190674
+          ]
+        },
+        {
+          "parameters": {
+            "center_mhz": 32.67897647136312,
+            "split_mhz": 0.06226075700657642,
+            "g": 0.015056455732117592,
+            "eta": 0.06756511177352548,
+            "P_model": -0.07811403176024967,
+            "log10_signal_scale_cgs": -2.3683250546006924,
+            "log10_tune_capacitance_pf": 3.0712137962999617,
+            "phase_slope_rad_per_mhz": -0.10498506719571465,
+            "phase_curvature_rad_per_mhz2": -0.21650247220462493,
+            "od_split_ratio": 1.7374074070088543,
+            "eta_od": 0.25316522815422077,
+            "od_fraction": 0.10360680284882345
+          },
+          "range_normalized_sse": 6.474746060025588e-05,
+          "success": true,
+          "evaluations": 60,
+          "quadrature_coefficients": [
+            -1414.9973285995532,
+            416.20899978481225,
+            10.550949651218957
+          ]
+        }
+      ],
+      "scaled_profiled_jacobian_condition": 3854.6853858297895,
+      "diagnostics": {
+        "rms_recorded_units": 6.519963809534633e-05,
+        "max_absolute_recorded_units": 0.0009237964871395693,
+        "lag1": 0.5055860939786012,
+        "wing_second_difference_sigma_proxy": 2.2037250232764478e-05,
+        "sigma_proxy_triplets": 267,
+        "sigma_proxy_assumption": "MAD(second differences)/(0.67449 sqrt(6)); iid Gaussian noise and locally smooth mean. Not a validated noise covariance."
+      },
+      "single_site_rms_recorded_units": 6.537994286033714e-05,
+      "rms_reduction_percent": 0.27577993663281397,
+      "P_status": "Common site spin-temperature lineshape estimate; no TE prerequisite; not independent truth",
+      "material_status": "Owner-confirmed butanol; fitted O-D weight is an effective signal fraction, not a measured chemical abundance"
+    }
+  ],
+  "starts_per_scan": 6,
+  "seed": 42,
+  "quadrature_nphi": 128,
+  "unit": "recorded units",
+  "residual_sign": "recorded minus fitted",
+  "comparison_scope": "Same measured bins and electronics bounds; 15 versus 12 fitted unknowns; in-sample residual comparison, not held-out accuracy",
+  "code_sha256": {
+    "match_butanol.py": "47ccdb39cbf6d72d559bb0da26b81afe30ce23eaa5a2d52b516703aa6af955b9",
+    "material_lineshapes.py": "1c863ee2409b2912453f72a9bc4ec148be8aa8bd5eebb50d20d091e096a8055d",
+    "lineshape.py": "81b653731a06f166c965b39eb8787cd0abe57cb2784d124d77c9b797d4541521",
+    "circuit.py": "e9fe63030e1a6356f4f4ebf565d56bfc506ad06efedecfb68b652dbd14946368",
+    "experimental_data.py": "3294e6feb38ec867ce7e4fd1ba264b25154da21ddba4f51e5ff06eefd6554841",
+    "match_experimental_signals.py": "63cfa71a7f63d168e949b4cf4ba2345a13d1f0e07cb1da760480639a32c170b0"
+  },
+  "execution_note": "Independent scans executed concurrently with the same matcher, six starts and the documented seed + record - 1 schedule. Per-scan records assembled without changing any fit values.",
+  "assembled_scan_fit_sha256": {
+    "scan_1_fit.json": "1c7c14f138d52fbc18488994217e56c39661ac7abeda4a460233b47c84cec56a",
+    "scan_2_fit.json": "dcaad18dca11b983d7d9af7678b7d60c4fc4d928f57899abcd6536539a6c7ebc",
+    "scan_3_fit.json": "3bc932f1b7d689960b153dfceea9379b990eeb16eaf6e92ce177d10de7cdf41d",
+    "scan_4_fit.json": "c7c54fb652e2444ba1f6ef77fd30df53c6f36bb9beb45a15a3a9ca0d51e372e3",
+    "scan_5_fit.json": "96a398dc9e2c9a46c9ee4c888abb790dcc4e324c37b085d98605b8dc4269f4d9"
+  },
+  "publication": {
+    "report_sha256": "36d1059d12e271ffe1600cb8f5d03331db683f771a6068d45e58cbdb8c6d0e15",
+    "exporter_sha256": "102493e41dea4863ea49a37b547ef250bee06f7346361a6d1f8100baaa8692e4",
+    "theory_source": {
+      "source": "Owner-supplied butanol_theory directory, reviewed 2026-09-07",
+      "files": [
+        {
+          "name": "fit_multisite.py",
+          "sha256": "aa9438b42922703dcb22c0f5ce914325f6db9887f47eed1280697a813bdd389b",
+          "bytes": 40361
+        },
+        {
+          "name": "fit_multisite_test.py",
+          "sha256": "3f24e458f75b50c34e20570b5da5b3633616f10c254cf6d63105688132851432",
+          "bytes": 39767
+        }
+      ],
+      "adopted": "Two-site C-D/O-D sum, common polarization and physical Lorentzian width, separate splitting and EFG asymmetry, inverse-splitting relative normalization; weak-quadrupole intensity option",
+      "adaptation": "Existing normalized complex orientation integral and Gauss-Legendre azimuth average; full physical circuit retained. No dependence on the source directory at runtime.",
+      "not_adopted": "Synthetic example units/values as measurements, endpoint-inclusive uniform phi mean, empirical gain tilt, free frequency-axis rescaling, or cubic voltage baseline in the full-circuit butanol comparison."
+    },
+    "theory_source_sha256": "e073be6052afdd9f9d125140c1fe3c6c87c50ff48a47dc61bb3f8fb75655ae7f",
+    "numerical_convergence": [
+      {
+        "record_1based": 1,
+        "nphi_128_to_256_max_recorded_units": 4.985135149127018e-08,
+        "nphi_128_to_256_rms_recorded_units": 7.711550452868291e-09,
+        "single_site_32_to_128_max_recorded_units": 8.133440587698715e-10
+      },
+      {
+        "record_1based": 2,
+        "nphi_128_to_256_max_recorded_units": 9.78772618509538e-13,
+        "nphi_128_to_256_rms_recorded_units": 9.173606176431021e-14,
+        "single_site_32_to_128_max_recorded_units": 4.530065211838519e-11
+      },
+      {
+        "record_1based": 3,
+        "nphi_128_to_256_max_recorded_units": 1.3410158317128662e-07,
+        "nphi_128_to_256_rms_recorded_units": 2.1787975200577592e-08,
+        "single_site_32_to_128_max_recorded_units": 1.9378560978111636e-09
+      },
+      {
+        "record_1based": 4,
+        "nphi_128_to_256_max_recorded_units": 4.263256414560601e-14,
+        "nphi_128_to_256_rms_recorded_units": 2.5618982671915017e-15,
+        "single_site_32_to_128_max_recorded_units": 2.2623424911216716e-08
+      },
+      {
+        "record_1based": 5,
+        "nphi_128_to_256_max_recorded_units": 4.049915958148631e-11,
+        "nphi_128_to_256_rms_recorded_units": 4.8163097358805665e-12,
+        "single_site_32_to_128_max_recorded_units": 8.527640815714221e-09
+      }
+    ],
+    "figure_sha256": {
+      "butanol-comparison.svg": "b5414c1e2bb68d8900a9cc3a450b91b59ffaaadfe2a9f28013be4788bc72c4d3",
+      "butanol-sites.svg": "9be48b06b39f43db4f57a5087da25de6335965d7eaf3b7df73634942590722f5"
+    },
+    "validation_environment": {
+      "numpy": "1.26.4",
+      "scipy": "1.11.4",
+      "matplotlib": "3.6.3"
+    }
+  }
+}

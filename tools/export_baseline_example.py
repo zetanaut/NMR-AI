@@ -52,7 +52,7 @@ def load_example(folder):
         traces.append(data)
     selected = int(np.argsort([s["rms_recorded_units"] for s in summaries], kind="stable")[len(summaries)//2])
     metadata = {
-        "selection": "Only supplied trace; all 500 bins" if len(traces) == 1 else "Median whole-scan residual RMS among distinct traces (upper median for even counts)",
+        "selection": "Only trace in the supplied baseline file; all 500 bins" if len(traces) == 1 else "Median whole-scan residual RMS among distinct traces (upper median for even counts)",
         "selected_trace_number": selected+1,
         "source_sha256": report["source_sha256"],
         "nucleus": report["nucleus"], "reference_hz": report["reference_hz"],
@@ -140,7 +140,7 @@ def example_html(metadata):
     m = metadata["summaries"][metadata["selected_trace_number"]-1]
     rms_millionths = m["rms_recorded_units"]*1e6
     count = metadata["unique_rows"]
-    selection = ("The only supplied measured scan; no selection among traces was made." if count == 1 else
+    selection = ("The supplied baseline file contains one measured scan; no selection among traces was made." if count == 1 else
                  "This example is selected by the median whole-scan residual RMS, not the minimum.")
     trace_label = "The supplied deuteron baseline" if count == 1 else f'Trace {m["trace_number"]} · median residual RMS among {count} distinct sweeps'
     duplicates = metadata["source_rows"] - count

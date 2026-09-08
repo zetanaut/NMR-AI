@@ -1,0 +1,18 @@
+{
+  "source": "Owner-supplied butanol_theory directory, reviewed 2026-09-07",
+  "files": [
+    {
+      "name": "fit_multisite.py",
+      "sha256": "aa9438b42922703dcb22c0f5ce914325f6db9887f47eed1280697a813bdd389b",
+      "bytes": 40361
+    },
+    {
+      "name": "fit_multisite_test.py",
+      "sha256": "3f24e458f75b50c34e20570b5da5b3633616f10c254cf6d63105688132851432",
+      "bytes": 39767
+    }
+  ],
+  "adopted": "Two-site C-D/O-D sum, common polarization and physical Lorentzian width, separate splitting and EFG asymmetry, inverse-splitting relative normalization; weak-quadrupole intensity option",
+  "adaptation": "Existing normalized complex orientation integral and Gauss-Legendre azimuth average; full physical circuit retained. No dependence on the source directory at runtime.",
+  "not_adopted": "Synthetic example units/values as measurements, endpoint-inclusive uniform phi mean, empirical gain tilt, free frequency-axis rescaling, or cubic voltage baseline in the full-circuit butanol comparison."
+}

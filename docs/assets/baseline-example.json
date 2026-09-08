@@ -1,5 +1,5 @@
 {
-  "selection": "Only supplied trace; all 500 bins",
+  "selection": "Only trace in the supplied baseline file; all 500 bins",
   "selected_trace_number": 1,
   "source_sha256": "dac7c4598c6ec32250ab763ab1bf99e2a7aa7346de4e452ce00e80f0e2b1eb28",
   "nucleus": "deuteron",
@@ -13,7 +13,7 @@
     "circuit.py": "e9fe63030e1a6356f4f4ebf565d56bfc506ad06efedecfb68b652dbd14946368",
     "baseline_data.py": "8a08e4a290c9bd1da194fe0f6c9932cd5c814b29fbd497c9c774522aecf27ffb"
   },
-  "exporter_sha256": "60360ad152edb93fec0b9d397bea6dd8a16df9b06c6ce238eecde8b5b399346d",
+  "exporter_sha256": "dfbe9d188e77ebbfd3a9e91eacc2de667a35628ba61f46dddff59c67124b90af",
   "parameter_catalog_sha256": "b4521e8233abbbc7e68e138c455b6c9df40246ca1f3d99c8d5f447cf11eb4877",
   "fit_mode": "tuning-informed",
   "source_rows": 1,

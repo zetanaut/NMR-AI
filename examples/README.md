@@ -73,7 +73,7 @@ public student use. Its bytes are preserved exactly, including five UTF-8
 U+2028 line separators and blank lines. SHA-256:
 `cdbb7e3afa6531694a4b97848d295bbb5c7c03ef62d796b053e3b4e16fbaea5a`.
 
-There are five distinct timestamp-plus-500-sample records. They use the same
+The owner identified this material as butanol. There are five distinct timestamp-plus-500-sample records. They use the same
 confirmed frequency grid and n=1, 3.580 m cable half-wave setup as the baseline.
 Timestamps are not in increasing order; file order is retained. The file has
 no polarization or frequency columns. Polarization is determined by matching
@@ -82,6 +82,8 @@ the spin-1 lineshape; TE calibration is not needed for that extraction.
 Use the UTF-8-aware, audited reader:
 
 ```python
+import sys
+sys.path.insert(0, "tools")
 from experimental_data import load_signal_csv
 
 signals, audit = load_signal_csv("examples/Sample_RawSignal.csv")
@@ -99,3 +101,50 @@ See [Practical 01B](../docs/matching.html) and the
 [experimental matching record](../notes/experimental-matching.md) for full
 signal/circuit fits, noise diagnostics and a 500-bin generator that samples new
 simulator-known polarizations around fitted experimental configurations.
+
+[Example 2](../docs/butanol.html) uses the same five sweeps with the supplied
+C–D/O–D butanol theory and compares all residuals against the original single-site
+exercise. The original raw file and generator are unchanged. See the
+[material-model record](../notes/material-examples.md) for the theory conventions.
+
+The example generation run contains 2,000 events across 100 configurations.
+Its polarization labels are newly sampled simulator truth, not copies of the
+five experimental fit estimates. The current trainer and predictor accept only
+the separate 512-bin TE-area benchmark; a 500-bin workflow without a required
+TE channel remains to be implemented. See the [project status](../notes/project-status.md).
+
+## UVA-ND3 data
+
+The owner requested [uva-nd3.json](uva-nd3.json) as the third public teaching
+example. It contains records 1, 126, 251, 376 and 501, selected at equal intervals
+through the 501-record source acquisition before fitting. It preserves every
+parsed numeric value in each selected frequency, raw phase, recorded baseline,
+and reference-subtracted array. Original-file and record hashes, timestamps,
+reported sweep counts and export policy are included. Unrelated DAQ metadata
+and prior fitted polarization/calibration values are omitted.
+
+Excerpt SHA-256:
+`af5a4358bae2aa48cc3c7d16967816679ae15f9c863511c9c96daa729885e4bb`.
+
+Each record has **512 measured bins**, with slightly varying digitized spacing,
+from approximately 32.3000000 to 33.0999878 MHz. Preserve its stored frequencies;
+neither the 500-bin butanol mapping nor the 512-bin synthetic linspace applies.
+Hardware details and a conversion from recorded units to volts remain unresolved
+for this acquisition. Do not assign the butanol cable/tuning setup to it.
+
+```python
+import sys
+sys.path.insert(0, "tools")
+from uva_nd3_data import load_nd3
+
+data, audit = load_nd3("examples/uva-nd3.json")
+assert audit["source_record_numbers_1based"] == [1, 126, 251, 376, 501]
+```
+
+The reader verifies all arrays and exact `phase − baseline == basesub` in every
+bin. [Example 3](../docs/uva-nd3.html) fits the recorded reference-subtracted
+signals using an explicit conditional readout/background approximation. It does
+not use a stored polarization or TE calibration as an input or truth label.
+The complete [material-model record](../notes/material-examples.md) explains
+selection, provenance, assumptions and reproduction. No external checkout is
+needed to run it.

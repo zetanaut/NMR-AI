@@ -1,3 +1,16 @@
+# Session startup
+
+Read `notes/project-status.md` first for the handoff, verified local Python
+interpreter, quick checks, saved artifacts, and next implementation milestone.
+Use that interpreter for local work. Check the selected environment before
+reporting missing dependencies or installing packages; the default system
+Python does not have PyTorch, but the documented Conda environment does.
+Shell activation does not persist between tool calls: use the absolute
+interpreter path or redeclare the documented variable in each shell.
+Check `git status --short --branch` and preserve existing uncommitted work.
+Keep `notes/project-status.md` current when the environment, validation results,
+authoritative artifact paths, or next milestone changes; date the evidence.
+
 # Scientific-source requirements
 
 Before changing or describing the physics, electronics, simulator, preprocessing,
@@ -7,6 +20,7 @@ or performance claims, read these files completely:
 - `notes/baseline-fitting.md`
 - `notes/experimental-matching.md` when working on experimental signal matching
   or the new 500-bin experiment-anchored generator.
+- `notes/material-examples.md` when working on the butanol or UVA-ND3 demonstrations.
 
 The user's requirement is to follow the real physics and supplied theory, not
 invent plausible-looking substitutes. Keep paper statements, mathematical
@@ -46,6 +60,16 @@ estimates as independently known measurements. Keep experimental P fit estimates
 distinct from newly sampled simulator truth labels and from accuracy claims.
 The 500-bin lineshape generator has no TE-area input requirement and is separate
 from the existing 512-bin TE-area benchmark. Do not conflate their preprocessing.
+
+The owner identified Sample_RawSignal.csv as butanol. Preserve the original
+single-site example and compare the supplied C-D/O-D theory on the same data.
+The authorized UVA-ND3 excerpt in examples/uva-nd3.json is a different acquisition:
+retain its 512 measured frequency values, raw phase and recorded baseline.
+The 500-bin and n=1, 3.580 m setup statements above apply to the original baseline
+and butanol sweeps, not this ND3 acquisition. ND3 hardware calibration is unresolved;
+do not borrow the butanol setup or treat stored acquisition polarization as truth.
+Use only the public name UVA-ND3 data. The new material fit demos do not by
+themselves revise either generator or establish material-specific network accuracy.
 
 NMR-AI is a standalone educational repository. Do not add runtime dependencies,
 imports, links, workflow integrations, or automatic data/checkpoint transfers to

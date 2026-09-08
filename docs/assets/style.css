@@ -729,6 +729,63 @@ summary::marker {
   text-align: center
 }
 
+.model-path {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 30px 0
+}
+
+.model-path a {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px 18px;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--teal);
+  border-radius: 4px;
+  background: var(--white);
+  text-decoration: none
+}
+
+.model-path .eyebrow {
+  font-size: 9px;
+  letter-spacing: .8px;
+  margin: 0
+}
+
+.model-path strong {
+  font-size: 20px;
+  line-height: 1.3
+}
+
+.model-path span:not(.eyebrow),
+.model-path small {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted)
+}
+
+#model-comparison-table td:not(:first-child) {
+  font-family: var(--mono);
+  white-space: nowrap
+}
+
+.model-chart-scroll {
+  max-width: 100%;
+  overflow-x: auto
+}
+
+.model-chart-scroll>.chart {
+  min-width: 720px
+}
+
+@media (max-width: 680px) {
+  .model-path {
+    grid-template-columns: 1fr
+  }
+}
+
 .arch-input {
   border: 1px solid #c4d3c4;
   background: var(--mint);
