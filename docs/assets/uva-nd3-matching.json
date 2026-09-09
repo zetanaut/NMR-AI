@@ -3760,7 +3760,7 @@
   },
   "publication": {
     "report_sha256": "93d08079f2d897e0f8c4312a6639bd83abd12607a75775c4c72e0be53afffe0b",
-    "exporter_sha256": "4f670171f53c211fe2935d2ac1fefd287f1fc1243d67ac927b4c19c9c96b41e7",
+    "exporter_sha256": "005e85ea430025d194321ae80c39a771f6d85dac62745f1de8dd9ab607098aa6",
     "numerical_convergence": [
       {
         "source_record_1based": 1,

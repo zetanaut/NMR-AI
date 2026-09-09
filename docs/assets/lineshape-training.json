@@ -3699,5 +3699,5 @@
     "Recorded-unit raw/reference inputs without TE calibration; source-scan grouped synthetic holdout, not experimental accuracy",
     "Controlled sensitivity coverage; no measured material-specific accuracy"
   ],
-  "publication_exporter_sha256": "f46e92443d91d863de1a0628522448f2a316f81de8e20ce66d6d18a95bc5f4cf"
+  "publication_exporter_sha256": "21c1fca41d92736f78bfbdd677e4a2d4d794bcfa589c4d52e1e7e82a615bb8d6"
 }

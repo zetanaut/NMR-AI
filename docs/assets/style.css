@@ -11,6 +11,18 @@
   --mono: ui-monospace, SFMono-Regular, Consolas, monospace
 }
 
+.expected-result {
+  background: var(--mint);
+  border-left: 3px solid var(--teal);
+  padding: 14px 24px;
+  margin: 24px 0;
+  overflow-wrap: anywhere;
+}
+
+.expected-result h3 { margin-top: 0; }
+.expected-result pre { padding-right: 20px; }
+.step-next { padding: 16px 0; border-top: 1px solid var(--line); }
+
 * {
   box-sizing: border-box
 }

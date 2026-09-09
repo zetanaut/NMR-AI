@@ -22,6 +22,7 @@
 <aside class="sidebar">
   <p class="eyebrow">The learning path</p>
   <nav aria-label="Tutorial chapters">
+    <a href="walkthrough.html"><strong>Start: run the tutorial step by step →</strong></a>
     <a href="#start" class="active">Before you begin</a>
     <a href="baseline.html" class="subnav">Baseline-fitting practical ↗</a>
     <a href="matching.html" class="subnav">Experimental lineshape matching ↗</a>
@@ -45,7 +46,8 @@
   <h1>From a measured spectrum to a <em>trusted prediction.</em></h1>
   <p class="lede">Learn to extract vector polarization from nuclear magnetic resonance spectra. Build realistic training data, choose a capable but efficient network, and measure what its predictions get right—and where they fail.</p>
   <aside class="callout"><span class="eyebrow">Start from the measurement</span><h4>Build and fit the physical Q-curve.</h4><p>The generator propagates a complex spin-1 Pake susceptibility through the coil, tuning capacitor, lossy cable, finite source, and phase-sensitive detector. Begin with the <a href="baseline.html">baseline-fitting practical</a>: derive the circuit, fit measured sweeps, and inspect what the residuals reveal.</p></aside>
-  <div class="hero-actions"><a class="button" href="#generator">Start with the data <span aria-hidden="true">↓</span></a><a class="text-link" href="#setup">Set up your workspace →</a></div>
+  <div class="hero-actions"><a class="button" href="walkthrough.html">Run the tutorial step by step →</a><a class="text-link" href="#generator">Explore the physics and networks ↓</a></div>
+  <aside class="note"><h3>First run this, then check the result.</h3><p>The <a href="walkthrough.html">nine-step coding walkthrough</a> gives each command in order, the file or terminal output to inspect, and the next action. You will fit all three 500-bin raw signal examples with their baselines present, then generate data, train a network, and evaluate 400 held-out predictions. This page provides the accompanying theory and reference results.</p></aside>
   <div class="route" aria-label="Three phases and their deliverables">
     <a href="#generator"><span class="route-number">01</span><strong>Simulate</strong><span>A defensible dataset</span></a>
     <a href="#network"><span class="route-number">02</span><strong>Design</strong><span>An efficient estimator</span></a>

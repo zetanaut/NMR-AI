@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Run the NMR / AI tutorial in order: inspect 500-bin inputs, fit three raw examples with baselines, generate data, train a network, and check predictions.">
+  <meta name="theme-color" content="#173c3a">
+  <title>NMR / AI — Run the tutorial step by step</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <script src="assets/walkthrough.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to the walkthrough</a>
+<header class="topbar"><a class="brand" href="index.html">NMR <span>/</span> AI</a><span class="topbar-note">The guided coding tutorial</span><a class="repo-link" href="https://github.com/zetanaut/NMR-AI">View on GitHub ↗</a></header>
+<div class="layout">
+<aside class="sidebar">
+  <p class="eyebrow">Run → check → continue</p>
+  <nav aria-label="Walkthrough steps">
+    <a href="#start">Before you begin</a>
+    <a href="#setup">1 · Set up Python</a>
+    <a href="#inspect">2 · Inspect the inputs</a>
+    <a href="#baseline">3 · Fit the baseline</a>
+    <a href="#single-site">4 · Fit the single-site model</a>
+    <a href="#butanol">5 · Fit both butanol sites</a>
+    <a href="#nd3">6 · Fit UVA-ND3</a>
+    <a href="#generate">7 · Generate training data</a>
+    <a href="#train">8 · Train the network</a>
+    <a href="#predict">9 · Predict and evaluate</a>
+    <a href="#next">Continue learning</a>
+    <a href="index.html">Physics and network explanations</a>
+  </nav>
+  <p class="sidebar-footer">Every working spectrum has 500 bins.<br>All three signal fits include the baseline.</p>
+</aside>
+<main id="main">
+<section id="start" class="hero">
+  <p class="eyebrow">Start here · Nine runnable steps</p>
+  <h1>Run the code.<br><em>Check the result.</em></h1>
+  <p class="lede">Start with the supplied measurements and finish with a trained network and a prediction file. Follow the steps in order. Each step gives you the command, the result to inspect, and the next action.</p>
+  <div class="hero-actions"><a class="button" href="#setup">Begin with step 1 ↓</a><a class="text-link" href="index.html">Read the science alongside the code →</a></div>
+  <div class="table-wrap"><table><caption>What you will make</caption><thead><tr><th>Steps</th><th>Result</th></tr></thead><tbody>
+    <tr><td>1–3 · Setup and baseline</td><td>A checked environment, audited inputs, and a measured-baseline diagnostic plot.</td></tr>
+    <tr><td>4–6 · Three signal examples</td><td>Five complete raw-sweep fits per example, each with a circuit baseline and all 500 residuals.</td></tr>
+    <tr><td>7–9 · Generate, train, predict</td><td>2,000 new simulated spectra, a saved network, and 400 held-out predictions.</td></tr>
+  </tbody></table></div>
+  <aside class="note"><h3>Keep these two operations clear</h3><p><strong>The three experimental fitters take raw sweeps with their baselines present.</strong> They fit the physical circuit and material response together. The UVA-ND3 input already contains a baseline.</p><p>Later, the network uses two channels: the raw sweep and the sweep minus a corresponding reference. The generator supplies an independent simulated reference for that step. No TE calibration is required on this learning path. Experimental fit estimates and newly sampled simulator truth labels have different roles.</p></aside>
+  <p>Use a Bash terminal on Linux, macOS, or Windows with WSL. Run every block from the <code>NMR-AI/</code> repository directory. Commands go in your terminal; boxes labeled <strong>Expected result</strong> show what to look for. A CPU can run the tutorial; training uses CUDA when available. Fits may be quiet between completed records, and the two-site fit can take substantially longer than the other steps.</p>
+  <p>All your results go under <code>local-results/walkthrough/</code>. The fitters, generator, trainer, and predictor require fresh output paths. To repeat the whole exercise, replace that prefix consistently with <code>local-results/walkthrough-2/</code>. To continue an interrupted session, activate the environment again and start at the first unfinished step; completed files remain available.</p>
+</section>
+
+<section id="setup" class="chapter">
+  <div class="chapter-label"><span>01</span><p>Prepare the workspace</p></div>
+  <h2>Install the tutorial and check Python.</h2>
+  <p>Use Python 3.10 or newer. If you already have this repository, open a terminal in its directory and start at <code>python3 -m venv .venv</code>. If its environment is already installed, start at activation.</p>
+  <h3>Run</h3>
+<pre data-run="setup"><code>git clone https://github.com/zetanaut/NMR-AI.git
+cd NMR-AI
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt</code></pre>
+  <p>Check the selected interpreter and limit the small fitting calculations to one BLAS thread. Repeat the activation and exports whenever you open a new terminal.</p>
+<pre data-run="environment"><code>export OPENBLAS_NUM_THREADS=1
+export OMP_NUM_THREADS=1
+python -c "import sys, numpy, scipy, torch, matplotlib; print(sys.executable); print('Imports OK'); print('CUDA:', torch.cuda.is_available())"
+python -m unittest discover -s tests -v</code></pre>
+  <div class="expected-result"><h3>Expected result</h3><p>Your environment’s Python path, <code>Imports OK</code>, and either <code>CUDA: True</code> or <code>CUDA: False</code>. The tests finish with <code>OK</code>. If an import fails, reactivate this environment and rerun the requirements command using its <code>python</code>.</p></div>
+  <p class="step-next">Once the checks pass, <a href="#inspect">inspect the supplied measurements in step 2 →</a></p>
+</section>
+
+<section id="inspect" class="chapter">
+  <div class="chapter-label"><span>02</span><p>Read the supplied measurements</p></div>
+  <h2>Confirm the 500-bin inputs before fitting.</h2>
+  <p>The first two signal examples use the same five butanol sweeps. UVA-ND3 supplies five records from another acquisition, already resampled onto the working grid. This check uses the same audited readers as the fitting tools.</p>
+  <h3>Run</h3>
+<pre data-run="inputs"><code>python - &lt;&lt;'PY'
+import sys
+from pathlib import Path
+sys.path.insert(0, 'tools')
+from baseline_data import acquisition_grid, load_acquisition, load_baseline_csv
+from experimental_data import load_signal_csv
+from uva_nd3_data import load_nd3
+
+f = acquisition_grid(load_acquisition()) / 1e6
+baseline, audit = load_baseline_csv(Path('examples/deuteron-baseline.csv'))
+butanol, scan_audit = load_signal_csv(Path('examples/Sample_RawSignal.csv'))
+nd3, nd3_audit = load_nd3(Path('examples/uva-nd3.json'))
+print(f'Grid: {len(f)} bins, {f[0]:.7f} to {f[-1]:.7f} MHz')
+print('Baseline amplitudes:', baseline[:, 1:].shape)
+print('Decimal-spacing repairs:', audit['decimal_whitespace_repair_count'])
+print('Butanol amplitudes:', butanol[:, 1:].shape)
+print('Butanol record separators audited:', len(scan_audit['unicode_line_separators']))
+print('UVA-ND3 raw phase:', (len(nd3['records']), nd3_audit['bins']))
+print('UVA-ND3 source resampling: verified')
+PY
+python tools/preview_baseline.py \
+  --output local-results/walkthrough/baseline-input.svg</code></pre>
+  <div class="expected-result"><h3>Expected result</h3>
+<pre><code>Grid: 500 bins, 32.3000000 to 33.0628213 MHz
+Baseline amplitudes: (1, 500)
+Decimal-spacing repairs: 35
+Butanol amplitudes: (5, 500)
+Butanol record separators audited: 5
+UVA-ND3 raw phase: (5, 500)
+UVA-ND3 source resampling: verified
+Previewed all 500 samples; 35 documented decimal-spacing repairs; no fit</code></pre>
+  <p>Open <code>local-results/walkthrough/baseline-input.svg</code> in a browser. You should see all measured baseline points, before any fit. The adjacent JSON records the parsing repairs. The CSVs’ first column is a timestamp, so the shape checks above omit that column.</p></div>
+  <p>The grid is <code>32.3 + 0.0015287*j MHz</code> for <code>j = 0..499</code>. Its nominal center is 32.7 MHz; preserve the recorded offsets and spacing. UVA-ND3’s original arrays remain in the provenance archive, and its working reader verifies the documented derivation.</p>
+  <p class="step-next">With the inputs checked, <a href="#baseline">fit the baseline in step 3 →</a></p>
+</section>
+
+<section id="baseline" class="chapter">
+  <div class="chapter-label"><span>03</span><p>Learn the baseline diagnostic</p></div>
+  <h2>Fit the measured baseline and inspect its limits.</h2>
+  <p>This first fit uses the confirmed butanol setup: n = 1, a 3.580 m half-wavelength at 32.7 MHz, and the declared ±3% working trim. It is a baseline-only exercise with a constant detector-phase assumption.</p>
+  <h3>Run</h3>
+<pre data-run="baseline"><code>python tools/fit_baseline.py examples/deuteron-baseline.csv \
+  --starts 24 --output-dir local-results/walkthrough/baseline</code></pre>
+  <h3>Check the report</h3>
+<pre data-run="baseline-check"><code>python - &lt;&lt;'PY'
+import json
+from pathlib import Path
+report = json.loads(Path('local-results/walkthrough/baseline/fit_report.json').read_text())
+fit = report['fits'][0]
+print('Fitted bins:', report['fitted_bin_mask'])
+print('RMS:', format(fit['rmse_recorded_units'], '.6g'), 'recorded units')
+print('Near bounds:', fit['near_bounds'])
+PY</code></pre>
+  <div class="expected-result"><h3>Expected result</h3><p>The fit reports six unknowns and RMS approximately <code>0.000811955</code> recorded units. The report retains all 500 bins and flags the upper cable-trim and stray-capacitance bounds: +3% and 400 pF.</p><p>Open <code>local-results/walkthrough/baseline/baseline_fits.png</code>. The upper panel overlays data and fit; the lower panel is recorded minus fitted. The smooth residual and bound pressure are part of the result. They show that this constrained fit is a diagnostic, not an accepted hardware calibration.</p></div>
+  <p>In the next step the signal fitter estimates tuning and frequency-dependent detector phase jointly with the lineshape. It reads the raw baseline and signals again using its own declared electronics assumptions. The bound-limited capacitor estimate here is not passed to it as a measurement. <a href="baseline.html#example">Read the full baseline explanation.</a></p>
+  <p class="step-next">After inspecting the residual, <a href="#single-site">fit the first signal model in step 4 →</a></p>
+</section>
+
+<section id="single-site" class="chapter">
+  <div class="chapter-label"><span>04</span><p>Signal example 1 of 3</p></div>
+  <h2>Fit the raw butanol sweeps with one spin-1 site.</h2>
+  <p>Fit the circuit baseline and complex single-site response together. All five raw sweeps retain their baselines, all 500 bins enter each fit, and polarization comes from the spin-temperature branch shapes without TE calibration.</p>
+  <h3>Run</h3>
+<pre data-run="single-site"><code>python tools/match_experimental_signals.py \
+  --output-dir local-results/walkthrough/single-site --starts 6
+python tools/plot_fit.py --fit-dir local-results/walkthrough/single-site \
+  --output local-results/walkthrough/single-site-fits.png</code></pre>
+  <div class="expected-result"><h3>Expected result</h3><p>Five scan summaries, five <code>scan_N.csv</code> files, and <code>single-site/matching_report.json</code>. The selected P estimates are approximately <strong>35.08%, −5.74%, 36.85%, 41.07%, and −7.96%</strong> in file order, with RMS about 6.0–6.6 × 10⁻⁵ recorded units. These are conditional fit estimates.</p><p>Open <code>local-results/walkthrough/single-site-fits.png</code>. Each row shows raw data with the full fit and fitted circuit baseline, then the fitted nuclear response, then raw-minus-fit residuals. The plotting command checks the exact grid and the saved baseline/signal/residual identities. Read its convergence and bound flags as well as the overlay.</p></div>
+  <p>Keep <code>matching_report.json</code>: step 5 uses it to initialize the two-site comparison, and step 7 uses its complete fitted configurations to seed a separate single-site generator. <a href="matching.html#results">Compare the published single-site fits.</a></p>
+  <p class="step-next"><a href="#butanol">Use this report for the butanol comparison in step 5 →</a></p>
+</section>
+
+<section id="butanol" class="chapter">
+  <div class="chapter-label"><span>05</span><p>Signal example 2 of 3</p></div>
+  <h2>Fit C–D and O–D sites to the same raw sweeps.</h2>
+  <p>This step reads your step 4 report explicitly. It keeps the same five measurements and electronics bounds, and adds three parameters for the second deuteron environment. The baseline remains in the input.</p>
+  <h3>Run</h3>
+<pre data-run="butanol"><code>python tools/match_butanol.py \
+  --single-site-report local-results/walkthrough/single-site/matching_report.json \
+  --output-dir local-results/walkthrough/butanol --starts 6
+python tools/plot_fit.py --fit-dir local-results/walkthrough/butanol \
+  --output local-results/walkthrough/butanol-fits.png</code></pre>
+  <div class="expected-result"><h3>Expected result</h3><p>Five fits in <code>butanol/butanol_report.json</code> and five <code>scan_N.csv</code> files. The plot command prints each RMS reduction against your supplied single-site fit. The reference run gives reductions of approximately <strong>2.57%, 0.05%, 2.37%, 4.35%, and 0.28%</strong>. Its selected solutions converge; one alternative start reaches its evaluation limit.</p><p>Open <code>local-results/walkthrough/butanol-fits.png</code> beside <code>single-site-fits.png</code>. Compare the complete residuals, including the endpoints. The plotting axes adapt to each fit, so use the printed RMS values for a numerical comparison. A smaller in-sample residual with three extra parameters does not establish more accurate P.</p></div>
+  <p>Both sites share a spin-temperature polarization and a physical linewidth. The fitted O–D weight is an effective signal fraction. <a href="butanol.html#model">Read the material assumptions and saved comparison.</a> This fit comparison does not replace the single-site generator used later.</p>
+  <p class="step-next"><a href="#nd3">Apply the same raw-sweep workflow to UVA-ND3 in step 6 →</a></p>
+</section>
+
+<section id="nd3" class="chapter">
+  <div class="chapter-label"><span>06</span><p>Signal example 3 of 3</p></div>
+  <h2>Fit raw UVA-ND3 with its baseline present.</h2>
+  <p>The supplied <code>examples/uva-nd3.json</code> is ready to use and was checked in step 2. The fitter selects its raw <code>phase</code> channel and jointly fits the circuit baseline and ND3 spin-1 response. Its recorded reference and stored subtraction are provenance; they are not the fit input. No baseline needs to be added.</p>
+  <h3>Run</h3>
+<pre data-run="nd3"><code>python tools/match_uva_nd3.py \
+  --output-dir local-results/walkthrough/nd3 --starts 6
+python tools/plot_fit.py --fit-dir local-results/walkthrough/nd3 \
+  --output local-results/walkthrough/nd3-fits.png</code></pre>
+  <div class="expected-result"><h3>Expected result</h3><p>Five raw fits for source records <strong>1, 126, 251, 376, and 501</strong>, saved as <code>record_N.csv</code> plus <code>nd3/uva_nd3_report.json</code>. Approximate fitted P values are <strong>−25.91%, −34.80%, −34.19%, −33.57%, and −33.27%</strong>. Raw-fit RMS is about 1.63–3.00 × 10⁻⁵ recorded units.</p><p>Open <code>local-results/walkthrough/nd3-fits.png</code>. All five rows show the baseline-bearing raw input and all 500 residuals. The reference result for record 376 reaches the 2000 pF upper tuning-capacitance search bound. Keep that diagnostic visible.</p></div>
+  <p>ND3’s fixed circuit values are explicit tutorial assumptions; its hardware calibration is unresolved. Sharing the 500-bin grid does not assign the measured butanol hardware to ND3. <a href="uva-nd3.html#model">Read the ND3 model and provenance.</a></p>
+  <p class="step-next">You have now fitted all three examples with baselines. <a href="#generate">Return to the step 4 single-site report to generate learning data →</a></p>
+</section>
+
+<section id="generate" class="chapter">
+  <div class="chapter-label"><span>07</span><p>Make new labeled spectra</p></div>
+  <h2>Generate 2,000 spectra from the single-site fit configurations.</h2>
+  <p>The generator uses your step 4 report. Each new event has a newly sampled, simulator-known P in [−0.6, 0.6], a full baseline-containing sweep, and a corresponding independent simulated baseline reference. The two-site and ND3 fits remain material-comparison exercises.</p>
+  <h3>Run</h3>
+<pre data-run="generate"><code>python tools/generate_matched_data.py \
+  --matching-report local-results/walkthrough/single-site/matching_report.json \
+  --num-samples 2000 --num-configurations 100 --seed 42 \
+  --output local-results/walkthrough/lineshape-data.npz</code></pre>
+  <h3>Check what training will receive</h3>
+<pre data-run="dataset-check"><code>python - &lt;&lt;'PY'
+import sys
+import numpy as np
+sys.path.insert(0, 'tools')
+from learning_data import load_dataset
+path = 'local-results/walkthrough/lineshape-data.npz'
+data = load_dataset(path, training=True)
+with np.load(path, allow_pickle=False) as arrays:
+    print('Raw sweeps:', arrays['signals'].shape)
+    print('Reference baselines:', arrays['baselines'].shape)
+    print('TE calibration array present:', 'calibration' in arrays)
+print('Network features:', data['features'].shape)
+print('Feature mode:', data['contract']['feature_mode'])
+print('Units:', data['contract']['voltage_unit'])
+print('Measured source groups:', np.unique(data['identifiers']['source_scan_1based']).tolist())
+PY</code></pre>
+  <div class="expected-result"><h3>Expected result</h3>
+<pre><code>Raw sweeps: (2000, 500)
+Reference baselines: (2000, 500)
+TE calibration array present: False
+Network features: (2000, 2, 500)
+Feature mode: lineshape
+Units: recorded units
+Measured source groups: [1, 2, 3, 4, 5]</code></pre>
+  <p><code>lineshape-data.npz</code> stores the arrays. <code>lineshape-data.json</code> records the seed configurations, coverage settings, units, hashes, and limitations. The two feature channels are raw and raw-minus-reference; subtraction happens in float64 before conversion to float32. Clean simulator signals are diagnostic arrays and do not enter training.</p></div>
+  <p>The sampled ranges are controlled robustness choices. The white-noise setting uses a residual-based high-frequency proxy; it does not reproduce every correlated residual seen above. These five measured sources do not establish a population distribution. <a href="matching.html#coverage">Read the generator coverage and noise assumptions.</a></p>
+  <p class="step-next"><a href="#train">Pass this NPZ file to the trainer in step 8 →</a></p>
+</section>
+
+<section id="train" class="chapter">
+  <div class="chapter-label"><span>08</span><p>Fit a network using training rows only</p></div>
+  <h2>Train and save the validation-selected checkpoint.</h2>
+  <p>Use the multiscale CNN with physical summaries. The split keeps every simulated descendant of a measured source together. Training fits the scalers and ridge coefficients, validation selects the checkpoint, and <code>--defer-test</code> leaves test evaluation for step 9.</p>
+  <h3>Run</h3>
+<pre data-run="train"><code>python tools/train_model.py \
+  --data local-results/walkthrough/lineshape-data.npz \
+  --output-dir local-results/walkthrough/lineshape-model \
+  --architecture physics_multiscale --epochs 80 --patience 12 \
+  --learning-rate 0.0001 --seed 42 --batch-order-seed 42 --defer-test</code></pre>
+  <h3>Check the split and saved model</h3>
+<pre data-run="training-check"><code>python - &lt;&lt;'PY'
+import json
+from pathlib import Path
+folder = Path('local-results/walkthrough/lineshape-model')
+split = json.loads((folder / 'split.json').read_text())
+provenance = json.loads((folder / 'provenance.json').read_text())
+print('Grouped by:', split['group_column'])
+for name in ('train', 'validation', 'test'):
+    print(name, 'rows:', split['rows'][name], 'sources:', split['group_values'][name])
+print('Saved model:', (folder / 'model.pt').is_file())
+print('Best epoch:', provenance['best_epoch'])
+print('Test evaluated:', provenance['test_evaluated'])
+PY</code></pre>
+  <div class="expected-result"><h3>Expected result</h3><p>Epoch lines followed by <code>Saved best validation checkpoint</code>. The saved split is:</p>
+<pre><code>Grouped by: source_scan_1based
+train rows: 1200 sources: [3, 4, 5]
+validation rows: 400 sources: [2]
+test rows: 400 sources: [1]
+Saved model: True</code></pre>
+  <p><code>Test evaluated: False</code> confirms the test was deferred. The model folder contains <code>model.pt</code>, <code>scaler.npz</code>, <code>partition.npz</code>, <code>history.csv</code>, and JSON configuration/provenance. Keep these together; the predictor uses them. The published run selected epoch 6 and stopped after 18 epochs. The stopping epoch and final decimals can differ with library versions, device, and numerical fit differences.</p></div>
+  <p><a href="index.html#network">Read how the convolution filters and physical summaries work.</a> Splitting 2,000 events at random would mix descendants of the same measured seed across partitions; the saved source grouping avoids that leakage.</p>
+  <p class="step-next">Keep the selected checkpoint fixed and <a href="#predict">evaluate the saved test partition in step 9 →</a></p>
+</section>
+
+<section id="predict" class="chapter">
+  <div class="chapter-label"><span>09</span><p>Use the saved model and inspect its errors</p></div>
+  <h2>Make 400 predictions, then read the error report.</h2>
+  <p>The predictor reloads your saved model and preprocessing. Use the same NPZ and <code>--partition test</code> so it checks the dataset hash and evaluates only the held-out rows. Predictions and labels are fractional P: <code>0.05</code> means 5% polarization.</p>
+  <h3>Run</h3>
+<pre data-run="predict"><code>python tools/predict.py \
+  --model-dir local-results/walkthrough/lineshape-model \
+  --data local-results/walkthrough/lineshape-data.npz --partition test \
+  --output local-results/walkthrough/test-predictions.csv
+python tools/analyze_predictions.py local-results/walkthrough/test-predictions.csv \
+  --p0 0.05 --half-width 0.005</code></pre>
+  <div class="expected-result"><h3>Expected result</h3><p><code>Saved 400 predictions to local-results/walkthrough/test-predictions.csv</code>, then a JSON error report. The CSV contains <code>P_true</code>, <code>P_pred</code>, <code>P_residual</code>, and the configuration/source identifiers. Open it in a text editor or spreadsheet.</p><p>Read <code>pooled.n</code> first: it should be <strong>400</strong>. Then inspect <code>bias_percentage_points</code>, <code>width_percentage_points</code>, and <code>rmse_percentage_points</code>. The <a href="matching.html#lineshape-network">published source-held-out run</a> has an RMSE of about <strong>6.37 percentage points</strong>; this is a comparison value, not a pass threshold for your environment.</p><p>The <code>signed_p_band</code> section restricts truth to 4.5% ≤ P &lt; 5.5%. Check its count before interpreting a local error. A small band count gives limited evidence, even with many pooled events.</p></div>
+  <p>The residual convention is <code>P_true − P_pred</code>. Positive bias means underprediction, and <code>RMSE² = bias² + width²</code> with population SD. Percentage-point error is 100 times fractional-P error. These are simulated recovery errors for one held-out source group, not measured experimental polarization accuracy.</p>
+  <p class="step-next">You now have the three raw-fit examples, generated data, a saved network, and its held-out predictions. <a href="#next">Choose a follow-up exercise →</a></p>
+</section>
+
+<section id="next" class="chapter">
+  <h2>Continue from the result you just made.</h2>
+  <ul>
+    <li><strong>Understand the estimator:</strong> read the <a href="index.html#network">MLP, DNN, and CNN explanation</a> and explore the saved learning curves.</li>
+    <li><strong>Compare architectures:</strong> follow the <a href="https://github.com/zetanaut/NMR-AI#compare-an-mlp-dnn-and-cnn">controlled TE-area comparison commands</a>. That exercise generates its own 500-bin voltage/calibration dataset and trains three models on the same partition; its units and preprocessing are distinct from this recorded-unit path.</li>
+    <li><strong>Investigate residuals:</strong> use the <a href="matching.html#noise">noise and mismatch lesson</a> and the <a href="index.html#distribution-shift">coverage and inference-shift discussion</a> before treating a fitted overlay or synthetic error as experimental validation.</li>
+  </ul>
+  <details><summary>Resume, rerun, and view your own files</summary><div class="details-body"><p>On returning to an installed workspace, activate <code>.venv</code>, repeat the two thread exports from step 1, and continue with the next unfinished command. “Choose a fresh output directory” protects existing results: change the output prefix consistently for a new run. If a fit was interrupted, keep its partial files for inspection and use a new directory for that fit, updating downstream paths.</p><p>The local PNG/SVG figures show your actual run. This website displays the checked-in reference results. The <code>export_*.py</code> scripts are for rebuilding those public reference pages and include provenance checks; you do not need to run them to view your own fits.</p></div></details>
+  <p>The <a href="https://github.com/zetanaut/NMR-AI/blob/main/notes/physics-electronics-theory.md">physics record</a>, <a href="https://github.com/zetanaut/NMR-AI/blob/main/notes/experimental-matching.md">matching record</a>, and <a href="https://github.com/zetanaut/NMR-AI/blob/main/notes/material-examples.md">material record</a> document the sources, units, fit assumptions, and unresolved experimental conventions.</p>
+</section>
+<footer><a class="brand" href="index.html">NMR <span>/</span> AI</a><p>500 bins · three raw-fit examples · one complete learning workflow</p></footer>
+<p id="copy-status" class="sr-only" aria-live="polite"></p>
+</main></div>
+</body>
+</html>

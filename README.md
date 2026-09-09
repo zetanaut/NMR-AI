@@ -2,242 +2,155 @@
 
 A standalone student tutorial on extracting vector polarization from continuous-wave NMR spectra.
 
-**[Read the tutorial](https://zetanaut.github.io/NMR-AI/) · [Baseline practical](https://zetanaut.github.io/NMR-AI/baseline.html) · [Experimental lineshape matching](https://zetanaut.github.io/NMR-AI/matching.html)**
+**[Start the step-by-step tutorial](https://zetanaut.github.io/NMR-AI/walkthrough.html)** · [Physics and network explanations](https://zetanaut.github.io/NMR-AI/)
 
-The three phases are a physically grounded training-data generator, a progression from MLP to DNN to CNN on the same data, and validation with bias, residual width, and relative errors at a stated polarization scale.
+Follow the nine steps below in order. The linked walkthrough supplies a **Run → Expected result → Next step** sequence, copy buttons, input checks, and explanations of every output. It starts with the supplied measurements and finishes with a saved network and held-out predictions. No other repository or pretrained checkpoint is required.
 
-The generators couple complex Dulya/Pake spin-1 susceptibility to a passive Q-meter circuit: coil and stray capacitance, RLGC transmission line, one tuning capacitor, finite-source/input loading, and a phase-sensitive detector. Baseline and signal are computed from the same circuit at χ=0 and χ(P). The experimental-matching workflow extracts polarization from the spin-1 lineshape without TE calibration. The 500-bin learning benchmark separately uses TE-area features.
+All three signal examples fit **raw sweeps with the baseline present**, using the physical circuit and the appropriate spin-1 response together. Every working spectrum, generated example, and network uses the exact **500-bin** grid:
 
-The scientific source is [Seay, Fernando, and Keller, arXiv:2603.10146v5](https://arxiv.org/abs/2603.10146v5). Read the [detailed physics/electronics notes](notes/physics-electronics-theory.md) and [baseline-fitting record](notes/baseline-fitting.md) for derivations, conventions, component assumptions, and measured-fit diagnostics.
-
-## The 500-bin acquisition
-
-All generated training examples and learning models use the confirmed grid:
-
-```
+```text
 f_j = 32.3 + 0.0015287*j MHz, j = 0..499
-500 samples · first 32.3000000 MHz · last 33.0628213 MHz
+first = 32.3000000 MHz; last = 33.0628213 MHz
 ```
 
-The nominal deuteron center is 32.7 MHz. Preserve the offsets and spacing in
-[deuteron-acquisition.json](configs/deuteron-acquisition.json); do not recenter
-a symmetric linspace. Models save and validate the grid and preprocessing.
-
-| Exercise | Inputs | Independent split unit |
-| --- | --- | --- |
-| Experiment-anchored lineshape regression | Raw and reference-subtracted recorded units; no TE calibration required | Measured source scan and all its simulated descendants |
-| Controlled TE-area benchmark | Raw voltage and TE-calibrated, reference-subtracted area contributions | Simulated circuit configuration |
-
-Both exercises have 500 bins. Their units and calibration assumptions are explicit.
+The nominal deuteron center is 32.7 MHz. Preserve the offsets and spacing in [the acquisition contract](configs/deuteron-acquisition.json). UVA-ND3's working arrays are reproducibly resampled from its preserved source archive; its hardware calibration remains unresolved.
 
 ## Set up
 
-Use Python 3.10 or newer, from `NMR-AI/`:
+**Step 1 — Install and check the environment.** Use Python 3.10 or newer and a Bash terminal on Linux, macOS, or Windows with WSL. If the repository already exists, open its directory and start with environment creation or activation.
 
 ```bash
+git clone https://github.com/zetanaut/NMR-AI.git
+cd NMR-AI
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
+export OPENBLAS_NUM_THREADS=1
+export OMP_NUM_THREADS=1
+python -c "import sys, numpy, scipy, torch, matplotlib; print(sys.executable); print('Imports OK'); print('CUDA:', torch.cuda.is_available())"
 python -m unittest discover -s tests -v
 ```
 
-On Windows activate with `.venv\Scripts\activate`. A CPU supports all labs; training automatically uses CUDA when available. No other repository, research data checkout, or pretrained model is required.
+**Check:** imports succeed and the tests end with `OK`. Either CUDA value is valid; CPU execution is supported. If an import fails, check the printed interpreter and activate the environment before installing requirements again.
 
-The full test suite imports PyTorch. If that import fails, check that the selected
-Python environment contains the packages in `requirements.txt` before rerunning.
+Run all subsequent commands from `NMR-AI/`. Repeat activation and the two thread exports in each new terminal. All outputs below use `local-results/walkthrough/`. Use a fresh prefix consistently for a second run; existing fit, dataset, model, and prediction paths are protected.
 
-## Fit a measured deuteron baseline
+## Inspect the inputs and fit the baseline
 
-The public [deuteron-baseline.csv](examples/deuteron-baseline.csv) is the owner's
-measured test example: one timestamp plus 500 amplitudes, with nominal center
-**32.7 MHz**. This baseline and the five butanol sweeps use the confirmed mapping:
-`f_j = 32.3 + 0.0015287*j MHz`, j=0…499; last sample 33.0628213 MHz.
-See [the acquisition contract](configs/deuteron-acquisition.json) and
-[data README](examples/README.md). The loader preserves all samples and explicitly
-repairs 35 decimal-spacing artifacts in memory.
+**Step 2 — Preview the measured input.**
 
-Reproduce the [measured fit](https://zetanaut.github.io/NMR-AI/baseline.html#example):
+```bash
+python tools/preview_baseline.py \
+  --output local-results/walkthrough/baseline-input.svg
+```
+
+**Check:** `Previewed all 500 samples; 35 documented decimal-spacing repairs; no fit`. Open the SVG in your browser. [Step 2 also provides the code to audit both signal datasets](https://zetanaut.github.io/NMR-AI/walkthrough.html#inspect): baseline `(1,500)`, butanol `(5,500)`, and raw UVA-ND3 `(5,500)`.
+
+**Step 3 — Fit the baseline.**
 
 ```bash
 python tools/fit_baseline.py examples/deuteron-baseline.csv \
-  --starts 24 --output-dir local-results/deuteron-tuned-baseline-fit
-python tools/export_baseline_example.py --fit-dir local-results/deuteron-tuned-baseline-fit
+  --starts 24 --output-dir local-results/walkthrough/baseline
 ```
 
-The default fit now enforces the owner's **n = 1** branch and **3.580 m cable
-half-wavelength at 32.7 MHz**, using consistent RLGC propagation (velocity factor
-0.7809803). The [setup preset](configs/deuteron-baseline-setup.json) permits only
-a provisional ±3% trim, an explicit working bound rather than a measured uncertainty.
-
-The constrained result reaches the upper trim and stray-capacitance limits.
-RMS is approximately 8.1195 × 10⁻⁴ recorded units (0.3296% of peak-to-peak range),
-with strongly correlated residuals. All 500 bins remain visible. This is a
-**diagnostic fit, not an accepted hardware calibration**: additional capacitor,
-coil, cable-loss and detector records are needed. The tutorial explains the
-warnings and lists every fixed, fitted, profiled and derived quantity.
-
-Both fitting entry points use the same setup-driven fitter. To add independent
-measurements for this setup, copy and refine `deuteron-baseline-setup.json`.
-For another setup, complete `configs/baseline-setup.template.json`:
-
-```bash
-python tools/fit_tuned_baseline.py examples/deuteron-baseline.csv \
-  --setup my-known-setup.json \
-  --starts 12 --output-dir local-results/tuning-informed-baseline-fit
-```
-
-Known quantities are fixed; only declared unknowns vary within supported bounds.
-A known cable half-wave multiple uses length = n*pi/beta + delta_length at the
-recorded tuning frequency. Gaussian constraints require a data-noise scale.
-Missing hardware records are not filled with invented measurements.
-
-`--acquisition` selects another documented contract; alternative start, step,
-and frequency-source overrides must be supplied together. Fit reports save the
-acquisition hash, parsing record, fixed/fitted values, numerical bounds,
-starting-point candidates, residual statistics, and reconstruction information.
-
-The owner authorized this baseline CSV, the five butanol signal sweeps in
-`examples/Sample_RawSignal.csv`, and the new UVA-ND3 teaching excerpt for publication.
-Other measurements and full fit products stay local. Both learning exercises use the confirmed 500-bin grid; their input units and
-calibration assumptions are saved separately.
+**Check:** open `local-results/walkthrough/baseline/baseline_fits.png` and `fit_report.json` in that folder. The reference RMS is about `0.000811955` recorded units. The constrained fit reaches the +3% cable-trim and 400 pF stray-capacitance bounds. This is a diagnostic, not an accepted hardware calibration. [Step 3 explains the residual and provides the report-checking code](https://zetanaut.github.io/NMR-AI/walkthrough.html#baseline).
 
 ## Three experimental examples
 
-Experimental lineshapes depend on the material and setup. These examples cover
-two materials and two acquisitions; the first two deliberately use the same data.
+The first two examples deliberately use the same five butanol sweeps. All three fit the raw input with its baseline present; plotting the fitted nuclear response afterward does not change the input.
 
-| Example | Data and purpose |
-| --- | --- |
-| [1. Single-site starting model](docs/matching.html) | Preserve the original full-circuit exercise and its 500-bin generator |
-| [2. Butanol: C–D and O–D](docs/butanol.html) | Apply the supplied two-site theory to the same five butanol sweeps and compare every full residual |
-| [3. UVA-ND3 data](docs/uva-nd3.html) | Jointly fit five raw UVA-ND3 sweeps and their circuit baselines using the ND3 spin-1 model on the exact 500-bin grid |
-
-Every working example uses `32.3 + 0.0015287*j MHz`, j=0..499. UVA-ND3
-includes documented interpolation from its preserved source measurements; its
-working data, fits and figures all contain 500 bins.
-
-The butanol comparison adds three fit parameters while retaining the original
-electronics assumptions. The UVA-ND3 example uses its raw phase with the baseline
-present and jointly fits the ND3 spin-1 response and physical circuit. Its fixed
-circuit constants are explicit tutorial assumptions; hardware calibration remains
-unresolved. The recorded reference and its subtraction are provenance only.
-Neither fit comparison is a measured polarization-accuracy claim. See the
-[material-model and provenance record](notes/material-examples.md).
-
-```bash
-OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python tools/match_butanol.py \
-  --output-dir local-results/butanol-matching --starts 6
-python tools/prepare_uva_nd3.py
-OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python tools/match_uva_nd3.py \
-  --output-dir local-results/uva-nd3-raw-matching-500-v3 --starts 6
-python tools/export_material_examples.py \
-  --butanol-fit-dir local-results/butanol-matching \
-  --nd3-fit-dir local-results/uva-nd3-raw-matching-500-v3
-```
-
-All inputs needed for these commands are included here. Use fresh output paths.
-The new material demonstrations do not change the existing generators or networks.
-
-## Example 1: match the supplied spin-1 signals and make training data
-
-[Sample_RawSignal.csv](examples/Sample_RawSignal.csv) contains five experimental
-spin-1 sweeps, now identified by the owner as butanol, published byte-for-byte with permission. The grid and n=1 cable
-setup are confirmed to match the baseline example. The reader audits Unicode
-line separators and blank lines without changing samples or record order.
+**Step 4 — Example 1: fit the single-site starting model.**
 
 ```bash
 python tools/match_experimental_signals.py \
-  --output-dir local-results/experimental-matching --starts 6
-python tools/generate_matched_data.py \
-  --matching-report local-results/experimental-matching/matching_report.json \
-  --num-samples 2000 --num-configurations 100 --seed 42 \
-  --output local-results/experiment-anchored-500-v2.npz
-python tools/export_signal_matching.py \
-  --fit-dir local-results/experimental-matching \
-  --dataset local-results/experiment-anchored-500-v2.npz
+  --output-dir local-results/walkthrough/single-site --starts 6
+python tools/plot_fit.py --fit-dir local-results/walkthrough/single-site \
+  --output local-results/walkthrough/single-site-fits.png
 ```
 
-This fits the tuning capacitor, frequency-dependent detector phase, readout and
-complex Pake lineshape against all 500 samples of every scan. Polarizations are
-determined from the intrinsic branch shapes/area ratio; no TE normalization is
-needed. The selected P estimates are approximately 35.08%, −5.74%, 36.85%,
-41.07%, and −7.96% in file order, with residual RMS about 6.0–6.6 × 10⁻⁵
-recorded units. These are fit results, not calibrated uncertainty claims.
+**Check:** five scan summaries and five rows in `single-site-fits.png`, showing raw data, full fit, fitted circuit baseline, fitted signal, and raw-minus-fit residuals. Approximate fitted P values are 35.08%, −5.74%, 36.85%, 41.07%, and −7.96%. Keep `single-site/matching_report.json` for steps 5 and 7. [Inspect the expected outputs](https://zetanaut.github.io/NMR-AI/walkthrough.html#single-site).
 
-The generator draws **new simulator-known P labels**, with explicit robustness
-excursions around the complete fitted seed configurations. Its first noise
-model uses a high-frequency noise-scale proxy; correlated residual structure
-and endpoint artifacts remain visible and need separate modeling. A supplied
-500×500 covariance can replace the white-Gaussian reference. Five scans do not
-define a measured population distribution or a large held-out test set.
+**Step 5 — Example 2: fit both butanol sites using your step 4 report.**
 
-The [new practical](https://zetanaut.github.io/NMR-AI/matching.html) shows all
-fits, residuals, physical parameter meanings, and a generated example. The
-[matching record](notes/experimental-matching.md) documents every step.
-The trainer and predictor accept this 500-bin recorded-unit dataset directly.
-They use raw and reference-subtracted channels without a required `calibration`
-array, subtracting in float64 before float32 conversion. Clean simulator arrays
-remain diagnostic products, never model inputs.
+```bash
+python tools/match_butanol.py \
+  --single-site-report local-results/walkthrough/single-site/matching_report.json \
+  --output-dir local-results/walkthrough/butanol --starts 6
+python tools/plot_fit.py --fit-dir local-results/walkthrough/butanol \
+  --output local-results/walkthrough/butanol-fits.png
+```
+
+**Check:** five RMS comparisons and `butanol-fits.png`. The reference two-site fit reduces RMS by about 2.57%, 0.05%, 2.37%, 4.35%, and 0.28% in scan order. It adds three parameters, so lower in-sample RMS alone does not establish more accurate P. [Compare the results and material assumptions](https://zetanaut.github.io/NMR-AI/walkthrough.html#butanol). This fit can take substantially longer than the single-site example.
+
+**Step 6 — Example 3: fit raw UVA-ND3 with its existing baseline.**
+
+```bash
+python tools/match_uva_nd3.py \
+  --output-dir local-results/walkthrough/nd3 --starts 6
+python tools/plot_fit.py --fit-dir local-results/walkthrough/nd3 \
+  --output local-results/walkthrough/nd3-fits.png
+```
+
+**Check:** five `record_N.csv` files, `nd3/uva_nd3_report.json`, and `nd3-fits.png`. The fitter selects raw `phase`; the recorded reference and stored subtraction are provenance. No baseline is added. The reference record 376 reaches the 2000 pF tuning-capacitance bound. [Inspect the five fits and their limitations](https://zetanaut.github.io/NMR-AI/walkthrough.html#nd3).
+
+The butanol and UVA-ND3 material demonstrations do not change the single-site generator or establish material-specific network accuracy. See the [material record](notes/material-examples.md), [matching record](notes/experimental-matching.md), and [baseline record](notes/baseline-fitting.md) for sources and conventions.
+
+## Generate experiment-anchored learning data
+
+**Step 7 — Generate new spectra from the step 4 single-site configurations.**
+
+```bash
+python tools/generate_matched_data.py \
+  --matching-report local-results/walkthrough/single-site/matching_report.json \
+  --num-samples 2000 --num-configurations 100 --seed 42 \
+  --output local-results/walkthrough/lineshape-data.npz
+```
+
+**Check:** the command reports 2,000 new sweeps with 500 bins. [Run the dataset check in step 7](https://zetanaut.github.io/NMR-AI/walkthrough.html#generate): raw and reference arrays have shape `(2000,500)`, network features have shape `(2000,2,500)`, and there is no required TE calibration array. The adjacent JSON documents coverage settings, units, seed configurations, and limitations.
+
+P labels are newly sampled simulator truth in [−0.6,0.6], not the fitted experimental estimates. Raw sweeps contain the baseline; each simulated configuration has an independent noisy reference. Controlled parameter excursions and a high-frequency noise proxy do not establish measured parameter distributions or full noise covariance.
 
 ## Train on experiment-anchored lineshapes
 
+**Step 8 — Train with validation selection and defer the test.**
+
 ```bash
-python tools/train_model.py --data local-results/experiment-anchored-500-v2.npz \
-  --output-dir local-results/my-lineshape-model --architecture physics_multiscale \
-  --epochs 80 --patience 12 --learning-rate 0.0001 --batch-order-seed 42
-python tools/predict.py --model-dir local-results/my-lineshape-model \
-  --data local-results/experiment-anchored-500-v2.npz --partition test \
-  --output local-results/my-lineshape-test.csv
+python tools/train_model.py \
+  --data local-results/walkthrough/lineshape-data.npz \
+  --output-dir local-results/walkthrough/lineshape-model \
+  --architecture physics_multiscale --epochs 80 --patience 12 \
+  --learning-rate 0.0001 --seed 42 --batch-order-seed 42 --defer-test
 ```
 
-All scalers and ridge coefficients use training rows only. Splits group by
-`source_scan_1based`, so all descendants of a measured seed stay together.
-Five sources give three training, one validation and one test source. The
-[matching practical](docs/matching.html) includes the saved synthetic evaluation.
-Reproduce its declared run with the commands below, using a matching fresh
-`--runs-dir` for both commands when needed.
+**Check:** the trainer reports a saved checkpoint and `test_evaluated=False`. [Inspect `split.json` using the step 8 check](https://zetanaut.github.io/NMR-AI/walkthrough.html#train): sources 3/4/5 give 1,200 training events, source 2 gives 400 validation events, and source 1 gives 400 test events. Keep `model.pt`, `scaler.npz`, `partition.npz`, and the saved configuration together.
+
+The two channels are raw and reference-subtracted recorded units. Subtraction occurs in float64 before conversion to float32. Scalers and ridge coefficients use training rows only; clean simulator arrays are excluded from inputs. All descendants of a measured source stay in the same partition.
+
+**Step 9 — Predict the held-out rows and analyze the errors.**
 
 ```bash
-python tools/run_model_comparison.py --protocol configs/lineshape-training.json
-python tools/export_lineshape_training.py
-```
-
-A held-out synthetic source group is not an independent experimental accuracy test.
-
-For measured inference, provide NPZ arrays `signals` and corresponding `baselines`
-of shape `(events,500)`, the exact `frequency_mhz`, and scalar strings
-`feature_mode="lineshape"` and `voltage_unit="recorded units"`. Ordinary prediction
-needs neither P labels nor simulator/group identifiers. The saved contract checks
-units and preprocessing and predictions are fractional P.
-
-## Run the 500-bin learning labs
-
-```bash
-python tools/generate_data.py --num-samples 2000 --num-configurations 100 \
-  --output local-results/smoke.npz
-python tools/train_model.py --data local-results/smoke.npz \
-  --output-dir local-results/smoke_model --epochs 20 --patience 8 \
-  --learning-rate 0.0001
-python tools/analyze_predictions.py local-results/smoke_model/test_predictions.csv \
+python tools/predict.py \
+  --model-dir local-results/walkthrough/lineshape-model \
+  --data local-results/walkthrough/lineshape-data.npz --partition test \
+  --output local-results/walkthrough/test-predictions.csv
+python tools/analyze_predictions.py local-results/walkthrough/test-predictions.csv \
   --p0 0.05 --half-width 0.005
-python tools/benchmark_network.py --architecture physics_multiscale --device cpu --batch-size 1
 ```
 
-Choose `--architecture mlp` (64,129 parameters), `dnn` (297,473), `compact`
-(3,889), or the default `physics_multiscale` (82,391, including 26 frozen
-coefficients fitted to training-only physical summaries). Benchmarking measures
-architecture forward passes, not trained accuracy or end-to-end latency.
+**Check:** 400 saved predictions and an error report with `pooled.n = 400`. Inspect bias, width, and RMSE in percentage points, plus the count in the signed 4.5%–5.5% band. The [published source-grouped run](docs/matching.html#lineshape-network) has RMSE about 6.37 percentage points. This is synthetic recovery, not measured experimental accuracy; stopping epochs and final decimals can vary by library/device. [Step 9 explains the metrics](https://zetanaut.github.io/NMR-AI/walkthrough.html#predict).
 
-Generated data contain raw/reference voltages in V, an independent TE calibration per event, fractional P, configuration IDs, the frequency grid, and `qmeter-complex-pake-500-v3` provenance. Voltage storage is float64; network inputs are float32 after subtraction/calibration. Generation metadata retain all physical configurations and dataset hashes. Existing outputs are protected; use fresh paths.
+For measured inference, supply aligned `(events,500)` `signals` and corresponding `baselines`, the exact `frequency_mhz`, and scalar strings `feature_mode="lineshape"` and `voltage_unit="recorded units"`. Ordinary prediction needs no P labels or group identifiers. A fitted baseline from the same sweep is not an independent reference; inspect reference drift and the coverage of the trained model before interpreting predictions.
 
-Training splits entire configurations 80/10/10. Scalers and the ridge estimate use training rows only. Validation selects the best checkpoint and early stopping; the test partition is evaluated afterward. Prediction uses the same saved preprocessing:
+## Continue with the controlled TE-area benchmark
 
-```bash
-python tools/generate_data.py --num-samples 500 --configuration-seed 91 --seed 99 \
-  --output local-results/new_spectra.npz
-python tools/predict.py --model-dir local-results/smoke_model \
-  --data local-results/new_spectra.npz --output local-results/new_predictions.csv
-```
+The following exercises have their own dataset and model directories. Both paths use 500 bins, but their inputs and assumptions differ:
+
+| Learning path | Channels and units | Split unit |
+| --- | --- | --- |
+| Steps 7–9 above | Raw and reference-subtracted recorded units; no TE calibration | Measured source and all simulated descendants |
+| TE-area benchmark below | Raw voltage and TE-calibrated reference-subtracted area contributions | Simulated circuit configuration |
+
+The generators propagate complex Dulya/Pake spin-1 susceptibility through the physical Q-meter circuit. Baseline and signal use the same circuit at χ=0 and χ(P). The [physics/electronics record](notes/physics-electronics-theory.md) documents the source theory, single-capacitor topology, units, readout conventions, and unresolved experimental assumptions.
 
 ## Compare an MLP, DNN and CNN
 
@@ -314,7 +227,8 @@ it does not claim new measured covariance matrices or network accuracy.
 
 Preview with `python3 -m http.server 8000 --bind 127.0.0.1 --directory docs`. The static Pages workflow deploys only `docs/`. There is no build system, external font, or CDN. Lessons and the summary table remain readable without JavaScript.
 
-- `docs/index.html`, `docs/baseline.html`: three-phase guide and baseline practical.
+- `docs/walkthrough.html`, `tools/plot_fit.py`: numbered runnable workflow, expected results, and local raw-fit figures.
+- `docs/index.html`, `docs/baseline.html`: theory, network explanations, and baseline practical.
 - `docs/matching.html`, `notes/experimental-matching.md`: five measured matches and the 500-bin generator practical.
 - `docs/butanol.html`, `docs/uva-nd3.html`, `notes/material-examples.md`: material comparisons, assumptions, the common 500-bin grid and provenance.
 - `tools/material_lineshapes.py`, `tools/match_butanol.py`, `tools/match_uva_nd3.py`: standalone single-site ND3 and two-site butanol full-circuit fitting demos.

@@ -4,6 +4,12 @@ Updated 2026-09-08. These are three worked examples across two materials and two
 acquisitions, not three independent datasets. The owner identified the existing
 five raw sweeps as butanol and requested the additional UVA-ND3 example.
 
+For the student execution sequence, follow [walkthrough steps 4–6](../docs/walkthrough.html#single-site).
+Each step provides commands, expected results and local raw-fit figures through
+`tools/plot_fit.py`. The two-site step explicitly reads the single-site report
+from the preceding step. The commands later in this record rebuild the public
+reference artifacts and retain their pinned comparison provenance.
+
 | Example | Measurements | Model and purpose |
 | --- | --- | --- |
 | [1: Single-site starting model](../docs/matching.html) | All five butanol sweeps in `Sample_RawSignal.csv`, 500 bins each | Preserve the original complex spin-1/full-circuit exercise and its separate single-site generator |
@@ -243,8 +249,11 @@ python tools/export_material_examples.py \
 python -m unittest discover -s tests -p 'test_material_examples.py' -v
 ```
 
-The butanol command uses the checked-in single-site comparison report. An
-experimental refit must update that report before starting a new comparison.
+The butanol command above defaults to the checked-in single-site comparison report.
+For a local comparison against a fresh fit, pass that report explicitly with
+`--single-site-report`, as in the walkthrough, and use `plot_fit.py` to view the
+local result. Publishing a new comparison also requires its matching single-site
+snapshot in the public assets so the exporter can verify the pinned report hash.
 The exporter verifies source hashes and reconstruction before writing the two
 new practicals, four SVG figures and two public fit records. Its text templates
 are the source for generated prose. Library versions used for verification are
