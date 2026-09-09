@@ -13,8 +13,9 @@ calibration, then generates new simulator-labeled examples. The controlled TE-ar
 
 The owner has identified those five sweeps as butanol. The
 [material-examples record](material-examples.md) adds a C–D/O–D comparison on the
-same data and a separate UVA-ND3 conditional fit using its own measured 512-bin
-frequency arrays. These new fitting demonstrations do not revise either
+same data and a separate UVA-ND3 conditional fit using a documented resampling
+onto the same exact 500-bin grid. Original measurement arrays remain in the
+source provenance archive; all working examples use 500 bins. These new fitting demonstrations do not revise either
 generator or the existing network results. The cable and 500-bin statements
 below concern the original baseline and butanol acquisition.
 

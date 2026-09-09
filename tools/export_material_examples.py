@@ -79,7 +79,7 @@ def page(title,number,lede,content):
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="{title}"><meta name="theme-color" content="#173c3a"><title>NMR / AI — {title}</title><link rel="stylesheet" href="assets/style.css"></head>
 <body><a class="skip-link" href="#main">Skip to the practical</a>
 <header class="topbar"><a class="brand" href="index.html">NMR <span>/</span> AI</a><span class="topbar-note">Experimental example {number} of 3</span><a class="repo-link" href="https://github.com/zetanaut/NMR-AI">View on GitHub ↗</a></header>
-<div class="layout"><aside class="sidebar"><p class="eyebrow">Three experimental examples</p><nav aria-label="Experimental examples"><a href="matching.html">1 · Single-site starting model</a><a href="butanol.html">2 · Butanol: C–D and O–D</a><a href="uva-nd3.html">3 · UVA-ND3 data</a><a href="#model">Model and assumptions</a><a href="#results">Fits and full residuals</a><a href="#reproduce">Reproduce the example</a><a href="#limits">Interpretation and next steps</a><a href="baseline.html">Physical-baseline practical</a><a href="index.html#network">500-bin learning models</a></nav><p class="sidebar-footer">Preserve the measured grid. Match the material and readout.</p></aside>
+<div class="layout"><aside class="sidebar"><p class="eyebrow">Three experimental examples</p><nav aria-label="Experimental examples"><a href="matching.html">1 · Single-site starting model</a><a href="butanol.html">2 · Butanol: C–D and O–D</a><a href="uva-nd3.html">3 · UVA-ND3 data</a><a href="#model">Model and assumptions</a><a href="#results">Fits and full residuals</a><a href="#reproduce">Reproduce the example</a><a href="#limits">Interpretation and next steps</a><a href="baseline.html">Physical-baseline practical</a><a href="index.html#network">500-bin learning models</a></nav><p class="sidebar-footer">All examples use 500 bins. Match the material and readout.</p></aside>
 <main id="main"><section class="hero"><p class="eyebrow">Experimental example {number} of 3</p><h1>{title}</h1><p class="lede">{lede}</p></section>
 {content}
 <footer><a class="brand" href="index.html">NMR <span>/</span> AI</a><p>Material-specific lineshapes · measured data · reproducible comparisons</p></footer></main></div></body></html>
@@ -196,7 +196,7 @@ def publish_nd3(folder):
         np.testing.assert_allclose(np.sqrt(np.mean(residual**2)),fit["diagnostics"]["rms_recorded_units"],rtol=1e-8)
         change=nd3_reconstruct(f,fit,nphi=64)-pred
         convergence.append({"source_record_1based":r["source_record_1based"],"nphi_32_to_64_max_recorded_units":float(np.max(np.abs(change)))})
-        axes[i,0].scatter(f,(y-background)*1e3,s=6,color="#267b71",alpha=.65,gid=f'nd3-record-{r["source_record_1based"]}',label="Measured reference subtraction − fitted residual background")
+        axes[i,0].scatter(f,(y-background)*1e3,s=6,color="#267b71",alpha=.65,gid=f'nd3-record-{r["source_record_1based"]}',label="Resampled reference subtraction − fitted background")
         axes[i,0].plot(f,(pred-background)*1e3,"--",color="#b44c30",lw=1.3,label="Conditional spin-1 fit")
         axes[i,1].plot(f,residual*1e6,color="#267b71",lw=.8);axes[i,1].axhline(0,color="black",lw=.5,alpha=.4)
         for ax in axes[i]:style(ax);ax.set_xlim(f[0],f[-1])
@@ -206,7 +206,7 @@ def publish_nd3(folder):
         p=fit["parameters"];d=fit["diagnostics"]
         rows.append(f'<tr><td>{r["source_record_1based"]}</td><td>{p["P_model"]*100:.3f}%</td><td>{p["center_mhz"]:.6f}</td><td>{p["split_mhz"]*1e3:.3f}</td><td>{p["g"]*p["split_mhz"]*1e3:.3f}</td><td>{p["eta"]:.4f}</td><td>{d["rms_recorded_units"]*1e6:.2f}</td></tr>')
     axes[0,0].legend(fontsize=6.5,loc="upper right")
-    for ax in axes[-1]:ax.set_xlabel("Measured frequency (MHz)")
+    for ax in axes[-1]:ax.set_xlabel("Frequency (MHz) · 500-bin grid")
     fig.tight_layout();save(fig,"uva-nd3-matches.svg","UVA-ND3 conditional lineshape fits and full residuals")
     fig,axes=plt.subplots(1,2,figsize=(11,4.5))
     for r in data["records"]:
@@ -214,9 +214,9 @@ def publish_nd3(folder):
         axes[0].plot(f,r["phase"],lw=1,label=f'Record {r["source_record_1based"]}')
         axes[1].plot(f,r["basesub"],lw=1)
     axes[0].plot(data["records"][0]["frequency_mhz"],data["records"][0]["baseline"],"k--",lw=1,label="Stored reference (first record)")
-    for ax,title in zip(axes,["Raw phase and recorded reference","Recorded phase − its baseline"]):
-        style(ax);ax.set(xlabel="Measured frequency (MHz)",ylabel="Recorded units",title=title)
-    axes[0].legend(fontsize=7);fig.tight_layout();save(fig,"uva-nd3-raw.svg","Raw UVA-ND3 phase and reference-subtracted records")
+    for ax,title in zip(axes,["Resampled phase and recorded reference","Resampled phase − resampled baseline"]):
+        style(ax);ax.set(xlabel="Frequency (MHz) · 500-bin grid",ylabel="Recorded units",title=title)
+    axes[0].legend(fontsize=7);fig.tight_layout();save(fig,"uva-nd3-raw.svg","500-bin UVA-ND3 phase and reference subtraction")
     publication={"report_sha256":digest(folder/"uva_nd3_report.json"),"exporter_sha256":digest(__file__),
                  "numerical_convergence":convergence,"figure_sha256":{n:digest(ASSETS/n) for n in ("uva-nd3-matches.svg","uva-nd3-raw.svg")},
                  "validation_environment":{"numpy":np.__version__,"scipy":scipy.__version__,"matplotlib":matplotlib.__version__}}
@@ -227,28 +227,30 @@ def publish_nd3(folder):
     status="All selected fits converged." if all_success else "Some selected fits did not converge; inspect the saved report."
     status+=" No selected fit has a near-bound flag." if not warnings else " Near-bound flags: "+"; ".join(warnings)
     content=f'''
-<section id="model" class="chapter"><p class="eyebrow">Another material · another acquisition</p><h2>Preserve the data contract for UVA-ND3.</h2>
-<p>The owner supplied this ND3 example from an earlier acquisition. The public <a href="https://github.com/zetanaut/NMR-AI/blob/main/examples/uva-nd3.json">UVA-ND3 teaching excerpt</a> contains records 1, 126, 251, 376 and 501, selected at equal intervals through the 501-record source file before fitting. It retains all 512 measured bins in each selected raw phase, baseline reference and reference-subtracted spectrum. The arrays preserve their parsed numeric values; unrelated DAQ metadata are omitted and source hashes are retained.</p>
-<p>The stored frequency arrays run from about 32.3000000 to 33.0999878 MHz. Their digitized spacing varies slightly, so use the actual values. This measured grid contract is separate: it is distinct from the 500-bin butanol and generated learning grid. The acquisition records report 4,000 sweeps for each selected record; that does not establish noise independence or a new covariance.</p>
-<div class="baseline-figure-scroll" tabindex="0" role="region" aria-label="Raw UVA-ND3 data and recorded reference subtraction"><img class="baseline-fit-image" src="assets/uva-nd3-raw.svg" width="1100" height="450" alt="Five raw phase sweeps with their reference context and the recorded baseline-subtracted spectra."></div>
-<h3>A conditional fit after measured reference subtraction</h3>
-<div class="equation small">y_sub = phase − recorded baseline<br>y_fit = a_abs [−Im κ(f;P)] + a_disp Re κ(f;P)<br>+ b₀ + b₁t + b₂t² + b₃t³, &nbsp; t = (f_MHz − 32.7)/0.4</div>
+<section id="model" class="chapter"><p class="eyebrow">Another material · another acquisition</p><h2>Fit UVA-ND3 on the common 500-bin grid.</h2>
+<p>The <a href="https://github.com/zetanaut/NMR-AI/blob/main/examples/uva-nd3.json">500-bin UVA-ND3 working example</a> contains records 1, 126, 251, 376 and 501, selected at equal intervals through the source acquisition before fitting. Every phase, baseline and reference-subtracted array uses <strong>fⱼ = 32.3 + 0.0015287 j MHz, j = 0…499</strong>, ending at 33.0628213 MHz. All fits, figures and residuals below use these 500 bins.</p>
+<p>These are derived data: raw phase and the recorded baseline are linearly interpolated in frequency onto the common grid in float64, then subtracted. The original measurement arrays remain in a <a href="https://github.com/zetanaut/NMR-AI/tree/main/provenance">source provenance archive</a>. The saved derivation records hashes, the target window and endpoint roundoff handling. Interpolation changes resolution and correlates errors; the 500 samples are not independent new measurements. The recorded 4,000 acquisition sweeps do not establish a noise covariance.</p>
+<div class="baseline-figure-scroll" tabindex="0" role="region" aria-label="500-bin UVA-ND3 data and reference subtraction"><img class="baseline-fit-image" src="assets/uva-nd3-raw.svg" width="1100" height="450" alt="Five UVA-ND3 phase sweeps and recorded references resampled onto the exact 500-bin grid, with their subtraction."></div>
+<h3>A conditional fit after resampling and reference subtraction</h3>
+<div class="equation small">y_sub = L[phase] − L[recorded baseline]<br>y_fit = L[a_abs [−Im κ(f;P)] + a_disp Re κ(f;P)<br>+ b₀ + b₁t + b₂t² + b₃t³], &nbsp; t = (f_MHz − 32.7)/0.4</div>
+<p>L applies the same frequency interpolation to the complete model evaluated on the original source coordinates. The fit minimizes unweighted residuals over all 500 target bins; interpolation is included in the response, without assuming an independently measured noise covariance.</p>
 <p>κ is the unit-area single-site spin-temperature shape. Its branch weights are the physical weights divided by P, evaluated with their finite symmetric limit at zero; the fitted amplitude carries the overall signal strength. This parameterization fits a nonzero observed lineshape and is not a simulator that predicts finite nuclear signal at zero P. The five nonlinear unknowns are center, splitting, Lorentzian width, EFG asymmetry and P. Two constant absorption/dispersion coefficients and four residual-background coefficients are profiled jointly: <strong>11 fitted unknowns</strong>.</p>
 <p>The cubic describes residual mismatch after subtraction of the recorded reference. It is fitted jointly on all bins, not frozen from a preliminary wing fit. The constant readout mixture and cubic residual are explicit approximations. Cable, coil and capacitor records for this acquisition have not been independently supplied, so this example does not borrow the butanol apparatus as a hardware calibration or claim a full-circuit fit.</p>
 <p>No stored acquisition polarization, area calibration, or previous fitted curve enters the optimization. P is inferred from the intrinsic branch shapes and ratio under the spin-temperature hypothesis; TE calibration is not a prerequisite.</p></section>
 <section id="results" class="chapter"><p class="eyebrow">Five predetermined records</p><h2>Fit the observed structure and show what remains.</h2>
 <div class="table-wrap"><table><caption>UVA-ND3 conditional fit estimates; RMS in 10⁻⁶ recorded units</caption><thead><tr><th>Source record</th><th>P from shape</th><th>Center (MHz)</th><th>Split (kHz)</th><th>HWHM (kHz)</th><th>EFG η</th><th>RMS</th></tr></thead><tbody>{''.join(rows)}</tbody></table></div>
-<div class="baseline-figure-scroll" tabindex="0" role="region" aria-label="UVA-ND3 fits with all measured bins and residuals"><img class="baseline-fit-image" src="assets/uva-nd3-matches.svg" width="1200" height="1400" alt="Five UVA-ND3 measured lineshapes and fitted curves, with full 512-bin residuals."></div>
-<p>{status} The left panels remove the jointly fitted residual background for display; the right panels retain every bin of recorded reference-subtracted data minus the complete fitted model. Remaining structured residuals show the limits of the conditional model. The <a href="assets/uva-nd3-matching.json">complete fit record</a> contains every starting solution, source/code hashes and numerical convergence checks.</p></section>
+<div class="baseline-figure-scroll" tabindex="0" role="region" aria-label="UVA-ND3 fits with all 500 bins and residuals"><img class="baseline-fit-image" src="assets/uva-nd3-matches.svg" width="1200" height="1400" alt="Five UVA-ND3 lineshapes resampled onto 500 bins, fitted curves and full 500-bin residuals."></div>
+<p>{status} The left panels remove the jointly fitted residual background for display; the right panels retain all 500 bins of resampled reference-subtracted data minus the complete resampled fitted model. Remaining structured residuals show the limits of the conditional model. The <a href="assets/uva-nd3-matching.json">complete fit record</a> contains every starting solution, source/code hashes and numerical convergence checks.</p></section>
 <section id="reproduce" class="chapter"><h2>Run the UVA-ND3 example.</h2>
-<pre><code>python tools/match_uva_nd3.py \\
-  --output-dir local-results/uva-nd3-matching --starts 6
+<pre><code>python tools/prepare_uva_nd3.py
+python tools/match_uva_nd3.py \\
+  --output-dir local-results/uva-nd3-matching-500-v2 --starts 6
 python tools/export_material_examples.py \\
-  --nd3-fit-dir local-results/uva-nd3-matching</code></pre>
-<p>The audited reader verifies all 512 values and checks <code>phase − baseline == basesub</code> for every bin. The <a href="https://github.com/zetanaut/NMR-AI/blob/main/configs/uva-nd3-matching.json">fit configuration</a> states bounds and readout/background assumptions. Everything needed to reproduce the example is in this repository.</p></section>
-<section id="limits" class="chapter"><h2>Different setups need different validation.</h2><p>These are conditional fit estimates from five development records in one period. They do not establish calibrated polarization uncertainty or performance on independent acquisitions. The noise proxy is conditional on local smoothness and independent Gaussian noise; residual structure must not be treated as a measured covariance.</p>
-<p>The example does not feed the measured 512-bin arrays into the synthetic TE-area network, generate training labels from the fitted P values, or claim that the butanol hardware settings apply here. Compare <a href="matching.html">the original single-site exercise</a> and <a href="butanol.html">the butanol two-site comparison</a>, and read the <a href="https://github.com/zetanaut/NMR-AI/blob/main/notes/material-examples.md">material-model record</a> before extending a simulator.</p></section>'''
-    (ROOT/"docs/uva-nd3.html").write_text(page("UVA-ND3 data",3,"A different material and acquisition, with its measured frequency grid, recorded reference, and model limitations kept visible.",content))
+  --nd3-fit-dir local-results/uva-nd3-matching-500-v2</code></pre>
+<p>The audited reader requires the exact 500-bin grid, reproduces the interpolation from the preserved source and checks <code>phase − baseline == basesub</code> for every bin. The fitter rejects the original acquisition arrays as working input. The <a href="https://github.com/zetanaut/NMR-AI/blob/main/configs/uva-nd3-matching.json">fit configuration</a> states bounds and readout/background assumptions. Everything needed to reproduce the example is in this repository.</p></section>
+<section id="limits" class="chapter"><h2>Different setups need different validation.</h2><p>These are conditional fit estimates from five development records in one period. They do not establish calibrated polarization uncertainty or performance on independent acquisitions. Interpolation correlates neighboring errors, so an independent-bin noise proxy is not reported. Residual structure must not be treated as a measured covariance.</p>
+<p>A common 500-bin grid establishes input dimensions. Applying a trained network also requires validated material and readout coverage, compatible units and references, and its saved preprocessing. Fitted P values are conditional estimates; this example does not establish network accuracy or the butanol hardware settings for ND3. Compare <a href="matching.html">the original single-site exercise</a> and <a href="butanol.html">the butanol two-site comparison</a>, and read the <a href="https://github.com/zetanaut/NMR-AI/blob/main/notes/material-examples.md">material-model record</a> before extending a simulator.</p></section>'''
+    (ROOT/"docs/uva-nd3.html").write_text(page("UVA-ND3 data",3,"Five UVA-ND3 records on the exact 500-bin teaching grid, with documented resampling, recorded reference subtraction and conditional lineshape fits.",content))
 
 
 def main():

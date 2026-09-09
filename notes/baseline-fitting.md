@@ -20,8 +20,9 @@ for generation, training and prediction.
 The owner has identified the five polarized sweeps as butanol. The
 [three material examples](material-examples.md) retain the original exercise,
 add its two-site butanol comparison, and introduce UVA-ND3 data from another
-acquisition. That ND3 excerpt preserves its own measured 512-bin grid and
-recorded reference; its hardware setup is not inferred from this baseline.
+acquisition. That ND3 working example uses the same exact 500-bin grid through
+documented resampling of phase and its recorded reference. Original arrays remain
+in the provenance archive; its hardware setup is not inferred from this baseline.
 
 ## Establish acquisition metadata first
 

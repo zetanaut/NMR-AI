@@ -110,7 +110,11 @@ two materials and two acquisitions; the first two deliberately use the same data
 | --- | --- |
 | [1. Single-site starting model](docs/matching.html) | Preserve the original full-circuit exercise and its 500-bin generator |
 | [2. Butanol: C–D and O–D](docs/butanol.html) | Apply the supplied two-site theory to the same five butanol sweeps and compare every full residual |
-| [3. UVA-ND3 data](docs/uva-nd3.html) | Fit five predetermined records with their measured 512-bin frequency arrays and recorded baseline subtraction |
+| [3. UVA-ND3 data](docs/uva-nd3.html) | Fit five predetermined UVA-ND3 records resampled onto the exact 500-bin grid, with recorded baseline subtraction |
+
+Every working example uses `32.3 + 0.0015287*j MHz`, j=0..499. UVA-ND3
+includes documented interpolation from its preserved source measurements; its
+working data, fits and figures all contain 500 bins.
 
 The butanol comparison adds three fit parameters while retaining the original
 electronics assumptions. The UVA-ND3 model uses a conditional complex lineshape
@@ -121,11 +125,12 @@ Neither fit comparison is a measured polarization-accuracy claim. See the
 ```bash
 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python tools/match_butanol.py \
   --output-dir local-results/butanol-matching --starts 6
+python tools/prepare_uva_nd3.py
 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python tools/match_uva_nd3.py \
-  --output-dir local-results/uva-nd3-matching --starts 6
+  --output-dir local-results/uva-nd3-matching-500-v2 --starts 6
 python tools/export_material_examples.py \
   --butanol-fit-dir local-results/butanol-matching \
-  --nd3-fit-dir local-results/uva-nd3-matching
+  --nd3-fit-dir local-results/uva-nd3-matching-500-v2
 ```
 
 All inputs needed for these commands are included here. Use fresh output paths.
@@ -309,7 +314,7 @@ Preview with `python3 -m http.server 8000 --bind 127.0.0.1 --directory docs`. Th
 
 - `docs/index.html`, `docs/baseline.html`: three-phase guide and baseline practical.
 - `docs/matching.html`, `notes/experimental-matching.md`: five measured matches and the 500-bin generator practical.
-- `docs/butanol.html`, `docs/uva-nd3.html`, `notes/material-examples.md`: material comparisons, assumptions, measured grids and provenance.
+- `docs/butanol.html`, `docs/uva-nd3.html`, `notes/material-examples.md`: material comparisons, assumptions, the common 500-bin grid and provenance.
 - `tools/material_lineshapes.py`, `tools/match_butanol.py`, `tools/match_uva_nd3.py`: standalone two-site/full-circuit and reference-subtracted fitting demos.
 - `tools/uva_nd3_data.py`, `tools/export_material_examples.py`: audited UVA-ND3 excerpt reader and verified publication of both material demos.
 - `tools/circuit.py`, `tools/lineshape.py`: physical electronics and complex nuclear response.

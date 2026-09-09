@@ -116,22 +116,23 @@ group all descendants of each measured source together. See the
 
 ## UVA-ND3 data
 
-The owner requested [uva-nd3.json](uva-nd3.json) as the third public teaching
-example. It contains records 1, 126, 251, 376 and 501, selected at equal intervals
-through the 501-record source acquisition before fitting. It preserves every
-parsed numeric value in each selected frequency, raw phase, recorded baseline,
-and reference-subtracted array. Original-file and record hashes, timestamps,
-reported sweep counts and export policy are included. Unrelated DAQ metadata
-and prior fitted polarization/calibration values are omitted.
+[uva-nd3.json](uva-nd3.json) is the third public teaching example. Its five
+records, selected before fitting at source positions 1, 126, 251, 376 and 501,
+all use **500 bins** on `f_j = 32.3 + 0.0015287*j MHz`, j=0..499.
+The last point is 33.0628213 MHz, matching every other working example.
 
-Excerpt SHA-256:
-`af5a4358bae2aa48cc3c7d16967816679ae15f9c863511c9c96daa729885e4bb`.
+These are derived arrays. `tools/prepare_uva_nd3.py` linearly interpolates the
+original phase and recorded baseline in frequency using float64, then computes
+`basesub = phase - baseline`. It uses the target window without physical
+extrapolation; the first endpoint differs from the source by floating-point
+roundoff only. The [source archive](../provenance/README.md) preserves the original
+excerpt byte-for-byte. The working file retains source and record hashes,
+timestamps, reported sweep counts and the complete resampling policy.
 
-Each record has **512 measured bins**, with slightly varying digitized spacing,
-from approximately 32.3000000 to 33.0999878 MHz. Preserve its stored frequencies;
-the 500-bin butanol/generated learning grid does not apply to this acquisition.
-Hardware details and a conversion from recorded units to volts remain unresolved
-for this acquisition. Do not assign the butanol cable/tuning setup to it.
+Interpolation changes resolution and correlates neighboring errors. It does
+not establish new independent measurements or a noise covariance. Hardware
+calibration and recorded-unit-to-volt conversion remain unresolved for ND3;
+the common grid does not assign the butanol cable/tuning setup to it.
 
 ```python
 import sys
@@ -139,13 +140,20 @@ sys.path.insert(0, "tools")
 from uva_nd3_data import load_nd3
 
 data, audit = load_nd3("examples/uva-nd3.json")
+assert audit["bins"] == 500
 assert audit["source_record_numbers_1based"] == [1, 126, 251, 376, 501]
 ```
 
-The reader verifies all arrays and exact `phase − baseline == basesub` in every
-bin. [Example 3](../docs/uva-nd3.html) fits the recorded reference-subtracted
-signals using an explicit conditional readout/background approximation. It does
-not use a stored polarization or TE calibration as an input or truth label.
-The complete [material-model record](../notes/material-examples.md) explains
-selection, provenance, assumptions and reproduction. No external checkout is
-needed to run it.
+The reader checks the exact grid, every resampled array against the source,
+and exact `phase - baseline == basesub` in every bin. It rejects the archived
+source arrays as working input. Reproduce the derived artifact with:
+
+```bash
+python tools/prepare_uva_nd3.py
+```
+
+[Example 3](../docs/uva-nd3.html) fits all 500 reference-subtracted values. Its
+conditional model is evaluated on source coordinates and passed through the
+same interpolation before comparison. It uses neither stored polarization nor
+TE calibration as a fit input or truth label. The [material-model record](../notes/material-examples.md)
+explains the assumptions and reproduction. Everything needed is in this repository.

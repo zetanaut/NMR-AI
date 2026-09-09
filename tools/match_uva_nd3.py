@@ -15,10 +15,11 @@ from scipy.optimize import least_squares
 
 from lineshape import powder_complex
 from match_experimental_signals import digest, residual_diagnostics
-from uva_nd3_data import load_nd3
+from uva_nd3_data import (confirmed_frequency, linear_resample, load_nd3,
+                          sampling_contract, sampling_frequency)
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "uva-nd3-reference-subtracted-lineshape-v1"
+VERSION = "uva-nd3-reference-subtracted-lineshape-500-v2"
 NAMES = ("center_mhz","split_mhz","g","eta","P_model")
 
 
@@ -37,24 +38,31 @@ def normalized_shape(f, p, nphi=32):
     return (.5*(1+q_over_p)*plus + .5*(1-q_over_p)*minus)/p["split_mhz"]
 
 
-def basis(f, p, nphi=32):
+def basis(f, p, nphi=32, source_frequency=None):
+    if source_frequency is not None:
+        return linear_resample(source_frequency, basis(source_frequency, p, nphi), f)
     shape = normalized_shape(f,p,nphi)
     t = (np.asarray(f)-32.7)/.4
     return np.column_stack([-shape.imag,shape.real,np.ones_like(t),t,t*t,t*t*t])
 
 
 def reconstruct(f, fit, background_only=False, nphi=32):
-    design = basis(f,fit["parameters"],nphi)
+    if not np.array_equal(f, confirmed_frequency()):
+        raise ValueError("Require the exact confirmed 500-bin frequency grid")
+    source = sampling_frequency(fit["sampling"]) if fit.get("sampling") else None
+    design = basis(f,fit["parameters"],nphi,source)
     coefficients = np.asarray(fit["readout_background_coefficients"])
     if background_only:
         return design[:,2:]@coefficients[2:]
     return design@coefficients
 
 
-def match_scan(f, y, config, starts=6, seed=42):
+def match_scan(f, y, config, starts=6, seed=42, source_record_1based=None):
     f,y = np.asarray(f),np.asarray(y)
-    if f.shape != (512,) or y.shape != f.shape or not np.isfinite([f,y]).all() or np.any(np.diff(f)<=0):
-        raise ValueError("Require all 512 finite samples on the measured frequency grid")
+    if not np.array_equal(f, confirmed_frequency()) or y.shape != f.shape or not np.isfinite(y).all():
+        raise ValueError("Require all 500 finite samples on the exact confirmed frequency grid")
+    sampling = sampling_contract(source_record_1based) if source_record_1based is not None else None
+    source = sampling_frequency(sampling) if sampling else None
     if starts < 1:
         raise ValueError("Need at least one start")
     specs = config["fit_parameters"]
@@ -62,10 +70,10 @@ def match_scan(f, y, config, starts=6, seed=42):
     span = np.array([specs[n]["bounds"][1]-specs[n]["bounds"][0] for n in NAMES])
     initial = np.array([specs[n]["initial"] for n in NAMES])
     decode = lambda q:dict(zip(NAMES,low+span*q))
-    scale = float(np.ptp(y))
+    scale = max(float(np.ptp(y)), 1e-12)
 
     def solve(q):
-        design = basis(f,decode(q))
+        design = basis(f,decode(q),source_frequency=source)
         coefficients,_,rank,_ = np.linalg.lstsq(design,y,rcond=None)
         if rank != 6:
             raise ValueError("Rank-deficient conditional readout/background")
@@ -96,19 +104,26 @@ def match_scan(f, y, config, starts=6, seed=42):
             best=result
     p=decode(best.x)
     prediction,coefficients=solve(best.x)
-    background=basis(f,p)[:,2:]@coefficients[2:]
+    background=basis(f,p,source_frequency=source)[:,2:]@coefficients[2:]
     lo,hi=config["noise_proxy_window_mhz"]
     wing=(f<lo)|(f>hi)
     condition=float(np.linalg.cond(best.jac))
     fit={"model_version":VERSION,"parameters":p,"readout_background_coefficients":coefficients.tolist(),
          "coefficient_order":["absorption_area","dispersion_area","b0","b1","b2","b3"],
-         "n_free":11,"nonlinear_parameters":list(NAMES),"all_512_bins_fitted":True,
+         "n_free":11,"nonlinear_parameters":list(NAMES),"all_500_bins_fitted":True,
+         "sampling":sampling,
          "success":bool(best.success),"candidates":candidates,
          "near_bounds":{n:"lower" if q<=1e-4 else "upper" for n,q in zip(NAMES,best.x) if min(q,1-q)<=1e-4},
          "scaled_profiled_jacobian_condition":condition if np.isfinite(condition) else None,
          "diagnostics":residual_diagnostics(y-prediction,f,wing),
          "P_status":"Conditional spin-temperature lineshape estimate; independent of stored DAQ pol/cc; no calibrated uncertainty claim",
          "hardware_status":"Reference-subtracted response approximation; not a full-circuit fit or a calibration to the butanol apparatus"}
+    if sampling:
+        diagnostics = fit["diagnostics"]
+        diagnostics.pop("wing_second_difference_sigma_proxy")
+        diagnostics.pop("sigma_proxy_triplets")
+        diagnostics.pop("sigma_proxy_assumption")
+        diagnostics["noise_status"] = "Linear resampling correlates neighboring errors; no iid-noise sigma proxy or measured covariance is inferred from this residual"
     return np.column_stack([f,y,prediction,background,prediction-background,y-prediction]),fit
 
 
@@ -127,7 +142,7 @@ def main():
     fits=[]
     for r in data["records"]:
         i=r["source_record_1based"]
-        trace,fit=match_scan(r["frequency_mhz"],r["basesub"],config,args.starts,args.seed+i)
+        trace,fit=match_scan(r["frequency_mhz"],r["basesub"],config,args.starts,args.seed+i,source_record_1based=i)
         fit.update(source_record_1based=i,start_time=r["start_time"],sweeps=r["sweeps"])
         fits.append(fit)
         np.savetxt(args.output_dir/f"record_{i}.csv",trace,delimiter=",",comments="",
@@ -135,8 +150,8 @@ def main():
         print(f"UVA-ND3 record {i}: P={fit['parameters']['P_model']:.6f}, RMS={fit['diagnostics']['rms_recorded_units']:.6g}, bounds={fit['near_bounds']}",flush=True)
     report={"version":VERSION,"dataset":"UVA-ND3 data","material":"ND3","audit":audit,"config":config,
             "config_sha256":digest(args.config),"fits":fits,"starts_per_scan":args.starts,"seed":args.seed,
-            "unit":"recorded units","residual_sign":"recorded reference-subtracted spectrum minus fitted",
-            "code_sha256":{n:digest(ROOT/"tools"/n) for n in ("match_uva_nd3.py","uva_nd3_data.py","lineshape.py","match_experimental_signals.py")}}
+            "unit":"recorded units","residual_sign":"resampled phase minus resampled recorded baseline minus resampled fitted response",
+            "code_sha256":{n:digest(ROOT/"tools"/n) for n in ("match_uva_nd3.py","uva_nd3_data.py","prepare_uva_nd3.py","baseline_data.py","lineshape.py","match_experimental_signals.py")}}
     (args.output_dir/"uva_nd3_report.json").write_text(json.dumps(report,indent=2,allow_nan=False)+"\n")
 
 
