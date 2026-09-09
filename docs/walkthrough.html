@@ -37,6 +37,7 @@
   <h1>Run the code.<br><em>Check the result.</em></h1>
   <p class="lede">Start with the supplied measurements and finish with a trained network and a prediction file. Follow the steps in order. Each step gives you the command, the result to inspect, and the next action.</p>
   <div class="hero-actions"><a class="button" href="#setup">Begin with step 1 ↓</a><a class="text-link" href="index.html">Read the science alongside the code →</a></div>
+  <p><strong>This is simulation-based inference of one scalar: vector polarization P.</strong> You will use measured sweeps and setup information to constrain a physical simulator, then train a multiscale convolutional neural network (CNN) on newly generated spectra with known P. Experimental P estimates have uncertainty and are not exact training labels. This polarization model returns a number; a denoising autoencoder (DAE) would return a cleaner spectrum. Reducing extraction error still leaves instrument and calibration uncertainties. <a href="index.html#inference-method">Read why we use this approach and what its errors mean.</a></p>
   <div class="table-wrap"><table><caption>What you will make</caption><thead><tr><th>Steps</th><th>Result</th></tr></thead><tbody>
     <tr><td>1–3 · Setup and baseline</td><td>A checked environment, audited inputs, and a measured-baseline diagnostic plot.</td></tr>
     <tr><td>4–6 · Three signal examples</td><td>Five complete raw-sweep fits per example, each with a circuit baseline and all 500 residuals.</td></tr>

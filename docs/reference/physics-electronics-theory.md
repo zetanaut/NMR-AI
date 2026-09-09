@@ -21,6 +21,60 @@ examples use 500 bins. These fitting demonstrations do not revise either generat
 or the existing network results. The cable and 500-bin statements
 below concern the original baseline and butanol acquisition.
 
+## Inference approach and uncertainty scope
+
+The [introduction](https://zetanaut.github.io/NMR-AI/#inference-method) describes
+this as **simulation-based inference through supervised point estimation**.
+The experimental matching path fits real spectra and uses known hardware
+constraints to establish simulator configurations. Newly sampled P values then
+label freshly simulated responses. Experimental fit estimates do not become
+exact training labels. The controlled TE-area benchmark has separate nominal
+hardware and ideal calibration assumptions.
+
+The implemented MLP, dense DNN and CNNs all map two 500-bin input channels to
+one signed scalar: vector polarization along the measurement axis. The main
+walkthrough uses the multiscale CNN with a fitted, then frozen, ridge-summary
+branch. Its loss is scaled absolute MSE in P. It returns a point estimate, not
+a posterior or a calibrated interval. Known spin/circuit constraints enter
+through the forward simulation; training does not impose an additional circuit
+residual loss. Independent tensor polarization is outside the current
+spin-temperature population contract.
+
+A denoising autoencoder instead reconstructs a signal from corrupted input;
+that spectrum needs a further extraction step to estimate P. See
+[Vincent et al. (2010)](https://jmlr.org/papers/v11/vincent10a.html) for the
+denoising objective and [Cranmer, Brehmer and Louppe (2020)](https://arxiv.org/abs/1911.01429)
+for the broader simulation-based inference framework. No DAE is trained in
+this repository. A cleaner-looking trace does not establish better P recovery;
+downstream uncertainties must retain any induced bias and bin correlations.
+
+The numerical context in the introduction has three distinct sources:
+
+- **Project context, supplied by the maintainer on 2026-09-09:** motivating
+  experimental P estimates are generally known to about 5% relative, and the
+  motivating Q-meter systems have an approximately 0.8% relative design limit.
+  These are not uncertainty measurements on the supplied data, do not specify
+  a confidence convention, and are not universal hardware limits.
+- **Reference-paper statements:** section 2 reports typical measurement
+  uncertainties of 3–5% relative; section 7.5 uses approximately 1% for intrinsic
+  Q-meter accuracy and reports extraction improvements in its comparisons.
+  The exact 0.8% is not specified there. See
+  [page 3](https://arxiv.org/pdf/2603.10146v5#page=3) and
+  [pages 23–24](https://arxiv.org/pdf/2603.10146v5#page=23).
+- **This implementation's evidence:** saved tests measure recovery of
+  simulator-known P under the declared sampling and preprocessing. They do not
+  establish a measured total uncertainty or a direct neural-versus-fit advantage.
+  Such a comparison needs the same held-out inputs, information and error
+  definition, including failed fits and source/condition coverage.
+
+At |P| = 0.05, 5% relative gives 0.0025 fractional P = 0.25 percentage points;
+0.8% relative gives 0.0004 fractional P = 0.04 percentage points. These are
+arithmetic conversions, not network scores. The measurement-level 5% can
+already include instrument and extraction contributions; do not add the two
+figures or combine them in quadrature without distinct components, uncertainty
+conventions and covariance information. Improving extraction leaves calibration,
+hardware, sample-weighting and simulator-discrepancy contributions to assess.
+
 ## 1. Continuous-wave measurement and conventions
 
 This is swept-frequency, continuous-wave, phase-sensitive NMR, not pulsed FID spectroscopy. An approximately constant-current RF source excites a coil coupled to the sample. The complex magnetic susceptibility changes the coil impedance; the tuning components, transmission line, input loading, and detector phase determine the recorded voltage. Analysis and calibration act on that response.

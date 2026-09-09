@@ -1,7 +1,8 @@
 # NMR / AI
 
-Learn to estimate nuclear polarization from NMR spectra with Python. Fit measured
-data, generate labeled spectra, train a neural network, and inspect its errors.
+Learn **simulation-based inference** of vector polarization from NMR spectra
+with Python. Fit measured data, generate labeled spectra, train a neural network,
+and inspect its errors.
 Basic Python and familiarity with arrays are enough to begin.
 
 **[Start the step-by-step tutorial →](https://zetanaut.github.io/NMR-AI/walkthrough.html)**
@@ -9,6 +10,28 @@ Basic Python and familiarity with arrays are enough to begin.
 The tutorial gives commands in order, expected outputs, and plots to check at
 each step. All data needed for the examples are included. You train your own
 model; no pretrained download is required.
+
+## What kind of model is this?
+
+These are **polarization regression models**: each spectrum produces one signed
+value, the vector polarization P. The main walkthrough uses a multiscale
+convolutional neural network (CNN); simpler dense networks provide comparisons.
+A denoising autoencoder (DAE) instead reconstructs a cleaner spectrum for further
+analysis.
+
+Experimental polarization estimates can have roughly 5% relative uncertainty in
+the motivating measurements. We therefore use measured spectra and known setup
+information to constrain a physical simulator, then train on new spectra with
+simulator-known P labels. Experimental fit estimates are not treated as exact
+training truth. The simulator carries the supplied spin and circuit constraints;
+its fidelity still needs experimental validation.
+
+The aim is to reduce extraction error compared with conventional fitting.
+Calibration and instrument uncertainties remain, including the approximately
+0.8% relative Q-meter design limit specified for the systems motivating this
+tutorial. Read the [model introduction](https://zetanaut.github.io/NMR-AI/#inference-method)
+for the evidence, uncertainty scope, and distinction between the tutorial's
+results and the reference paper's comparisons.
 
 ## Set up
 
