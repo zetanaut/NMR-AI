@@ -63,7 +63,7 @@ class WorkingExampleContracts(unittest.TestCase):
     def test_active_tutorial_text_has_no_old_bin_contract(self):
         paths = [ROOT / "README.md", ROOT / "examples/README.md"]
         paths += list((ROOT / "docs").glob("*.html"))
-        paths += [p for p in (ROOT / "notes").glob("*.md") if p.name != "project-status.md"]
+        paths += list((ROOT / "docs/reference").glob("*.md"))
         for path in paths:
             self.assertIsNone(re.search(r"\b512\b", path.read_text()), str(path))
 

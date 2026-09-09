@@ -1,21 +1,20 @@
 # Experimental spin-1 matching and an anchored generator
 
-This is the reproducibility record for [Practical 01B](../docs/matching.html).
+This reference accompanies [Practical 01B](https://zetanaut.github.io/NMR-AI/matching.html).
 Read the [circuit and lineshape conventions](physics-electronics-theory.md)
 and [baseline practical](baseline-fitting.md) first. The reference is
 [Seay, Fernando and Keller, arXiv:2603.10146](https://arxiv.org/pdf/2603.10146):
 Fig. 1 and Eqs. (1)–(14) for electronics; Eqs. (15)–(26) for the spin-1 model.
-The [learning example](../docs/matching.html#lineshape-network) includes generation,
+The [learning example](https://zetanaut.github.io/NMR-AI/matching.html#lineshape-network) includes generation,
 training, saved preprocessing and prediction on this exact 500-bin acquisition.
 
-This remains **Example 1: the single-site starting model**. The owner has now
-identified its five sweeps as butanol. [Example 2](../docs/butanol.html) applies
-the supplied C–D/O–D theory to those exact samples; [Example 3](../docs/uva-nd3.html)
+**Example 1 uses a single-site starting model** for the five butanol sweeps. [Example 2](https://zetanaut.github.io/NMR-AI/butanol.html) applies
+the supplied C–D/O–D theory to those exact samples; [Example 3](../uva-nd3.html)
 uses raw phase from a separate UVA-ND3 acquisition and jointly fits its circuit
 baseline and ND3 spin-1 response.
 The [material-model record](material-examples.md) documents both additions.
-The original single-site fits and generator below remain unchanged; they are
-not a new material-specific training or experimental-accuracy result.
+The generator below uses that single-site model. The material comparisons
+do not establish material-specific network accuracy.
 
 ## Experimental data and confirmed setup
 
@@ -240,14 +239,14 @@ Each model saves the exact 500-bin frequency array, feature mode, units,
 training-only scalers and target normalization. Clean simulator arrays remain
 available for diagnostics and are excluded from network inputs.
 
-The declared [training protocol](../configs/lineshape-training.json) uses a
+The declared [training protocol](../../configs/lineshape-training.json) uses a
 multiscale CNN with an 80-epoch cap and validation-selected checkpoint. All
 `source_scan_1based` descendants stay together: source scans 3, 4 and 5 supply
 1,200 training examples, source 2 supplies 400 validation examples, and source 1
 supplies 400 test examples. These labels are newly sampled simulator truth.
 Splitting only by simulated configuration would leak measured-seed relationships.
 
-The [published training record](../docs/assets/lineshape-training.json) retains
+The [published training record](../assets/lineshape-training.json) retains
 all test predictions, metrics, history, source partitions, preprocessing and
 hashes. Its source-holdout synthetic result is not experimental polarization
 accuracy. The five development scans do not provide an independent experimental
@@ -263,5 +262,5 @@ Ordinary measured prediction accepts raw/reference arrays, the exact grid and
 explicit `feature_mode="lineshape"` and `voltage_unit="recorded units"`; it does
 not require P labels or simulator/group identifiers. The trained model requires
 corresponding references; a fitted baseline from the same sweep is not an
-independent reference. See the [README](../README.md#train-on-experiment-anchored-lineshapes)
+independent reference. See the [README](https://zetanaut.github.io/NMR-AI/walkthrough.html#train)
 for direct training and prediction commands.

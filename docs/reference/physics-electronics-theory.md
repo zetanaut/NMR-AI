@@ -2,16 +2,16 @@
 
 Reference: D. Seay, I. P. Fernando, and D. Keller, *Polarized target nuclear magnetic resonance measurements with deep neural networks*, [arXiv:2603.10146v5](https://arxiv.org/abs/2603.10146v5), [EPJ A 62, 153 (2026)](https://doi.org/10.1140/epja/s10050-026-01937-x). Prepared 2026-09-07 after reading all 28 pages, including Appendix A. Page numbers below refer to that version. Key equations and the circuit diagram were also inspected visually. PDF SHA-256: `14977413a028f93120029729bfb4b895aa5eee2ad3e12e0560a814847db76331`.
 
-These notes distinguish the paper's physics, explicit implementation conventions, and evidence from the supplied measurements. Equations below are restated/derived with unambiguous names. This independent educational implementation is not a reproduction of the paper's training runs or an experimentally calibrated deuteron instrument. The [baseline practical](../docs/baseline.html) explains the measured-fit workflow.
+These notes distinguish the paper's physics, explicit implementation conventions, and evidence from the supplied measurements. Equations below are restated/derived with unambiguous names. This independent educational implementation is not a reproduction of the paper's training runs or an experimentally calibrated deuteron instrument. The [baseline practical](https://zetanaut.github.io/NMR-AI/baseline.html) explains the measured-fit workflow.
 
-The new [experimental-matching record](experimental-matching.md) documents five
+The [experimental-matching reference](experimental-matching.md) documents five
 polarized spin-1 sweeps on the confirmed 500-bin grid. That workflow fits the
 capacitor, detector phase and complex branch shapes to infer P without TE
 calibration, then generates new simulator-labeled examples. The controlled TE-area benchmark is a separate calibration exercise on the same
 500-bin acquisition grid. Training and prediction support both modes; see the
-[learning examples](../README.md#train-on-experiment-anchored-lineshapes).
+[learning examples](https://zetanaut.github.io/NMR-AI/walkthrough.html#train).
 
-The owner has identified those five sweeps as butanol. The
+The five sweeps are butanol measurements. The
 [material-examples record](material-examples.md) adds a C–D/O–D comparison on the
 same data and a separate UVA-ND3 joint raw-phase/full-circuit fit using documented
 resampling onto the same exact 500-bin grid. ND3 uses explicitly nominal circuit
@@ -111,7 +111,7 @@ nominal center by generating a different linspace. The shared contract is
 `configs/deuteron-acquisition.json`, hashed into fit provenance. DAQ conversion
 to volts remains unknown.
 
-The hardware constraint is now explicit: the owner confirms n=1 with λ/2 =
+The confirmed hardware constraint is: the owner confirms n=1 with λ/2 =
 3.580 m at nominal 32.7 MHz. The paper itself specifies integer half-wave tuning
 and approximately 0.78 cable velocity factor [Sec. 2, pp. 2–3](https://arxiv.org/pdf/2603.10146#page=2).
 The measured setup fixes v_phase/c = 2f₀h/c = 0.7809802874 and permits only a
@@ -148,7 +148,7 @@ circuit; check the actual setting and full zero-reactance condition.
 The former incompatible propagation assumptions and unrestricted baseline
 length search have been removed from this measured-fit workflow.
 
-`fit_baseline.py` now delegates to `fit_tuned_baseline.py` using the known
+`fit_baseline.py` delegates to `fit_tuned_baseline.py` using the known
 deuteron preset. It has three bounded nonlinear coordinates (C_tune, C_stray,
 δℓ) and three analytically profiled readout coordinates. Known quantities are
 fixed; Gaussian measurement constraints require a data-noise scale. Supplied
@@ -167,7 +167,7 @@ diagnostic. The matching workflow uses jointly fitted polarized-scan configurati
 as generator seeds, rather than this bound-limited baseline solution.
 
 The 500-bin TE-area generator and its trained teaching benchmark are a separate
-controlled configuration, unchanged by this baseline-only correction. Their
+controlled configuration. Their
 derived n=1 operating point is not a calibration to this measured 3.580 m cable.
 Adopting this setup there would require new data, calibration checks, and training.
 
@@ -251,7 +251,7 @@ These distributions are intentionally inspectable numerical experiments. For exp
 
 ## 7. 500-bin networks, validation, and metric conventions
 
-The 2026-09-08 [model-comparison record](model-comparison.md) adds a basic MLP
+The [model-comparison reference](model-comparison.md) adds a basic MLP
 (64,129 parameters) and a three-hidden-layer dense DNN (297,473) to the
 existing CNNs below. The new tutorial comparison trains the MLP, dense DNN and
 multiscale CNN on the same broad dataset, exact grouped partition and preprocessing,

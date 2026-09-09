@@ -178,7 +178,7 @@ def example_html(metadata):
 <p>{selection} The largest absolute residual is {m["max_absolute_residual_recorded_units"]*1e6:.2f} × 10⁻⁶ recorded units; the endpoint deviations have not been cropped out. {optimization} It uses the same circuit implementation used by the generator.</p>
 {parameter_table_html(metadata)}
 <details><summary>Whole-scan fit statistics</summary><div class="details-body"><div class="table-wrap"><table><caption>Whole-scan residuals; {duplicates} exact duplicate records omitted</caption><thead><tr><th>Sweep</th><th>RMS (10⁻⁶ recorded units)</th><th>RMS / peak-to-peak</th></tr></thead><tbody>{rows}</tbody></table></div><p>The <a href="#diagnostics">diagnostics section</a> explains why residual structure must not automatically be treated as electronic noise.</p></div></details>
-<p class="provenance">Computed directly from the saved measured-fit CSVs; the fitted curve is checked against its stored circuit and detector coefficients before export. <a href="assets/baseline-example.json">Download the figure provenance, fit settings, and statistics</a>. {source_link} A close baseline fit does not uniquely measure each component or establish polarization accuracy.</p>
+<p class="provenance">Computed directly from the saved measured-fit CSVs; the fitted curve is checked against its stored circuit and detector coefficients before export. <a href="assets/baseline-example.json">Download the fit settings and statistics</a>. {source_link} A close baseline fit does not uniquely measure each component or establish polarization accuracy.</p>
 </div>
 </section>'''
 

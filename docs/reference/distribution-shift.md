@@ -1,6 +1,6 @@
 # Matching uncertainty, distribution shift and robustness
 
-Added 2026-09-08 for the [tutorial section](../docs/index.html#distribution-shift),
+Added 2026-09-08 for the [tutorial section](https://zetanaut.github.io/NMR-AI/index.html#distribution-shift),
 with a same-day revision emphasizing unfamiliar experimental structure at inference.
 This is a proposed measurement and validation protocol. It does not report
 new experimental covariance estimates, revise either generator, or establish
@@ -36,8 +36,8 @@ evidence, and either can occur without a large value of the other.
 
 ## What the three deliverables mean
 
-The owner's proposed comparison of noise, baseline and signal over SNR and
-polarization is a useful starting point. Three deliverable packages make it
+Comparing noise, baseline and signal over SNR and polarization is a useful
+starting point. Three deliverable packages make it
 operational, with different mathematical objects in each:
 
 | Package | Save | Question it answers |

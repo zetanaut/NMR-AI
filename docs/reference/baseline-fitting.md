@@ -1,10 +1,10 @@
 # Fit the measured deuteron baseline
 
-This is the laboratory record for the [baseline practical](../docs/baseline.html).
+This reference accompanies the [baseline practical](https://zetanaut.github.io/NMR-AI/baseline.html).
 The circuit follows [arXiv:2603.10146v5, Fig. 1 and Eqs. (1)–(14)](https://arxiv.org/pdf/2603.10146v5#page=4);
 see the [physics notes](physics-electronics-theory.md) for topology and conventions.
 
-Continue with [Practical 01B](../docs/matching.html) and its
+Continue with [Practical 01B](https://zetanaut.github.io/NMR-AI/matching.html) and its
 [experimental-matching record](experimental-matching.md) for the five supplied
 polarized scans. That next model fits the slow detector phase as well as the
 tuning capacitor, improving the earlier baseline comparison while retaining
@@ -14,10 +14,10 @@ electronics assumption, not a prerequisite capacitor measurement. The separate
 matching model gives baseline RMS about 6.3643e-5 recorded units and fitted
 C_tune about 544.84 pF; it also fixes the cable at 3.580 m and C_stray at zero.
 This changes several assumptions, so the comparison does not isolate phase
-alone or establish hardware calibration. See the [learning examples](../README.md#train-on-experiment-anchored-lineshapes)
+alone or establish hardware calibration. See the [learning examples](https://zetanaut.github.io/NMR-AI/walkthrough.html#train)
 for generation, training and prediction.
 
-The owner has identified the five polarized sweeps as butanol. The
+The five polarized sweeps are butanol measurements. The
 [three material examples](material-examples.md) retain the original exercise,
 add its two-site butanol comparison, and introduce UVA-ND3 data from another
 acquisition. That ND3 working example uses the same exact 500-bin grid through
@@ -26,7 +26,7 @@ in the provenance archive; its hardware setup is not inferred from this baseline
 
 ## Establish acquisition metadata first
 
-The public example is now [`examples/deuteron-baseline.csv`](../examples/deuteron-baseline.csv),
+The example is [`examples/deuteron-baseline.csv`](../../examples/deuteron-baseline.csv),
 provided by the repository owner specifically for student use and publication.
 It contains one headerless record: timestamp plus 500 amplitudes. This is a
 deuteron baseline with nominal center **32.7 MHz**; no frequency column is present.
@@ -37,7 +37,7 @@ added. Published SHA-256: `dac7c4598c6ec32250ab763ab1bf99e2a7aa7346de4e452ce00e8
 artifacts in memory and records every repaired token. Ambiguous numbers,
 nonfinite values, and wrong field counts are rejected. All 500 samples and the
 timestamp are preserved; neither fitter interprets the first row as a header.
-See [the example README](../examples/README.md) for source provenance and loading.
+See [the example README](../../examples/README.md) for source provenance and loading.
 
 The owner confirmed that this baseline and the butanol sweeps have 500 bins and retain the original
 proton sweep offsets and spacing, with nominal center changed from 213 MHz to
@@ -65,7 +65,7 @@ information, not an integer inferred from the fitted curve. The paper explicitly
 requires integer half-wave tuning and quotes approximately 0.78 velocity factor
 and 360 cm half-wavelength for deuterons [Sec. 2, pp. 2–3](https://arxiv.org/pdf/2603.10146#page=2).
 
-The working preset is [deuteron-baseline-setup.json](../configs/deuteron-baseline-setup.json).
+The working preset is [deuteron-baseline-setup.json](../../configs/deuteron-baseline-setup.json).
 It fixes the branch and propagation scale, allowing only δℓ = ±0.1074 m (±3%).
 This is our explicit working interpretation of “a few percent,” not an independently
 measured tolerance or Gaussian standard uncertainty. Do not increase it to absorb
@@ -109,9 +109,7 @@ python tools/export_baseline_example.py --fit-dir local-results/deuteron-tuned-b
 ```
 
 Use a fresh output directory. `fit_baseline.py` is a convenience entry point to
-the setup-driven fitter with the supplied deuteron preset, not a separate
-unrestricted search. The former unconstrained workflow and its public fit have
-been replaced. The CSV and confirmed frequency grid are unchanged.
+the setup-driven fitter with the supplied deuteron preset, using the confirmed cable constraint and frequency grid.
 
 Twenty-four starts (seed 42) vary only C_tune, C_stray, and δℓ. Numerical
 capacitance bounds are 10–2000 pF and 0–400 pF respectively; these are search

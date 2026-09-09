@@ -1,10 +1,10 @@
 # Three experimental examples
 
-Updated 2026-09-08. These are three worked examples across two materials and two
-acquisitions, not three independent datasets. The owner identified the existing
-five raw sweeps as butanol and requested the additional UVA-ND3 example.
+These are three worked examples across two materials and two acquisitions.
+The first two compare models on the same butanol sweeps; UVA-ND3 supplies
+the separate acquisition.
 
-For the student execution sequence, follow [walkthrough steps 4–6](../docs/walkthrough.html#single-site).
+For the student execution sequence, follow [walkthrough steps 4–6](https://zetanaut.github.io/NMR-AI/walkthrough.html#single-site).
 Each step provides commands, expected results and local raw-fit figures through
 `tools/plot_fit.py`. The two-site step explicitly reads the single-site report
 from the preceding step. The commands later in this record rebuild the public
@@ -12,9 +12,9 @@ reference artifacts and retain their pinned comparison provenance.
 
 | Example | Measurements | Model and purpose |
 | --- | --- | --- |
-| [1: Single-site starting model](../docs/matching.html) | All five butanol sweeps in `Sample_RawSignal.csv`, 500 bins each | Preserve the original complex spin-1/full-circuit exercise and its separate single-site generator |
-| [2: Butanol C–D/O–D comparison](../docs/butanol.html) | Exactly the same five raw sweeps and frequency grid | Add the second deuteron environment from the supplied butanol theory; compare full residuals with Example 1 |
-| [3: UVA-ND3 data](../docs/uva-nd3.html) | Five predetermined records resampled onto the exact 500-bin teaching grid | Jointly fit raw phase, circuit baseline and the ND3 spin-1 response; retain explicit nominal hardware assumptions |
+| [1: Single-site starting model](https://zetanaut.github.io/NMR-AI/matching.html) | All five butanol sweeps in `Sample_RawSignal.csv`, 500 bins each | Preserve the original complex spin-1/full-circuit exercise and its separate single-site generator |
+| [2: Butanol C–D/O–D comparison](https://zetanaut.github.io/NMR-AI/butanol.html) | Exactly the same five raw sweeps and frequency grid | Add the second deuteron environment from the supplied butanol theory; compare full residuals with Example 1 |
+| [3: UVA-ND3 data](../uva-nd3.html) | Five predetermined records resampled onto the exact 500-bin teaching grid | Jointly fit raw phase, circuit baseline and the ND3 spin-1 response; retain explicit nominal hardware assumptions |
 
 The [physics](physics-electronics-theory.md), [baseline](baseline-fitting.md),
 and [original matching](experimental-matching.md) records remain the authority
@@ -27,7 +27,7 @@ before changing its performance claims.
 
 The owner supplied `fit_multisite.py` and `fit_multisite_test.py` in the
 `butanol_theory` directory. Their byte counts and SHA-256 hashes are recorded in
-[butanol-theory-source.json](../configs/butanol-theory-source.json). They were
+[butanol-theory-source.json](../../configs/butanol-theory-source.json). They were
 read as sources, not executed or imported. The scientific context is
 [Dulya et al., *A line-shape analysis for spin-1 NMR signals*, NIM A 398 (1997)
 109–125](https://doi.org/10.1016/S0168-9002(97)00317-3). The supplied code is the
@@ -39,7 +39,7 @@ a common physical Lorentzian half-width, separate splitting scales and EFG
 asymmetries, and an O–D mixing weight. Its inverse-splitting factors are essential:
 the weight describes integrated susceptibility, rather than the ratio of heights
 on two differently scaled frequency axes. The local implementation is
-[material_lineshapes.py](../tools/material_lineshapes.py):
+[material_lineshapes.py](../../tools/material_lineshapes.py):
 
 ```
 χ(f) = A_int [(1−K) κ_CD((f−fc)/Δ_CD)/Δ_CD
@@ -68,7 +68,7 @@ The supplied synthetic example parameters, axis rescaling, and empirical gain
 tilt are not apparatus measurements. The source's polynomial voltage background
 is not substituted for the physical circuit in this comparison.
 
-[match_butanol.py](../tools/match_butanol.py) propagates the summed complex
+[match_butanol.py](../../tools/match_butanol.py) propagates the summed complex
 susceptibility through the same physical single-capacitor circuit as Example 1.
 It retains n=1, the 3.580 m cable at nominal 32.7 MHz, consistent passive RLGC,
 finite-source loading, zero stray capacitance, and the explicit nominal coil,
@@ -91,8 +91,8 @@ Different near-best solutions reflect optimization/model sensitivity; their
 spread is not a statistical confidence interval. The old report remains the
 unaltered comparison snapshot, identified by its hash.
 
-See [the complete comparison record](../docs/assets/butanol-matching.json) and
-[all five fits](../docs/butanol.html#results) for the measured RMS reductions,
+See [the complete comparison record](../assets/butanol-matching.json) and
+[all five fits](https://zetanaut.github.io/NMR-AI/butanol.html#results) for the measured RMS reductions,
 P estimates and remaining residual structure. These are in-sample comparisons
 with three added unknowns; smaller residuals do not establish greater P accuracy.
 
@@ -114,21 +114,21 @@ separate detector voltages are not added through the nonlinear circuit.
 
 ## UVA-ND3 acquisition and provenance
 
-The public [working example](../examples/uva-nd3.json) contains five records on
+The public [working example](../../examples/uva-nd3.json) contains five records on
 the exact **500-bin** grid `32.3 + 0.0015287*j MHz`, j=0..499, ending at
 33.0628213 MHz. Source records 1, 126, 251, 376 and 501 were selected at equal
 intervals before fitting. All current fit inputs, residuals and figures use
 these 500 samples.
 
 The original numeric excerpt is preserved byte-for-byte in
-[the source provenance archive](../provenance/README.md), with SHA-256
+[the reader’s original measurement resource](../../tools/_data/uva-nd3-measured.json), with SHA-256
 `af5a4358bae2aa48cc3c7d16967816679ae15f9c863511c9c96daa729885e4bb`.
 The parent acquisition is the 2022-09-23 file named in the artifact, 48,637,894
 bytes, SHA-256 `57b5755108b05109d54bc5e1b40c11f07a6fefa59e4e35ecad05e5d9a7a77afc`.
 Its original frequency coordinates and phase/reference values are source
 provenance, rather than an alternate working input contract.
 
-[prepare_uva_nd3.py](../tools/prepare_uva_nd3.py) linearly interpolates phase and
+[prepare_uva_nd3.py](../../tools/prepare_uva_nd3.py) linearly interpolates phase and
 recorded baseline separately in frequency using float64. Their subtraction is
 retained as a provenance check; the active fit uses raw `phase` with its baseline
 present. No baseline is added to these already raw sweeps.
@@ -138,7 +138,7 @@ roundoff within four floating-point spacings and rejects physical extrapolation.
 Source frequencies above the target endpoint are outside the working window.
 The original arrays are preserved; the derived arrays are explicitly labeled.
 
-The [reader](../tools/uva_nd3_data.py) requires exact equality to the confirmed
+The [reader](../../tools/uva_nd3_data.py) requires exact equality to the confirmed
 500-bin frequency array and to the reproducible source derivation. It checks
 `phase - baseline == basesub` in every bin, source/configuration hashes and record
 identity. The source archive is rejected as a working example input. Each
@@ -155,7 +155,7 @@ The active input is the resampled raw `phase`. Its baseline is present. Stored
 Acquisition polarization, area-calibration coefficients and previous fitted
 curves are also excluded. No added baseline or TE calibration is required.
 
-[match_uva_nd3.py](../tools/match_uva_nd3.py) now uses the same physical single-
+[match_uva_nd3.py](../../tools/match_uva_nd3.py) now uses the same physical single-
 capacitor circuit and full complex susceptibility propagation as the other raw
 examples, with the single-site ND3 spin-temperature model:
 
@@ -185,7 +185,7 @@ constant detector phase and offset. There are **12 fitted unknowns**. Gain is
 hypot(a,b) recorded-units per node volt, constant phase is atan2(-b,a), and d is
 in recorded units. This parameterization does not establish a DAQ conversion.
 
-The [configuration](../configs/uva-nd3-matching.json) records all fixed component
+The [configuration](../../configs/uva-nd3-matching.json) records all fixed component
 values, fitted bounds and their source. Fixed components use the existing
 standalone tutorial `circuit.py:nominal_circuit`, with its derived half-wave
 operating point at 32.68 MHz. These are declared assumptions for a conditional
@@ -209,7 +209,7 @@ is retained and shown, not widened. Other selected capacitances are about
 681.83, 1056.75, 383.65 and 495.07 pF. Scaled profiled-Jacobian conditions range
 from about 492 to 82,015. Numerical convergence and fitted settings do not
 establish identifiable hardware or accurate experimental polarization.
-The [complete fit record](../docs/assets/uva-nd3-matching.json) retains every
+The [complete fit record](../assets/uva-nd3-matching.json) retains every
 candidate, fixed circuit value, initialization mask, source/code hash and
 32-to-64-node quadrature check.
 
@@ -260,6 +260,6 @@ are the source for generated prose. Library versions used for verification are
 saved in each publication record. Existing benchmark artifacts are unchanged.
 
 The butanol comparison retains its byte-identical original
-[single-site reference snapshot](../docs/assets/experimental-matching-single-site-reference.json).
+[single-site reference snapshot](../assets/experimental-matching-single-site-reference.json).
 The current matching publication has updated generation metadata; the fitted
 single-site parameters and residuals agree exactly with this reference.

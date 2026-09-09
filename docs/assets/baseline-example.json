@@ -13,7 +13,7 @@
     "circuit.py": "e9fe63030e1a6356f4f4ebf565d56bfc506ad06efedecfb68b652dbd14946368",
     "baseline_data.py": "8a08e4a290c9bd1da194fe0f6c9932cd5c814b29fbd497c9c774522aecf27ffb"
   },
-  "exporter_sha256": "dfbe9d188e77ebbfd3a9e91eacc2de667a35628ba61f46dddff59c67124b90af",
+  "exporter_sha256": "d29893ac2ab180bf8f37a55a5aa3b5179ad76c163001e6aab8cb0636f6e972cb",
   "parameter_catalog_sha256": "b4521e8233abbbc7e68e138c455b6c9df40246ca1f3d99c8d5f447cf11eb4877",
   "fit_mode": "tuning-informed",
   "source_rows": 1,

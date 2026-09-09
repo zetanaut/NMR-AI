@@ -84,7 +84,7 @@
     "All five records are development examples from one acquisition period, not independent held-out experiments",
     "Interpolation correlates errors; raw-fit residuals do not establish measured noise covariance or calibrated parameter uncertainty"
   ],
-  "sampling": "Same float64 linear interpolation as examples/uva-nd3.json; source evidence is preserved under provenance/.",
+  "sampling": "Same float64 linear interpolation as examples/uva-nd3.json; the reader keeps the original measurements in its internal tools/_data/ resource.",
   "input_channel": "phase",
   "nominal_circuit": {
     "status": "tutorial assumptions; not measured ND3 hardware",

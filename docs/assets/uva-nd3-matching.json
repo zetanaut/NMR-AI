@@ -3,7 +3,7 @@
   "dataset": "UVA-ND3 data",
   "material": "ND3",
   "audit": {
-    "source_sha256": "4cc21aa1d93a8d4e2bcaf1f243e4d37140aced36d3afbcd6d78bf53316b82f7e",
+    "source_sha256": "bb6ecd2684e589d515a10b7e5065f092b4df296e82c28ae2c5cd3a66a5fc2403",
     "parent_sha256": "57b5755108b05109d54bc5e1b40c11f07a6fefa59e4e35ecad05e5d9a7a77afc",
     "rows": 5,
     "bins": 500,
@@ -17,7 +17,7 @@
     "frequency_policy": "Exact 500-bin teaching grid: f_j = 32.3 + 0.0015287*j MHz, j=0..499",
     "resampling": {
       "version": "uva-nd3-linear-resampling-500-v1",
-      "source_archive": "provenance/uva-nd3-measured.json",
+      "source_archive": "tools/_data/uva-nd3-measured.json",
       "source_excerpt_sha256": "af5a4358bae2aa48cc3c7d16967816679ae15f9c863511c9c96daa729885e4bb",
       "acquisition_sha256": "daa69f3ba3bf9b886587531e983869213e37014c29bca2e8c55e6aed077d881c",
       "method": "Piecewise linear interpolation in frequency, applied independently to phase and baseline in float64; basesub = phase - baseline",
@@ -118,7 +118,7 @@
       "All five records are development examples from one acquisition period, not independent held-out experiments",
       "Interpolation correlates errors; raw-fit residuals do not establish measured noise covariance or calibrated parameter uncertainty"
     ],
-    "sampling": "Same float64 linear interpolation as examples/uva-nd3.json; source evidence is preserved under provenance/.",
+    "sampling": "Same float64 linear interpolation as examples/uva-nd3.json; the reader keeps the original measurements in its internal tools/_data/ resource.",
     "input_channel": "phase",
     "nominal_circuit": {
       "status": "tutorial assumptions; not measured ND3 hardware",
@@ -152,7 +152,7 @@
       32.88
     ]
   },
-  "config_sha256": "9a601c6e403570c5b6838c6fb73096eaf6c7b6b33e8fab140a62bb337692611a",
+  "config_sha256": "42f857516a53c920419a2cb9ae8ab7cbb9127c9a7eed7156d6ad2378b8c78142",
   "fits": [
     {
       "model_version": "uva-nd3-raw-qmeter-pake-500-v3",
@@ -3751,16 +3751,24 @@
   "residual_sign": "resampled raw phase minus full resampled circuit fit",
   "code_sha256": {
     "match_uva_nd3.py": "0c9c974135c30222a775d5a0c39dacc85b3392dd11bf7d3dda32141a14f964d0",
-    "uva_nd3_data.py": "d78542326dcbea272410d3da96d04cea38fff788f7c5d1d804c3f2586da592c2",
+    "uva_nd3_data.py": "14d245c0b89a8ada7a39007a2d6f2918351b028bc15d8352c7d1ca9650bb97fe",
     "prepare_uva_nd3.py": "47037acf6ceec4f714bde25808f62884ee33012d92961724ccdaeb418c882685",
     "baseline_data.py": "8a08e4a290c9bd1da194fe0f6c9932cd5c814b29fbd497c9c774522aecf27ffb",
     "circuit.py": "e9fe63030e1a6356f4f4ebf565d56bfc506ad06efedecfb68b652dbd14946368",
     "lineshape.py": "81b653731a06f166c965b39eb8787cd0abe57cb2784d124d77c9b797d4541521",
     "match_experimental_signals.py": "63cfa71a7f63d168e949b4cf4ba2345a13d1f0e07cb1da760480639a32c170b0"
   },
+  "reverification": {
+    "date": "2026-09-09",
+    "reason": "Internal data resource relocated; numeric arrays, interpolation, fitted parameters and all saved curve columns verified unchanged. No refit.",
+    "original_report_sha256": "93d08079f2d897e0f8c4312a6639bd83abd12607a75775c4c72e0be53afffe0b",
+    "original_reader_sha256": "d78542326dcbea272410d3da96d04cea38fff788f7c5d1d804c3f2586da592c2",
+    "original_config_sha256": "9a601c6e403570c5b6838c6fb73096eaf6c7b6b33e8fab140a62bb337692611a",
+    "original_working_example_sha256": "4cc21aa1d93a8d4e2bcaf1f243e4d37140aced36d3afbcd6d78bf53316b82f7e"
+  },
   "publication": {
-    "report_sha256": "93d08079f2d897e0f8c4312a6639bd83abd12607a75775c4c72e0be53afffe0b",
-    "exporter_sha256": "005e85ea430025d194321ae80c39a771f6d85dac62745f1de8dd9ab607098aa6",
+    "report_sha256": "32808295ce0d867e79c36a1efe6eef27919d4265c4e6c12e70f44f328e2b64ef",
+    "exporter_sha256": "ad8aa93c3c302a6747e585c033ce49db4b9b3a8b84f4d45a49ea5eb2d6b57069",
     "numerical_convergence": [
       {
         "source_record_1based": 1,

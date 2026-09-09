@@ -1,163 +1,72 @@
-# Public deuteron teaching examples
+# Example data
 
-[deuteron-baseline.csv](deuteron-baseline.csv) is the measured baseline supplied
-by the repository owner for public student use. It is independent of any research
-software checkout. The original fields and spacing are preserved; only a final
-newline was added to the supplied file.
+Use these files with the commands in the
+[step-by-step tutorial](https://zetanaut.github.io/NMR-AI/walkthrough.html).
+They are included and ready to load.
 
-- One headerless record: timestamp, followed by 500 recorded amplitudes.
-- Nucleus: deuteron; owner-confirmed nominal center: 32.7 MHz.
-- Frequency: `32.3 + 0.0015287*j MHz`, j = 0…499, preserving the original
-  proton sweep offsets and spacing with the owner's corrected center.
-- First/last sample: 32.3000000 / 33.0628213 MHz. There are 499 intervals
-  between 500 samples, each 1.5287 kHz. Do not substitute a symmetric linspace.
-- Contract: [`deuteron-acquisition.json`](../configs/deuteron-acquisition.json).
-- Recorded-unit to volts conversion: **not supplied**.
-- 35 numeric fields contain spaces immediately before their decimal point.
-  The loader repairs that specific formatting pattern in memory and reports
-  each repair. It does not smooth, discard, interpolate, or rescale samples.
+| File | Contains | Reader | Tutorial step |
+| --- | --- | --- | --- |
+| [deuteron-baseline.csv](deuteron-baseline.csv) | One baseline sweep | `baseline_data.load_baseline_csv` | [3: baseline fit](https://zetanaut.github.io/NMR-AI/walkthrough.html#baseline) |
+| [Sample_RawSignal.csv](Sample_RawSignal.csv) | Five raw butanol sweeps | `experimental_data.load_signal_csv` | [4–5: single-site and two-site fits](https://zetanaut.github.io/NMR-AI/walkthrough.html#single-site) |
+| [uva-nd3.json](uva-nd3.json) | Five raw UVA-ND3 sweeps | `uva_nd3_data.load_nd3` | [6: ND3 fit](https://zetanaut.github.io/NMR-AI/walkthrough.html#nd3) |
 
-Published CSV SHA-256:
-`dac7c4598c6ec32250ab763ab1bf99e2a7aa7346de4e452ce00e80f0e2b1eb28`.
-Original file SHA-256, before the final newline:
-`cc24ece801180ac3113052610042bf8228a97fabbfe8350fdc7aabbb5b4c48e8`.
+Every working sweep has 500 bins on this frequency grid:
 
-## Load it from the repository root
+```text
+frequency_mhz[j] = 32.3 + 0.0015287*j, j = 0..499
+first = 32.3000000 MHz; last = 33.0628213 MHz
+```
+
+The nominal deuteron frequency is 32.7 MHz. The actual grid is defined in
+[deuteron-acquisition.json](../configs/deuteron-acquisition.json); use its spacing
+and offsets. Amplitudes are in recorded units. A conversion to volts has not
+been supplied.
+
+## Load the examples
+
+Run this Python code from the repository root. The fitting commands use these
+same readers automatically.
 
 ```python
 import sys
 sys.path.insert(0, "tools")
 from baseline_data import load_baseline_csv, load_acquisition, acquisition_grid
-
-records, parsing = load_baseline_csv("examples/deuteron-baseline.csv")
-timestamp = records[0, 0]
-amplitudes = records[0, 1:]
-frequency_hz = acquisition_grid(load_acquisition())
-assert amplitudes.shape == (500,)
-assert parsing["decimal_whitespace_repair_count"] == 35
-```
-
-Ordinary `numpy.loadtxt` rejects the embedded spaces; use the shared loader in
-both fitting programs. Ambiguous whitespace such as `1 2` is rejected, not
-silently converted to `12`. The CSV is never rewritten by the loader.
-
-## Preview and fit
-
-Run `python tools/preview_baseline.py` to reproduce the website's measured-data
-preview against the confirmed frequency axis. It is a measured-only plot.
-
-To reproduce the displayed physical-circuit comparison:
-
-```bash
-python tools/fit_baseline.py examples/deuteron-baseline.csv \
-  --starts 24 --output-dir local-results/deuteron-tuned-baseline-fit
-```
-
-It uses the confirmed acquisition and hardware preset automatically:
-[deuteron-baseline-setup.json](../configs/deuteron-baseline-setup.json) fixes n=1
-and λ/2=3.580 m at 32.7 MHz. The provisional ±3% length trim is a working bound,
-not a measured uncertainty. Cable L/C are derived consistently from that known
-propagation scale with explicit nominal impedance/loss assumptions.
-
-The constrained fit reaches trim and stray-capacitance limits and has correlated
-residuals; it is not an accepted hardware calibration. Add actual capacitor,
-coil, loss and detector records before treating fitted values as physical settings.
-For this setup, copy and refine the preset; the blank template is for other setups.
-See the [fitting procedure](../notes/baseline-fitting.md) for diagnostics, parameter
-meanings, and publication.
-
-## Polarized spin-1 raw signals
-
-[Sample_RawSignal.csv](Sample_RawSignal.csv) is also explicitly authorized for
-public student use. Its bytes are preserved exactly, including five UTF-8
-U+2028 line separators and blank lines. SHA-256:
-`cdbb7e3afa6531694a4b97848d295bbb5c7c03ef62d796b053e3b4e16fbaea5a`.
-
-The owner identified this material as butanol. There are five distinct timestamp-plus-500-sample records. They use the same
-confirmed frequency grid and n=1, 3.580 m cable half-wave setup as the baseline.
-Timestamps are not in increasing order; file order is retained. The file has
-no polarization or frequency columns. Polarization is determined by matching
-the spin-1 lineshape; TE calibration is not needed for that extraction.
-
-Use the UTF-8-aware, audited reader:
-
-```python
-import sys
-sys.path.insert(0, "tools")
 from experimental_data import load_signal_csv
-
-signals, audit = load_signal_csv("examples/Sample_RawSignal.csv")
-assert signals.shape == (5, 501)
-assert len(audit["unicode_line_separators"]) == 5
-assert len(audit["blank_logical_lines_1based"]) == 18
-```
-
-It reuses the strict numeric grammar from `baseline_data.py`, but handles this
-file's record separators explicitly. It never removes a separator inside an
-otherwise invalid number to invent a new value. No records are deduplicated,
-sorted or smoothed. The original single-baseline parser remains unchanged.
-
-See [Practical 01B](../docs/matching.html) and the
-[experimental matching record](../notes/experimental-matching.md) for full
-signal/circuit fits, noise diagnostics and a 500-bin generator that samples new
-simulator-known polarizations around fitted experimental configurations.
-
-[Example 2](../docs/butanol.html) uses the same five sweeps with the supplied
-C–D/O–D butanol theory and compares all residuals against the original single-site
-exercise. The original raw file and generator are unchanged. See the
-[material-model record](../notes/material-examples.md) for the theory conventions.
-
-The example generation run contains 2,000 events across 100 configurations.
-Its polarization labels are newly sampled simulator truth, not copies of the
-five experimental fit estimates. The trainer and predictor accept these 500-bin raw/reference arrays without a
-required TE channel. They save the acquisition and preprocessing contract and
-group all descendants of each measured source together. See the
-[training exercise](../README.md#train-on-experiment-anchored-lineshapes).
-
-## UVA-ND3 data
-
-[uva-nd3.json](uva-nd3.json) is the third public teaching example. Its five
-records, selected before fitting at source positions 1, 126, 251, 376 and 501,
-all use **500 bins** on `f_j = 32.3 + 0.0015287*j MHz`, j=0..499.
-The last point is 33.0628213 MHz, matching every other working example.
-The fitting input is `phase`, which already contains the raw baseline.
-
-These are derived arrays. `tools/prepare_uva_nd3.py` linearly interpolates the
-original phase and recorded baseline in frequency using float64, then computes
-`basesub = phase - baseline`. It uses the target window without physical
-extrapolation; the first endpoint differs from the source by floating-point
-roundoff only. The [source archive](../provenance/README.md) preserves the original
-excerpt byte-for-byte. The working file retains source and record hashes,
-timestamps, reported sweep counts and the complete resampling policy.
-
-Interpolation changes resolution and correlates neighboring errors. It does
-not establish new independent measurements or a noise covariance. Hardware
-calibration and recorded-unit-to-volt conversion remain unresolved for ND3;
-the common grid does not assign the butanol cable/tuning setup to it.
-
-```python
-import sys
-sys.path.insert(0, "tools")
 from uva_nd3_data import load_nd3
 
-data, audit = load_nd3("examples/uva-nd3.json")
-assert audit["bins"] == 500
-assert audit["source_record_numbers_1based"] == [1, 126, 251, 376, 501]
+baseline, baseline_audit = load_baseline_csv("examples/deuteron-baseline.csv")
+butanol, butanol_audit = load_signal_csv("examples/Sample_RawSignal.csv")
+nd3, nd3_audit = load_nd3("examples/uva-nd3.json")
+frequency_mhz = acquisition_grid(load_acquisition()) / 1e6
+
+print(baseline[:, 1:].shape)        # (1, 500); column 0 is the timestamp
+print(butanol[:, 1:].shape)         # (5, 500); column 0 is the timestamp
+print(len(nd3["records"]))          # 5; each record has 500 phase values
+print(baseline_audit["decimal_whitespace_repair_count"])  # 35
 ```
 
-The reader checks the exact grid, every resampled array against the source,
-and exact `phase - baseline == basesub` in every bin. It rejects the archived
-source arrays as working input. Reproduce the derived artifact with:
+The baseline CSV contains spaces before some decimal points. Its reader repairs
+that formatting in memory and reports every repair. The butanol reader handles
+UTF-8 record separators and preserves the original record order. Use these
+readers instead of a generic CSV importer.
 
-```bash
-python tools/prepare_uva_nd3.py
-```
+For UVA-ND3, fit `record["phase"]`: it already includes the baseline. The stored
+`baseline` and `basesub` fields describe the recorded reference and its
+subtraction; they are excluded from the raw-sweep fit. The working arrays were
+linearly interpolated onto the teaching grid. The reader verifies that
+derivation, and the fitter applies the same interpolation to its model.
+Interpolation correlates neighboring errors. ND3 hardware values are explicit
+tutorial assumptions, separate from the confirmed butanol setup.
 
-[Example 3](../docs/uva-nd3.html) fits all 500 raw `phase` values with their
-baseline present. It jointly fits the ND3 spin-1 susceptibility, tuning capacitor,
-detector phase and readout through the full physical circuit. The circuit is
-evaluated on source coordinates and interpolated identically before comparison.
-The stored `baseline` and `basesub` arrays are retained for provenance only.
-No extra baseline is added, and no TE calibration or stored polarization enters
-the fit. Fixed circuit constants are explicit assumptions, not ND3 measurements. The [material-model record](../notes/material-examples.md)
-explains the assumptions and reproduction. Everything needed is in this repository.
+## From fits to training data
+
+The supplied signal files have no independently established polarization labels.
+Their fits estimate polarization from the spin-1 lineshape. Tutorial step 7
+uses the single-site fitted configurations to generate **new** spectra with
+simulator-known labels, which are used for training and evaluation.
+
+Source details and numerical checks are in the reference pages for the
+[baseline](../docs/reference/baseline-fitting.md),
+[butanol sweeps](../docs/reference/experimental-matching.md), and
+[material models](../docs/reference/material-examples.md).
+Save your generated files in `local-results/`.

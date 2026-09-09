@@ -1,6 +1,6 @@
 # MLP → DNN → CNN on 500-bin spectra
 
-The [network lesson](../docs/index.html#network) compares three estimators on
+The [network lesson](https://zetanaut.github.io/NMR-AI/index.html#network) compares three estimators on
 newly generated 500-bin TE-area examples. The grid is
 `32.3 + 0.0015287*j MHz`, j=0..499, ending at 33.0628213 MHz.
 The nominal deuteron center is 32.7 MHz. The [physics notes](physics-electronics-theory.md)
@@ -8,7 +8,7 @@ record the full-circuit and calibration assumptions.
 
 ## Common data and protocol
 
-The [declared protocol](../configs/model-comparison.json) uses
+The [declared protocol](../../configs/model-comparison.json) uses
 `local-results/qmeter-500-v1/broad.npz`: 6,000 spectra from 300 controlled
 simulated configurations, with new fractional P drawn in [-0.25,0.25].
 Dataset SHA-256: `af70281eb8bd6efd52dcfe3b764d2bc12712259207342b937bb9e9f2aa157c37`.
@@ -41,14 +41,14 @@ All errors below are percentage points, equal to 100 times fractional-P error.
 
 Residual is `P_true - P_pred`. Bias is its mean and width is its population SD
 (ddof=0), so RMSE² = bias² + width². A width is not a calibrated uncertainty
-interval. The [public comparison data](../docs/assets/model-comparison.json)
+interval. The [public comparison data](../assets/model-comparison.json)
 retain every test prediction and training history.
 
 This is one seed and a common epoch cap. It does not establish the best achievable
 error of an architecture, a universal ordering, or experimental accuracy. The
 CNN includes a fitted ridge estimator, so its performance measures the complete
 estimator rather than the isolated benefit of convolution. The separate
-[raw/reference lineshape exercise](../docs/matching.html#lineshape-network) uses
+[raw/reference lineshape exercise](https://zetanaut.github.io/NMR-AI/matching.html#lineshape-network) uses
 recorded units, no TE calibration, a different P range and source-scan holdouts;
 its error belongs to that contract.
 
@@ -92,7 +92,7 @@ from the 82,391 parameter count.
 
 ## Reproduce and verify
 
-Create an environment using the [README](../README.md#set-up). Generate the broad
+Create an environment using the [README](../../README.md#set-up). Generate the broad
 dataset once and use fresh output paths:
 
 ```bash
@@ -116,4 +116,4 @@ learning curves; the static error figure/table remain readable without JavaScrip
 
 The additional 40-epoch CNN comparison uses the same 500-bin contract and fresh
 runs under `local-results/qmeter-500-v1/`. Its separate aggregate is
-`docs/assets/results.js`; see the README for reproduction commands.
+`docs/assets/results.js`; see the [benchmark guide](benchmarks.md#reproduce-the-additional-cnn-runs) for commands.

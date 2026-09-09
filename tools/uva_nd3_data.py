@@ -9,7 +9,7 @@ import numpy as np
 from baseline_data import acquisition_grid, load_acquisition
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "provenance/uva-nd3-measured.json"
+SOURCE = ROOT / "tools/_data/uva-nd3-measured.json"
 SOURCE_SHA256 = "af5a4358bae2aa48cc3c7d16967816679ae15f9c863511c9c96daa729885e4bb"
 VERSION = "uva-nd3-linear-resampling-500-v1"
 ARRAYS = ("frequency_mhz", "phase", "baseline", "basesub")
@@ -78,7 +78,7 @@ def prepare_nd3():
     data["grid"] = "Exact 500-bin teaching grid: f_j = 32.3 + 0.0015287*j MHz, j=0..499"
     data["export_policy"] = "Derived 500-bin arrays; float64 linear interpolation of raw phase and recorded baseline, then subtraction"
     data["resampling"] = {
-        "version": VERSION, "source_archive": "provenance/uva-nd3-measured.json",
+        "version": VERSION, "source_archive": "tools/_data/uva-nd3-measured.json",
         "source_excerpt_sha256": SOURCE_SHA256,
         "acquisition_sha256": load_acquisition()["configuration_sha256"],
         "method": "Piecewise linear interpolation in frequency, applied independently to phase and baseline in float64; basesub = phase - baseline",
