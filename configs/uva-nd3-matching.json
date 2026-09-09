@@ -1,8 +1,8 @@
 {
-  "description": "Conditional spin-1 fits to five UVA-ND3 records resampled onto the exact confirmed 500-bin grid.",
+  "description": "Joint fit of the full raw UVA-ND3 phase sweeps and their baseline with the ND3 spin-1 susceptibility and physical Q-meter circuit, on the exact 500-bin grid.",
   "material_source": "Owner-confirmed ND3",
-  "readout": "Constant absorption/dispersion mixture and jointly profiled cubic residual background; evaluate on source frequencies and linearly resample the complete response onto all 500 working bins.",
-  "background_convention": "b0+b1*t+b2*t^2+b3*t^3, t=(f_MHz-32.7)/0.4. This describes residual mismatch after measured reference subtraction; it is not a substitute for a calibrated circuit model.",
+  "readout": "a Re[u exp(i phi(f))] + b Im[u exp(i phi(f))] + d, profiled jointly with lineshape and electronics on raw phase",
+  "background_convention": "Baseline = same fitted full circuit/readout with chi=0; signal = full fit minus baseline. No stored reference subtraction or polynomial voltage background is used in the fit.",
   "fit_parameters": {
     "center_mhz": {
       "initial": 32.685,
@@ -43,18 +43,78 @@
         0.95
       ],
       "source": "Spin-temperature branch-ratio fit; stored acquisition pol and cc are not used"
+    },
+    "log10_signal_scale_cgs": {
+      "initial": -3.0,
+      "bounds": [
+        -8.0,
+        -1.0
+      ],
+      "source": "Effective fitted ND3 susceptibility scale; numerical interval, no DAQ or coupling calibration"
+    },
+    "log10_tune_capacitance_pf": {
+      "initial": 2.9152245914409454,
+      "bounds": [
+        1.0,
+        3.3010299956639813
+      ],
+      "source": "Fitted series capacitor; initialized at the nominal tutorial resonance, not a measured knob setting"
+    },
+    "phase_slope_rad_per_mhz": {
+      "initial": 0.0,
+      "bounds": [
+        -1.0,
+        1.0
+      ],
+      "source": "Fitted slow detector phase; explicit search interval in rad/MHz"
+    },
+    "phase_curvature_rad_per_mhz2": {
+      "initial": 0.0,
+      "bounds": [
+        -3.0,
+        3.0
+      ],
+      "source": "Fitted slow detector phase; explicit search interval in rad/MHz squared"
     }
   },
-  "noise_proxy_window_mhz": [
-    32.48,
-    32.88
-  ],
   "max_nfev": 700,
   "limitations": [
-    "Hardware tuning/propagation constants are not independently supplied for this setup",
-    "Constant complex readout and cubic residual background are conditional approximations",
+    "Circuit constants are explicit tutorial assumptions; actual ND3 cable, coil, losses and detector calibration remain unresolved",
+    "Capacitance, detector phase, readout and ND3 shape are fitted jointly; fit estimates are not independent measurements",
     "All five records are development examples from one acquisition period, not independent held-out experiments",
-    "Interpolation changes resolution and correlates errors; unweighted diagnostic fits do not establish independent-bin noise, covariance or calibrated uncertainty"
+    "Interpolation correlates errors; raw-fit residuals do not establish measured noise covariance or calibrated parameter uncertainty"
   ],
-  "sampling": "Same float64 linear interpolation as examples/uva-nd3.json; source evidence is preserved under provenance/."
+  "sampling": "Same float64 linear interpolation as examples/uva-nd3.json; source evidence is preserved under provenance/.",
+  "input_channel": "phase",
+  "nominal_circuit": {
+    "status": "tutorial assumptions; not measured ND3 hardware",
+    "source": "Standalone circuit.py nominal_circuit: supplied tutorial component seeds and a derived half-wave operating point at 32.68 MHz. This is a declared conditional scenario, not the measured butanol cable setup or an ND3 calibration.",
+    "values": {
+      "reference_hz": 32680000.0,
+      "drive_v": 0.382652652,
+      "drive_resistance_ohm": 619.0,
+      "input_resistance_ohm": 50.0,
+      "damping_resistance_ohm": 10.0,
+      "coil_resistance_ohm": 0.35,
+      "coil_inductance_h": 3e-08,
+      "tune_capacitance_f": 8.226679752213878e-10,
+      "stray_capacitance_f": 0.0,
+      "cable_resistance_ohm_per_m": 3.43,
+      "cable_inductance_h_per_m": 2.542e-07,
+      "cable_conductance_s_per_m": 0.0,
+      "cable_capacitance_f_per_m": 1.027e-10,
+      "cable_length_m": 2.992822176489712,
+      "filling_factor": 0.098563235,
+      "susceptibility_scale_cgs": 1.0,
+      "detector_gain": 1.0,
+      "detector_phase_rad": 0.0,
+      "detector_phase_slope_rad_per_hz": 0.0,
+      "detector_phase_curvature_rad_per_hz2": 0.0,
+      "dc_offset_v": 0.0
+    }
+  },
+  "initial_signal_window_mhz": [
+    32.48,
+    32.88
+  ]
 }

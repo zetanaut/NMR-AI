@@ -178,16 +178,18 @@ python tools/export_material_examples.py \\
 
 def publish_nd3(folder):
     report=read_verified(folder/"uva_nd3_report.json")
+    if report.get("input_channel") != "phase" or report.get("stored_reference_used_in_fit") is not False:
+        raise ValueError("Only the joint raw-phase ND3 workflow can be published")
     verify_reused_figures(report,"uva-nd3-matching.json")
     data,audit=load_nd3(ROOT/"examples/uva-nd3.json")
     if report["audit"]!=audit or len(report["fits"])!=len(data["records"]):
         raise ValueError("UVA-ND3 report does not match the complete teaching excerpt")
     if digest(ROOT/"configs/uva-nd3-matching.json")!=report["config_sha256"]:
         raise ValueError("UVA-ND3 fitting configuration changed")
-    fig,axes=plt.subplots(5,2,figsize=(12,14),sharex=True)
+    fig,axes=plt.subplots(5,3,figsize=(15,14),sharex=True)
     rows=[]; convergence=[]
     for i,(r,fit) in enumerate(zip(data["records"],report["fits"])):
-        f=np.asarray(r["frequency_mhz"]);y=np.asarray(r["basesub"])
+        f=np.asarray(r["frequency_mhz"]);y=np.asarray(r["phase"])
         pred=nd3_reconstruct(f,fit);background=nd3_reconstruct(f,fit,True)
         residual=y-pred
         saved=np.loadtxt(folder/f'record_{r["source_record_1based"]}.csv',delimiter=",",skiprows=1)
@@ -196,61 +198,73 @@ def publish_nd3(folder):
         np.testing.assert_allclose(np.sqrt(np.mean(residual**2)),fit["diagnostics"]["rms_recorded_units"],rtol=1e-8)
         change=nd3_reconstruct(f,fit,nphi=64)-pred
         convergence.append({"source_record_1based":r["source_record_1based"],"nphi_32_to_64_max_recorded_units":float(np.max(np.abs(change)))})
-        axes[i,0].scatter(f,(y-background)*1e3,s=6,color="#267b71",alpha=.65,gid=f'nd3-record-{r["source_record_1based"]}',label="Resampled reference subtraction − fitted background")
-        axes[i,0].plot(f,(pred-background)*1e3,"--",color="#b44c30",lw=1.3,label="Conditional spin-1 fit")
-        axes[i,1].plot(f,residual*1e6,color="#267b71",lw=.8);axes[i,1].axhline(0,color="black",lw=.5,alpha=.4)
+        axes[i,0].scatter(f,y,s=6,color="#267b71",alpha=.65,gid=f'nd3-record-{r["source_record_1based"]}',label="Raw phase · baseline present")
+        axes[i,0].plot(f,pred,"--",color="#b44c30",lw=1.3,label="Full ND3 circuit fit")
+        axes[i,0].plot(f,background,color="#173c3a",lw=1,label="Jointly fitted circuit baseline")
+        axes[i,1].plot(f,(pred-background)*1e3,color="#b44c30",lw=1.2,label="Fitted nuclear response")
+        axes[i,2].plot(f,residual*1e6,color="#267b71",lw=.8)
+        axes[i,2].axhline(0,color="black",lw=.5,alpha=.4)
         for ax in axes[i]:style(ax);ax.set_xlim(f[0],f[-1])
-        axes[i,0].set_title(f'Record {r["source_record_1based"]} · P fit {fit["parameters"]["P_model"]*100:.2f}%',loc="left",fontsize=11)
-        axes[i,1].set_title("Full residual · reference-subtracted data minus fit",loc="left",fontsize=10)
-        axes[i,0].set_ylabel("10⁻³ recorded units");axes[i,1].set_ylabel("10⁻⁶ recorded units")
+        axes[i,0].ticklabel_format(axis="y",useOffset=False)
+        axes[i,0].set_title(f'Record {r["source_record_1based"]} · raw sweep and fit',loc="left",fontsize=10)
+        axes[i,1].set_title(f'ND3 response · P fit {fit["parameters"]["P_model"]*100:.2f}%',loc="left",fontsize=10)
+        axes[i,2].set_title("Full residual · raw phase minus fit",loc="left",fontsize=10)
+        axes[i,0].set_ylabel("Recorded units")
+        axes[i,1].set_ylabel("10⁻³ recorded units");axes[i,2].set_ylabel("10⁻⁶ recorded units")
         p=fit["parameters"];d=fit["diagnostics"]
-        rows.append(f'<tr><td>{r["source_record_1based"]}</td><td>{p["P_model"]*100:.3f}%</td><td>{p["center_mhz"]:.6f}</td><td>{p["split_mhz"]*1e3:.3f}</td><td>{p["g"]*p["split_mhz"]*1e3:.3f}</td><td>{p["eta"]:.4f}</td><td>{d["rms_recorded_units"]*1e6:.2f}</td></tr>')
-    axes[0,0].legend(fontsize=6.5,loc="upper right")
+        rows.append(f'<tr><td>{r["source_record_1based"]}</td><td>{p["P_model"]*100:.3f}%</td><td>{p["center_mhz"]:.6f}</td><td>{p["split_mhz"]*1e3:.3f}</td><td>{p["g"]*p["split_mhz"]*1e3:.3f}</td><td>{p["eta"]:.4f}</td><td>{fit["resolved_tune_capacitance_pf"]:.2f}</td><td>{d["rms_recorded_units"]*1e6:.2f}</td></tr>')
+    axes[0,0].legend(fontsize=6,loc="lower left")
     for ax in axes[-1]:ax.set_xlabel("Frequency (MHz) · 500-bin grid")
-    fig.tight_layout();save(fig,"uva-nd3-matches.svg","UVA-ND3 conditional lineshape fits and full residuals")
-    fig,axes=plt.subplots(1,2,figsize=(11,4.5))
+    fig.tight_layout();save(fig,"uva-nd3-matches.svg","UVA-ND3 raw sweeps, jointly fitted circuit baselines, nuclear responses and full residuals")
+    fig,ax=plt.subplots(figsize=(11,4.5))
     for r in data["records"]:
         f=np.asarray(r["frequency_mhz"])
-        axes[0].plot(f,r["phase"],lw=1,label=f'Record {r["source_record_1based"]}')
-        axes[1].plot(f,r["basesub"],lw=1)
-    axes[0].plot(data["records"][0]["frequency_mhz"],data["records"][0]["baseline"],"k--",lw=1,label="Stored reference (first record)")
-    for ax,title in zip(axes,["Resampled phase and recorded reference","Resampled phase − resampled baseline"]):
-        style(ax);ax.set(xlabel="Frequency (MHz) · 500-bin grid",ylabel="Recorded units",title=title)
-    axes[0].legend(fontsize=7);fig.tight_layout();save(fig,"uva-nd3-raw.svg","500-bin UVA-ND3 phase and reference subtraction")
+        ax.plot(f,r["phase"],lw=1,label=f'Record {r["source_record_1based"]}')
+    style(ax)
+    ax.ticklabel_format(axis="y",useOffset=False)
+    ax.set(xlabel="Frequency (MHz) · 500-bin grid",ylabel="Raw recorded phase units",
+           title="Input to every fit: raw ND3 phase with its baseline present")
+    ax.legend(fontsize=8)
+    fig.tight_layout();save(fig,"uva-nd3-raw.svg","All five raw 500-bin UVA-ND3 sweeps with baseline present")
     publication={"report_sha256":digest(folder/"uva_nd3_report.json"),"exporter_sha256":digest(__file__),
                  "numerical_convergence":convergence,"figure_sha256":{n:digest(ASSETS/n) for n in ("uva-nd3-matches.svg","uva-nd3-raw.svg")},
                  "validation_environment":{"numpy":np.__version__,"scipy":scipy.__version__,"matplotlib":matplotlib.__version__}}
     publication["figure_environment"]=FIGURE_PROVENANCE.get("uva-nd3-raw.svg",publication["validation_environment"])
     (ASSETS/"uva-nd3-matching.json").write_text(json.dumps({**report,"publication":publication},indent=2,allow_nan=False)+"\n")
     all_success=all(f["success"] for f in report["fits"])
-    warnings=[f'Record {f["source_record_1based"]}: {f["near_bounds"]}' for f in report["fits"] if f["near_bounds"]]
+    warnings=[]
+    for fit in report["fits"]:
+        for name,side in fit["near_bounds"].items():
+            label="tuning capacitance" if name=="log10_tune_capacitance_pf" else name
+            value=f" ({fit['resolved_tune_capacitance_pf']:.2f} pF)" if name=="log10_tune_capacitance_pf" else ""
+            warnings.append(f"Record {fit['source_record_1based']}: {label} reaches the {side} search bound{value}")
     status="All selected fits converged." if all_success else "Some selected fits did not converge; inspect the saved report."
-    status+=" No selected fit has a near-bound flag." if not warnings else " Near-bound flags: "+"; ".join(warnings)
+    status+=" No selected fit has a near-bound flag." if not warnings else " Boundary diagnostic: "+"; ".join(warnings)
     content=f'''
-<section id="model" class="chapter"><p class="eyebrow">Another material · another acquisition</p><h2>Fit UVA-ND3 on the common 500-bin grid.</h2>
-<p>The <a href="https://github.com/zetanaut/NMR-AI/blob/main/examples/uva-nd3.json">500-bin UVA-ND3 working example</a> contains records 1, 126, 251, 376 and 501, selected at equal intervals through the source acquisition before fitting. Every phase, baseline and reference-subtracted array uses <strong>fⱼ = 32.3 + 0.0015287 j MHz, j = 0…499</strong>, ending at 33.0628213 MHz. All fits, figures and residuals below use these 500 bins.</p>
-<p>These are derived data: raw phase and the recorded baseline are linearly interpolated in frequency onto the common grid in float64, then subtracted. The original measurement arrays remain in a <a href="https://github.com/zetanaut/NMR-AI/tree/main/provenance">source provenance archive</a>. The saved derivation records hashes, the target window and endpoint roundoff handling. Interpolation changes resolution and correlates errors; the 500 samples are not independent new measurements. The recorded 4,000 acquisition sweeps do not establish a noise covariance.</p>
-<div class="baseline-figure-scroll" tabindex="0" role="region" aria-label="500-bin UVA-ND3 data and reference subtraction"><img class="baseline-fit-image" src="assets/uva-nd3-raw.svg" width="1100" height="450" alt="Five UVA-ND3 phase sweeps and recorded references resampled onto the exact 500-bin grid, with their subtraction."></div>
-<h3>A conditional fit after resampling and reference subtraction</h3>
-<div class="equation small">y_sub = L[phase] − L[recorded baseline]<br>y_fit = L[a_abs [−Im κ(f;P)] + a_disp Re κ(f;P)<br>+ b₀ + b₁t + b₂t² + b₃t³], &nbsp; t = (f_MHz − 32.7)/0.4</div>
-<p>L applies the same frequency interpolation to the complete model evaluated on the original source coordinates. The fit minimizes unweighted residuals over all 500 target bins; interpolation is included in the response, without assuming an independently measured noise covariance.</p>
-<p>κ is the unit-area single-site spin-temperature shape. Its branch weights are the physical weights divided by P, evaluated with their finite symmetric limit at zero; the fitted amplitude carries the overall signal strength. This parameterization fits a nonzero observed lineshape and is not a simulator that predicts finite nuclear signal at zero P. The five nonlinear unknowns are center, splitting, Lorentzian width, EFG asymmetry and P. Two constant absorption/dispersion coefficients and four residual-background coefficients are profiled jointly: <strong>11 fitted unknowns</strong>.</p>
-<p>The cubic describes residual mismatch after subtraction of the recorded reference. It is fitted jointly on all bins, not frozen from a preliminary wing fit. The constant readout mixture and cubic residual are explicit approximations. Cable, coil and capacitor records for this acquisition have not been independently supplied, so this example does not borrow the butanol apparatus as a hardware calibration or claim a full-circuit fit.</p>
-<p>No stored acquisition polarization, area calibration, or previous fitted curve enters the optimization. P is inferred from the intrinsic branch shapes and ratio under the spin-temperature hypothesis; TE calibration is not a prerequisite.</p></section>
-<section id="results" class="chapter"><p class="eyebrow">Five predetermined records</p><h2>Fit the observed structure and show what remains.</h2>
-<div class="table-wrap"><table><caption>UVA-ND3 conditional fit estimates; RMS in 10⁻⁶ recorded units</caption><thead><tr><th>Source record</th><th>P from shape</th><th>Center (MHz)</th><th>Split (kHz)</th><th>HWHM (kHz)</th><th>EFG η</th><th>RMS</th></tr></thead><tbody>{''.join(rows)}</tbody></table></div>
-<div class="baseline-figure-scroll" tabindex="0" role="region" aria-label="UVA-ND3 fits with all 500 bins and residuals"><img class="baseline-fit-image" src="assets/uva-nd3-matches.svg" width="1200" height="1400" alt="Five UVA-ND3 lineshapes resampled onto 500 bins, fitted curves and full 500-bin residuals."></div>
-<p>{status} The left panels remove the jointly fitted residual background for display; the right panels retain all 500 bins of resampled reference-subtracted data minus the complete resampled fitted model. Remaining structured residuals show the limits of the conditional model. The <a href="assets/uva-nd3-matching.json">complete fit record</a> contains every starting solution, source/code hashes and numerical convergence checks.</p></section>
-<section id="reproduce" class="chapter"><h2>Run the UVA-ND3 example.</h2>
+<section id="model" class="chapter"><p class="eyebrow">Raw sweep → joint fit → ND3 response</p><h2>Fit the ND3 signal with its baseline present.</h2>
+<p>The <a href="https://github.com/zetanaut/NMR-AI/blob/main/examples/uva-nd3.json">500-bin UVA-ND3 working example</a> supplies the raw <code>phase</code> channel for records 1, 126, 251, 376 and 501. The baseline is already present in these sweeps. The fit uses each complete raw sweep and jointly determines its circuit baseline, detector response and ND3 spin-1 lineshape. No additional baseline is needed.</p>
+<p>Every working array uses <strong>fⱼ = 32.3 + 0.0015287 j MHz, j = 0…499</strong>, ending at 33.0628213 MHz. Raw phase is linearly resampled from the original frequency coordinates in float64. The stored reference and its subtraction remain available as provenance; neither enters this fit. Original measurements are preserved in the <a href="https://github.com/zetanaut/NMR-AI/tree/main/provenance">source archive</a>. Interpolation changes resolution and correlates errors.</p>
+<div class="baseline-figure-scroll" tabindex="0" role="region" aria-label="Five raw UVA-ND3 input sweeps with baseline present"><img class="baseline-fit-image" src="assets/uva-nd3-raw.svg" width="1100" height="450" alt="Five raw 500-bin UVA-ND3 phase sweeps, retaining their existing baselines."></div>
+<h3>The same full-circuit workflow, with the ND3 lineshape</h3>
+<div class="equation small">χ_ND3 = A [w₊ K₊ + w₋ K₋]<br>w₊ = (P + Q)/2, &nbsp; w₋ = (P − Q)/2<br>y_fit = L[a Re(u(χ_ND3) exp(iφ)) + b Im(u(χ_ND3) exp(iφ)) + d]<br>B_fit = y_fit with χ = 0, &nbsp; S_fit = y_fit − B_fit</div>
+<p>The single-site ND3 response uses the complex spin-temperature powder model, with its fitted splitting, broadening and EFG asymmetry. Q = 3P² / (2 + √(4 − 3P²)). The susceptibility vanishes at P=0. Its absorption and dispersion pass through the coil, passive RLGC cable, one tuning capacitor and finite source/input loading, following the same physical circuit as the other examples.</p>
+<p>The detector phase is φ₁Δf + φ₂Δf²; its constant phase, gain and offset are represented by the jointly profiled coefficients a, b and d. The five ND3 shape parameters, effective susceptibility amplitude, tuning capacitance, phase slope and phase curvature give nine nonlinear coordinates. Including the three readout coefficients gives <strong>12 fitted unknowns</strong>. The baseline comes from the same fitted circuit with susceptibility set to zero.</p>
+<p>L is the documented interpolation onto 500 bins. The complete circuit model is evaluated on source coordinates and resampled with the same operator as raw phase. Wings initialize the electronics; the final optimization fits all 500 raw values jointly. The stored reference is not subtracted or fixed as the model baseline.</p>
+<p>The <a href="https://github.com/zetanaut/NMR-AI/blob/main/configs/uva-nd3-matching.json">configuration</a> lists all fixed circuit values and fit bounds. Fixed values use the standalone tutorial's nominal circuit, including its derived half-wave operating point. These are explicit modeling assumptions. They do not assign the measured butanol hardware to ND3 or establish ND3 component calibration. Polarization comes from the lineshape; no TE calibration or stored acquisition polarization is used.</p></section>
+<section id="results" class="chapter"><p class="eyebrow">Five complete raw fits</p><h2>Keep the baseline visible and inspect the full residual.</h2>
+<div class="table-wrap"><table><caption>Joint raw-phase ND3 fit estimates; RMS in 10⁻⁶ recorded units</caption><thead><tr><th>Source record</th><th>P from shape</th><th>Center (MHz)</th><th>Split (kHz)</th><th>HWHM (kHz)</th><th>EFG η</th><th>C_tune (pF)</th><th>Raw-fit RMS</th></tr></thead><tbody>{''.join(rows)}</tbody></table></div>
+<div class="baseline-figure-scroll" tabindex="0" role="region" aria-label="Raw ND3 fits, circuit baselines, fitted signals and full residuals"><img class="baseline-fit-image" src="assets/uva-nd3-matches.svg" width="1500" height="1400" alt="Five rows showing raw ND3 phase with the complete fit and circuit baseline, the fitted nuclear response, and all 500 raw-minus-fit residuals."></div>
+<p>{status} A search-bound solution is a diagnostic of the assumed electronics and does not measure a component setting. The left panels retain the original baseline level in the raw input. The middle panels show the fitted nuclear response, defined after fitting as the complete model minus its χ=0 baseline. The right panels show raw phase minus the complete fit across all 500 bins. The <a href="assets/uva-nd3-matching.json">complete fit record</a> saves every starting solution, nominal circuit assumption, fitted parameter, source hash and quadrature check.</p></section>
+<section id="reproduce" class="chapter"><h2>Run the raw UVA-ND3 example.</h2>
 <pre><code>python tools/prepare_uva_nd3.py
-python tools/match_uva_nd3.py \\
-  --output-dir local-results/uva-nd3-matching-500-v2 --starts 6
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python tools/match_uva_nd3.py \\
+  --output-dir local-results/uva-nd3-raw-matching-500-v3 --starts 6
 python tools/export_material_examples.py \\
-  --nd3-fit-dir local-results/uva-nd3-matching-500-v2</code></pre>
-<p>The audited reader requires the exact 500-bin grid, reproduces the interpolation from the preserved source and checks <code>phase − baseline == basesub</code> for every bin. The fitter rejects the original acquisition arrays as working input. The <a href="https://github.com/zetanaut/NMR-AI/blob/main/configs/uva-nd3-matching.json">fit configuration</a> states bounds and readout/background assumptions. Everything needed to reproduce the example is in this repository.</p></section>
-<section id="limits" class="chapter"><h2>Different setups need different validation.</h2><p>These are conditional fit estimates from five development records in one period. They do not establish calibrated polarization uncertainty or performance on independent acquisitions. Interpolation correlates neighboring errors, so an independent-bin noise proxy is not reported. Residual structure must not be treated as a measured covariance.</p>
-<p>A common 500-bin grid establishes input dimensions. Applying a trained network also requires validated material and readout coverage, compatible units and references, and its saved preprocessing. Fitted P values are conditional estimates; this example does not establish network accuracy or the butanol hardware settings for ND3. Compare <a href="matching.html">the original single-site exercise</a> and <a href="butanol.html">the butanol two-site comparison</a>, and read the <a href="https://github.com/zetanaut/NMR-AI/blob/main/notes/material-examples.md">material-model record</a> before extending a simulator.</p></section>'''
-    (ROOT/"docs/uva-nd3.html").write_text(page("UVA-ND3 data",3,"Five UVA-ND3 records on the exact 500-bin teaching grid, with documented resampling, recorded reference subtraction and conditional lineshape fits.",content))
+  --nd3-fit-dir local-results/uva-nd3-raw-matching-500-v3</code></pre>
+<p>The audited reader verifies the exact grid and reproducible source resampling. The fitting command selects <code>phase</code>. Each saved fit CSV contains frequency, raw phase, full fit, fitted circuit baseline, fitted signal and raw-minus-fit residual. All columns contain 500 values. Everything needed is included in this standalone repository.</p></section>
+<section id="limits" class="chapter"><h2>Interpret the joint fit as a conditional model.</h2><p>The circuit and ND3 lineshape are fitted together, so their assumptions affect both the baseline and inferred polarization. These five development records do not establish calibrated hardware, statistical parameter errors or independent polarization accuracy. Structured raw-fit residuals and interpolation-induced correlation remain visible; an independent-bin noise sigma is not inferred from them.</p>
+<p>A common raw-sweep workflow and 500-bin grid do not establish material-specific network accuracy. Generator and training results remain tied to their existing contracts. Compare <a href="matching.html">the single-site full-circuit example</a> and <a href="butanol.html">the two-site butanol example</a>, and see the <a href="https://github.com/zetanaut/NMR-AI/blob/main/notes/material-examples.md">material-model record</a> for the ND3 assumptions and validation.</p></section>'''
+    (ROOT/"docs/uva-nd3.html").write_text(page("UVA-ND3 data",3,"Fit all 500 raw samples with their baseline present, using the ND3 spin-1 response and the same physical circuit workflow as the other examples.",content))
 
 
 def main():

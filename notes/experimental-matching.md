@@ -11,7 +11,8 @@ training, saved preprocessing and prediction on this exact 500-bin acquisition.
 This remains **Example 1: the single-site starting model**. The owner has now
 identified its five sweeps as butanol. [Example 2](../docs/butanol.html) applies
 the supplied C–D/O–D theory to those exact samples; [Example 3](../docs/uva-nd3.html)
-uses a separate UVA-ND3 acquisition and its recorded reference subtraction.
+uses raw phase from a separate UVA-ND3 acquisition and jointly fits its circuit
+baseline and ND3 spin-1 response.
 The [material-model record](material-examples.md) documents both additions.
 The original single-site fits and generator below remain unchanged; they are
 not a new material-specific training or experimental-accuracy result.

@@ -8,7 +8,7 @@ five raw sweeps as butanol and requested the additional UVA-ND3 example.
 | --- | --- | --- |
 | [1: Single-site starting model](../docs/matching.html) | All five butanol sweeps in `Sample_RawSignal.csv`, 500 bins each | Preserve the original complex spin-1/full-circuit exercise and its separate single-site generator |
 | [2: Butanol C–D/O–D comparison](../docs/butanol.html) | Exactly the same five raw sweeps and frequency grid | Add the second deuteron environment from the supplied butanol theory; compare full residuals with Example 1 |
-| [3: UVA-ND3 data](../docs/uva-nd3.html) | Five predetermined records resampled onto the exact 500-bin teaching grid | Fit a single-site conditional response after subtraction of the recorded reference; retain unresolved hardware assumptions |
+| [3: UVA-ND3 data](../docs/uva-nd3.html) | Five predetermined records resampled onto the exact 500-bin teaching grid | Jointly fit raw phase, circuit baseline and the ND3 spin-1 response; retain explicit nominal hardware assumptions |
 
 The [physics](physics-electronics-theory.md), [baseline](baseline-fitting.md),
 and [original matching](experimental-matching.md) records remain the authority
@@ -123,7 +123,9 @@ Its original frequency coordinates and phase/reference values are source
 provenance, rather than an alternate working input contract.
 
 [prepare_uva_nd3.py](../tools/prepare_uva_nd3.py) linearly interpolates phase and
-recorded baseline separately in frequency using float64, then subtracts them.
+recorded baseline separately in frequency using float64. Their subtraction is
+retained as a provenance check; the active fit uses raw `phase` with its baseline
+present. No baseline is added to these already raw sweeps.
 The target window is contained in the source support except for a 7.1e-15 MHz
 first-endpoint roundoff difference. The interpolation clamps only endpoint
 roundoff within four floating-point spacings and rejects physical extrapolation.
@@ -140,51 +142,75 @@ or new independent measurements are inferred. ND3 hardware and voltage
 calibration remain unresolved; the butanol hardware contract does not follow
 from sharing its teaching grid. No external checkout or pipeline is required.
 
-## UVA-ND3 conditional lineshape fit
+## UVA-ND3 joint raw-phase and circuit fit
 
-The input is the resampled `basesub`, with its resampled recorded reference retained for
-inspection. Existing acquisition polarization, area-calibration coefficients,
-and previous fitted curves are neither inputs nor truth labels. TE calibration
-is not required for spin-temperature lineshape inference.
+The active input is the resampled raw `phase`. Its baseline is present. Stored
+`baseline` and `basesub` remain provenance and are excluded from fitting.
+Acquisition polarization, area-calibration coefficients and previous fitted
+curves are also excluded. No added baseline or TE calibration is required.
 
-[match_uva_nd3.py](../tools/match_uva_nd3.py) fits the complex single-site shape
-with a constant absorption/dispersion mixture and a joint cubic residual:
+[match_uva_nd3.py](../tools/match_uva_nd3.py) now uses the same physical single-
+capacitor circuit and full complex susceptibility propagation as the other raw
+examples, with the single-site ND3 spin-temperature model:
 
 ```
-y_sub = L[phase] − L[baseline]
-y_fit = L[a_abs (−Im κ) + a_disp Re κ + b0 + b1 t + b2 t² + b3 t³]
-t = (f_MHz − 32.7)/0.4
+Q(P) = 3P² / (2 + sqrt(4 - 3P²))
+chi_ND3 = A_cgs [(P+Q)/2 K_plus + (P-Q)/2 K_minus]
+u = node_voltage(resonator_impedance(f, chi_ND3))
+phi(f) = phi1*(f-f_ref) + phi2*(f-f_ref)²
+y_fit = L[a Re(u exp(i phi)) + b Im(u exp(i phi)) + d]
+B_fit = same fitted response with chi=0
+S_fit = y_fit - B_fit
+residual = resampled raw phase - y_fit
 ```
 
-L is the same piecewise-linear observation operator used for the data. The
-complete basis is evaluated on original source coordinates and resampled before
-profiling its coefficients. All 500 residuals enter the unweighted diagnostic
-fit; correlated-error likelihood or parameter uncertainty is not claimed.
+L is the existing linear interpolation from source frequencies onto the exact
+500-bin grid. The complete circuit model uses the same observation operator as
+raw phase. The susceptibility vanishes at P=0; it is not divided by P. Kernel
+normalization, cgs convention, passive RLGC propagation, finite-source loading
+and one series tuning capacitor follow the [physics record](physics-electronics-theory.md).
+No polynomial voltage baseline is used. The signal is included once through
+susceptibility; its difference from the chi=0 response is formed after fitting.
 
-Here κ is a unit-area shape in MHz⁻¹. The physical branch weights are divided by
-P analytically, using `Q/P = 3P/(2+sqrt(4−3P²))`, which has a finite limit at
-P=0. The free amplitude carries the overall signal strength. This conditional
-coordinate fits a nonzero observed lineshape; it is not a physical generator
-predicting a nonzero zero-P signal. The full susceptibility generator continues
-to vanish at P=0.
+Nine nonlinear coordinates are center, splitting, g, EFG eta, P, log10 effective
+susceptibility scale, log10 tuning capacitance in pF, phase slope in rad/MHz and
+phase curvature in rad/MHz². Three profiled coefficients a,b,d specify gain,
+constant detector phase and offset. There are **12 fitted unknowns**. Gain is
+hypot(a,b) recorded-units per node volt, constant phase is atan2(-b,a), and d is
+in recorded units. This parameterization does not establish a DAQ conversion.
 
-There are five nonlinear parameters (center, splitting, width, asymmetry and P)
-plus six profiled linear coefficients, for 11 unknowns. Absorption/dispersion
-coefficients have recorded-unit·MHz units and polynomial coefficients have
-recorded units. The polynomial represents residual background after measured
-reference subtraction. It is optimized jointly over all 500 bins, not frozen
-from a preliminary wing-only fit. This explicit response approximation does
-not claim a full-circuit reconstruction of unknown apparatus.
+The [configuration](../configs/uva-nd3-matching.json) records all fixed component
+values, fitted bounds and their source. Fixed components use the existing
+standalone tutorial `circuit.py:nominal_circuit`, with its derived half-wave
+operating point at 32.68 MHz. These are declared assumptions for a conditional
+fit, not ND3 component measurements or the known butanol cable setup. The
+capacitor is fitted from a nominal resonance initialization, not fixed at a
+previous estimate. No cable-length search or empirical hardware population is
+inferred. The same phase rotation and component topology apply to both chi=0
+and signal-on cases.
 
-The [configuration](../configs/uva-nd3-matching.json) gives every bound and
-starting value. Six starts cover both P signs; all selected fits converge and
-have no near-bound flags. They give P estimates approximately −25.024%, −34.390%,
-−33.485%, −33.176%, and −32.623%, in excerpt order. Whole-sweep residual RMS ranges
-from 1.66215×10⁻⁵ to 3.12690×10⁻⁵ recorded units. These conditional estimates
-are not calibration/accuracy claims. The [full record](../docs/assets/uva-nd3-matching.json)
-saves the candidate solutions, data/code hashes, diagnostics, and 32-to-64-node
-quadrature checks. Figures retain all 500 resampled bins, with residual sign
-`resampled phase minus resampled recorded baseline minus resampled fitted response`.
+Electronics are initialized on wings outside 32.48–32.88 MHz. Every final fit
+uses all 500 raw samples and six starts, including both P signs; no reference
+subtraction or frozen wing polynomial is used. Interpolation correlates errors,
+so this unweighted diagnostic fit does not claim a measured noise covariance
+or statistical parameter errors.
+
+All five selected fits converge. In source record order, fitted P estimates are
+approximately -25.9103%, -34.8012%, -34.1851%, -33.5660%, and -33.2714%.
+Whole-sweep raw residual RMS ranges from 1.63207e-5 to 2.99509e-5 recorded units.
+Record 376 reaches the 2000 pF upper tuning-capacitance search bound; that bound
+is retained and shown, not widened. Other selected capacitances are about
+681.83, 1056.75, 383.65 and 495.07 pF. Scaled profiled-Jacobian conditions range
+from about 492 to 82,015. Numerical convergence and fitted settings do not
+establish identifiable hardware or accurate experimental polarization.
+The [complete fit record](../docs/assets/uva-nd3-matching.json) retains every
+candidate, fixed circuit value, initialization mask, source/code hash and
+32-to-64-node quadrature check.
+
+The figures lead with the complete raw sweeps and preserve their baseline
+level. Each results row shows raw phase with the full prediction and fitted
+circuit baseline, the fitted nuclear response S_fit, and raw-minus-fit residuals.
+The response decomposition is a fit result; it is not the input channel.
 
 ## Noise, validation and reproduction
 
@@ -198,7 +224,7 @@ its signal and noise definitions must be saved explicitly.
 Numerical checks include independent complex orientation integrals, infinite
 frequency site-area normalization, the zero-site/full-circuit limit, zero-P
 susceptibility, preserved source arrays, independently checked linear resampling,
-known-P conditional synthetic recovery after resampling,
+known-P raw full-circuit recovery after resampling, explicit raw-channel selection,
 and reconstruction of every published fit. These tests establish the stated
 mathematical/numeric behavior, not instrument validity. Validation of polarization
 accuracy requires independent acquisitions and appropriate known-P tests.
@@ -210,10 +236,10 @@ OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python tools/match_butanol.py \
   --output-dir local-results/butanol-matching --starts 6
 python tools/prepare_uva_nd3.py
 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python tools/match_uva_nd3.py \
-  --output-dir local-results/uva-nd3-matching-500-v2 --starts 6
+  --output-dir local-results/uva-nd3-raw-matching-500-v3 --starts 6
 python tools/export_material_examples.py \
   --butanol-fit-dir local-results/butanol-matching \
-  --nd3-fit-dir local-results/uva-nd3-matching-500-v2
+  --nd3-fit-dir local-results/uva-nd3-raw-matching-500-v3
 python -m unittest discover -s tests -p 'test_material_examples.py' -v
 ```
 

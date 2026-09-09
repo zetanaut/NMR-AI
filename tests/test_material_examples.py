@@ -13,14 +13,16 @@ from scipy.integrate import quad_vec
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"tools"))
 from baseline_data import acquisition_grid,load_acquisition
-from circuit import Circuit
+from dataclasses import replace
+from circuit import Circuit, detector_voltage
 from lineshape import pake_susceptibility
 from material_lineshapes import butanol_components
 from match_butanol import node_basis as butanol_basis, susceptibility
 from match_butanol import reconstruct as butanol_reconstruct
 from match_experimental_signals import node_basis as single_basis, digest
 from experimental_data import load_signal_csv
-from match_uva_nd3 import basis, match_scan, normalized_shape, reconstruct
+from match_uva_nd3 import (fit_record, match_scan, node_basis as nd3_basis,
+                           reconstruct, susceptibility as nd3_susceptibility, validate_config)
 from uva_nd3_data import (SOURCE, SOURCE_SHA256, confirmed_frequency, linear_resample,
                           load_nd3, load_nd3_source)
 
@@ -126,34 +128,61 @@ class MaterialExamples(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"extrapolate"):linear_resample(source,values,bad)
         with self.assertRaisesRegex(ValueError,"increasing"):linear_resample(source[::-1],values,target)
 
-    def test_nd3_conditional_shape_and_known_synthetic_recovery(self):
+    def test_nd3_raw_circuit_and_known_synthetic_recovery(self):
         config=json.loads((ROOT/"configs/uva-nd3-matching.json").read_text())
-        data,_=load_nd3(ROOT/"examples/uva-nd3.json")
-        f=np.asarray(data["records"][0]["frequency_mhz"])
-        p={n:s["initial"] for n,s in config["fit_parameters"].items()}
-        p.update(P_model=-.37,eta=.065,g=.045)
-        shape=normalized_shape(f,p)
-        expected=pake_susceptibility((f-p["center_mhz"])/p["split_mhz"],p["P_model"],p["eta"],p["g"])[0]/(p["P_model"]*p["split_mhz"])
-        np.testing.assert_allclose(shape,expected,rtol=1e-13)
-        coeff=np.array([.00015,.000005,-.02,.0002,-.0001,.00005])
-        y=basis(f,p)@coeff
-        trace,fit=match_scan(f,y,config,starts=2)
-        self.assertAlmostEqual(fit["parameters"]["P_model"],p["P_model"],delta=1e-4)
-        np.testing.assert_allclose(reconstruct(f,fit),y,atol=2e-9)
-        np.testing.assert_allclose(trace[:,2],y,atol=2e-9)
-        self.assertEqual(fit["n_free"],11)
+        c=validate_config(config)
+        f=confirmed_frequency()
         source=np.asarray(load_nd3_source()["records"][0]["frequency_mhz"])
-        # Generate on measured source coordinates independently, then fit the
-        # resampled observation with exactly the same observation operator.
-        sampled=np.interp(f,source,basis(source,p)@coeff)
-        _,resampled_fit=match_scan(f,sampled,config,starts=2,source_record_1based=1)
-        self.assertAlmostEqual(resampled_fit["parameters"]["P_model"],p["P_model"],delta=1e-4)
-        np.testing.assert_allclose(reconstruct(f,resampled_fit),sampled,atol=2e-9)
-        self.assertNotIn("wing_second_difference_sigma_proxy",resampled_fit["diagnostics"])
+        p={n:spec["initial"] for n,spec in config["fit_parameters"].items()}
+        p.update(P_model=-.37,eta=.065,g=.045,log10_signal_scale_cgs=-2.2,
+                 phase_slope_rad_per_mhz=.08,phase_curvature_rad_per_mhz2=-.04)
+        coeff=np.array([-200.,20.,1.1])
+        # Independent readout representation in the shared physical circuit.
+        detector=replace(c,tune_capacitance_f=10**p["log10_tune_capacitance_pf"]*1e-12,
+                         detector_gain=np.hypot(*coeff[:2]),detector_phase_rad=np.arctan2(-coeff[1],coeff[0]),
+                         detector_phase_slope_rad_per_hz=p["phase_slope_rad_per_mhz"]/1e6,
+                         detector_phase_curvature_rad_per_hz2=p["phase_curvature_rad_per_mhz2"]/1e12,
+                         dc_offset_v=coeff[2])
+        source_prediction=detector_voltage(source*1e6,detector,nd3_susceptibility(source,p))
+        sampled=np.interp(f,source,source_prediction)
+        np.testing.assert_allclose(nd3_basis(f,c,p,source_frequency=source)@coeff,sampled,atol=1e-14,rtol=0)
+        # The same single-site circuit primitive underlies the other raw example.
+        np.testing.assert_array_equal(nd3_basis(f,c,p),single_basis(f,c,p))
+        trace,fit=match_scan(f,sampled,config,starts=2,source_record_1based=1)
+        self.assertAlmostEqual(fit["parameters"]["P_model"],p["P_model"],delta=2e-4)
+        np.testing.assert_allclose(reconstruct(f,fit),sampled,atol=2e-9)
+        np.testing.assert_array_equal(trace[:,1],sampled)
+        np.testing.assert_allclose(trace[:,3]+trace[:,4],trace[:,2],atol=1e-15)
+        np.testing.assert_array_equal(trace[:,5],sampled-trace[:,2])
+        self.assertEqual(fit["n_free"],12)
+        self.assertEqual(fit["input_channel"],"phase")
+        self.assertFalse(fit["stored_reference_used_in_fit"])
+        self.assertFalse(fit["added_baseline"])
+        self.assertNotIn("wing_second_difference_sigma_proxy",fit["diagnostics"])
         for wrong in (source,np.linspace(32.3,33.1,500)):
             with self.assertRaisesRegex(ValueError,"500"):match_scan(wrong,np.zeros_like(wrong),config)
         p["P_model"]=0.
-        self.assertTrue(np.isfinite(normalized_shape(f,p)).all())
+        np.testing.assert_array_equal(nd3_susceptibility(f,p),np.zeros_like(f))
+        np.testing.assert_array_equal(nd3_basis(f,c,p),nd3_basis(f,c,p,False))
+
+    def test_nd3_record_fit_needs_only_raw_phase_not_reference_subtraction(self):
+        config=json.loads((ROOT/"configs/uva-nd3-matching.json").read_text())
+        c=validate_config(config);f=confirmed_frequency()
+        source=np.asarray(load_nd3_source()["records"][0]["frequency_mhz"])
+        p={n:spec["initial"] for n,spec in config["fit_parameters"].items()}
+        p["log10_signal_scale_cgs"]=-2.3
+        y=nd3_basis(f,c,p,source_frequency=source)@np.array([-200.,20.,1.1])
+        # No baseline or basesub key is needed by the fitting entry point.
+        row={"frequency_mhz":f,"phase":y,"source_record_1based":1,"start_time":"synthetic check","sweeps":1}
+        trace,fit=fit_record(row,config,starts=1)
+        np.testing.assert_array_equal(trace[:,1],y)
+        np.testing.assert_allclose(trace[:,2],reconstruct(f,fit),atol=1e-13,rtol=0)
+        np.testing.assert_array_equal(trace[:,5],y-trace[:,2])
+        self.assertFalse(fit["stored_reference_used_in_fit"])
+        bad=deepcopy(config);bad["input_channel"]="basesub"
+        with self.assertRaisesRegex(ValueError,"raw phase"):validate_config(bad)
+        bad=deepcopy(config);bad["nominal_circuit"]["status"]="measured"
+        with self.assertRaisesRegex(ValueError,"assumptions"):validate_config(bad)
 
     def check_publication(self, report, figure, prefix, ids, bins):
         import xml.etree.ElementTree as ET
@@ -207,9 +236,11 @@ class MaterialExamples(unittest.TestCase):
             self.assertEqual(fit["source_record_1based"],row["source_record_1based"])
             f=np.asarray(row["frequency_mhz"])
             prediction=reconstruct(f,fit)
-            rms=np.sqrt(np.mean((np.asarray(row["basesub"])-prediction)**2))
+            rms=np.sqrt(np.mean((np.asarray(row["phase"])-prediction)**2))
             np.testing.assert_allclose(rms,fit["diagnostics"]["rms_recorded_units"],rtol=1e-8)
-            self.assertEqual(fit["n_free"],11)
+            self.assertEqual(fit["n_free"],12)
+            self.assertEqual(fit["input_channel"],"phase")
+            self.assertFalse(fit["stored_reference_used_in_fit"])
             self.assertTrue(fit["all_500_bins_fitted"])
             self.assertTrue(fit["success"])
             self.assertLess(np.max(abs(reconstruct(f,fit,nphi=64)-prediction)),.001*rms)

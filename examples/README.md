@@ -120,6 +120,7 @@ group all descendants of each measured source together. See the
 records, selected before fitting at source positions 1, 126, 251, 376 and 501,
 all use **500 bins** on `f_j = 32.3 + 0.0015287*j MHz`, j=0..499.
 The last point is 33.0628213 MHz, matching every other working example.
+The fitting input is `phase`, which already contains the raw baseline.
 
 These are derived arrays. `tools/prepare_uva_nd3.py` linearly interpolates the
 original phase and recorded baseline in frequency using float64, then computes
@@ -152,8 +153,11 @@ source arrays as working input. Reproduce the derived artifact with:
 python tools/prepare_uva_nd3.py
 ```
 
-[Example 3](../docs/uva-nd3.html) fits all 500 reference-subtracted values. Its
-conditional model is evaluated on source coordinates and passed through the
-same interpolation before comparison. It uses neither stored polarization nor
-TE calibration as a fit input or truth label. The [material-model record](../notes/material-examples.md)
+[Example 3](../docs/uva-nd3.html) fits all 500 raw `phase` values with their
+baseline present. It jointly fits the ND3 spin-1 susceptibility, tuning capacitor,
+detector phase and readout through the full physical circuit. The circuit is
+evaluated on source coordinates and interpolated identically before comparison.
+The stored `baseline` and `basesub` arrays are retained for provenance only.
+No extra baseline is added, and no TE calibration or stored polarization enters
+the fit. Fixed circuit constants are explicit assumptions, not ND3 measurements. The [material-model record](../notes/material-examples.md)
 explains the assumptions and reproduction. Everything needed is in this repository.

@@ -1440,7 +1440,7 @@
   },
   "publication": {
     "report_sha256": "36d1059d12e271ffe1600cb8f5d03331db683f771a6068d45e58cbdb8c6d0e15",
-    "exporter_sha256": "f86263549de299ac443a25df8699501b9117f066105fff0e9c0bf27da34f1b93",
+    "exporter_sha256": "4f670171f53c211fe2935d2ac1fefd287f1fc1243d67ac927b4c19c9c96b41e7",
     "theory_source": {
       "source": "Owner-supplied butanol_theory directory, reviewed 2026-09-07",
       "files": [

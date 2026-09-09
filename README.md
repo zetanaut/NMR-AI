@@ -110,15 +110,17 @@ two materials and two acquisitions; the first two deliberately use the same data
 | --- | --- |
 | [1. Single-site starting model](docs/matching.html) | Preserve the original full-circuit exercise and its 500-bin generator |
 | [2. Butanol: C–D and O–D](docs/butanol.html) | Apply the supplied two-site theory to the same five butanol sweeps and compare every full residual |
-| [3. UVA-ND3 data](docs/uva-nd3.html) | Fit five predetermined UVA-ND3 records resampled onto the exact 500-bin grid, with recorded baseline subtraction |
+| [3. UVA-ND3 data](docs/uva-nd3.html) | Jointly fit five raw UVA-ND3 sweeps and their circuit baselines using the ND3 spin-1 model on the exact 500-bin grid |
 
 Every working example uses `32.3 + 0.0015287*j MHz`, j=0..499. UVA-ND3
 includes documented interpolation from its preserved source measurements; its
 working data, fits and figures all contain 500 bins.
 
 The butanol comparison adds three fit parameters while retaining the original
-electronics assumptions. The UVA-ND3 model uses a conditional complex lineshape
-and joint residual background because its hardware calibration is unresolved.
+electronics assumptions. The UVA-ND3 example uses its raw phase with the baseline
+present and jointly fits the ND3 spin-1 response and physical circuit. Its fixed
+circuit constants are explicit tutorial assumptions; hardware calibration remains
+unresolved. The recorded reference and its subtraction are provenance only.
 Neither fit comparison is a measured polarization-accuracy claim. See the
 [material-model and provenance record](notes/material-examples.md).
 
@@ -127,10 +129,10 @@ OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python tools/match_butanol.py \
   --output-dir local-results/butanol-matching --starts 6
 python tools/prepare_uva_nd3.py
 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python tools/match_uva_nd3.py \
-  --output-dir local-results/uva-nd3-matching-500-v2 --starts 6
+  --output-dir local-results/uva-nd3-raw-matching-500-v3 --starts 6
 python tools/export_material_examples.py \
   --butanol-fit-dir local-results/butanol-matching \
-  --nd3-fit-dir local-results/uva-nd3-matching-500-v2
+  --nd3-fit-dir local-results/uva-nd3-raw-matching-500-v3
 ```
 
 All inputs needed for these commands are included here. Use fresh output paths.
@@ -315,7 +317,7 @@ Preview with `python3 -m http.server 8000 --bind 127.0.0.1 --directory docs`. Th
 - `docs/index.html`, `docs/baseline.html`: three-phase guide and baseline practical.
 - `docs/matching.html`, `notes/experimental-matching.md`: five measured matches and the 500-bin generator practical.
 - `docs/butanol.html`, `docs/uva-nd3.html`, `notes/material-examples.md`: material comparisons, assumptions, the common 500-bin grid and provenance.
-- `tools/material_lineshapes.py`, `tools/match_butanol.py`, `tools/match_uva_nd3.py`: standalone two-site/full-circuit and reference-subtracted fitting demos.
+- `tools/material_lineshapes.py`, `tools/match_butanol.py`, `tools/match_uva_nd3.py`: standalone single-site ND3 and two-site butanol full-circuit fitting demos.
 - `tools/uva_nd3_data.py`, `tools/export_material_examples.py`: audited UVA-ND3 excerpt reader and verified publication of both material demos.
 - `tools/circuit.py`, `tools/lineshape.py`: physical electronics and complex nuclear response.
 - `tools/fit_tuned_baseline.py`, `configs/baseline-setup.template.json`: fit only declared unknowns using independent tuning information.
