@@ -15,6 +15,14 @@ model; no pretrained download is required.
 Use Python 3.10 or newer and a Bash terminal on Linux, macOS, or Windows with WSL.
 A CPU is supported; a compatible GPU can speed up training.
 
+The requirements command below installs **PyTorch** (`torch`), NumPy, SciPy,
+and Matplotlib. For a CPU-only or GPU-specific PyTorch build, use the
+[official PyTorch installation selector](https://pytorch.org/get-started/locally/).
+Choose **Stable**, **Pip**, **Python**, your OS (**Linux** inside WSL), and your
+compute platform. Run its command after activating `.venv` and before installing
+the requirements below, replacing `pip` or `pip3` with `python -m pip` to use
+the active environment.
+
 ```bash
 git clone https://github.com/zetanaut/NMR-AI.git
 cd NMR-AI
@@ -23,10 +31,12 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 export OPENBLAS_NUM_THREADS=1
 export OMP_NUM_THREADS=1
-python -c "import numpy, scipy, torch, matplotlib; print('Imports OK'); print('CUDA:', torch.cuda.is_available())"
+python -c "import numpy, scipy, torch, matplotlib; print('Imports OK'); print('PyTorch:', torch.__version__); print('CUDA:', torch.cuda.is_available())"
 ```
 
-You should see `Imports OK`. Either CUDA value is valid. Run subsequent commands
+You should see `Imports OK` and the installed PyTorch version. `CUDA: False`
+is valid for CPU use; if you intend to use an NVIDIA GPU, check the official
+installation instructions until `CUDA: True` is reported. Run subsequent commands
 from the repository root. In each new terminal, activate the environment and
 repeat the two thread exports.
 

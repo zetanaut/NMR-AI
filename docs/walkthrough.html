@@ -51,6 +51,7 @@
   <div class="chapter-label"><span>01</span><p>Prepare the workspace</p></div>
   <h2>Install the tutorial and check Python.</h2>
   <p>Use Python 3.10 or newer. If you already have this repository, open a terminal in its directory and start at <code>python3 -m venv .venv</code>. If its environment is already installed, start at activation.</p>
+  <p><code>requirements.txt</code> installs <strong>PyTorch</strong> (<code>torch</code>), NumPy, SciPy, and Matplotlib. For a CPU-only or GPU-specific build, use the <a href="https://pytorch.org/get-started/locally/">official PyTorch installation selector</a>: choose <strong>Stable</strong>, <strong>Pip</strong>, <strong>Python</strong>, your OS (<strong>Linux</strong> inside WSL), and your compute platform. Run the selected command after activating <code>.venv</code> and before the requirements command below. Replace <code>pip</code> or <code>pip3</code> with <code>python -m pip</code> to install into the active environment.</p>
   <h3>Run</h3>
 <pre data-run="setup"><code>git clone https://github.com/zetanaut/NMR-AI.git
 cd NMR-AI
@@ -60,9 +61,9 @@ python -m pip install -r requirements.txt</code></pre>
   <p>Check the selected interpreter and limit the small fitting calculations to one BLAS thread. Repeat the activation and exports whenever you open a new terminal.</p>
 <pre data-run="environment"><code>export OPENBLAS_NUM_THREADS=1
 export OMP_NUM_THREADS=1
-python -c "import sys, numpy, scipy, torch, matplotlib; print(sys.executable); print('Imports OK'); print('CUDA:', torch.cuda.is_available())"
+python -c "import sys, numpy, scipy, torch, matplotlib; print(sys.executable); print('Imports OK'); print('PyTorch:', torch.__version__); print('CUDA:', torch.cuda.is_available())"
 python -m unittest discover -s tests -v</code></pre>
-  <div class="expected-result"><h3>Expected result</h3><p>Your environment’s Python path, <code>Imports OK</code>, and either <code>CUDA: True</code> or <code>CUDA: False</code>. The tests finish with <code>OK</code>. If an import fails, reactivate this environment and rerun the requirements command using its <code>python</code>.</p></div>
+  <div class="expected-result"><h3>Expected result</h3><p>Your environment’s Python path, <code>Imports OK</code>, the installed PyTorch version, and either <code>CUDA: True</code> or <code>CUDA: False</code>. <code>False</code> is valid for CPU use; if you intend to use an NVIDIA GPU, follow the official installation instructions until the check reports <code>True</code>. The tests finish with <code>OK</code>. If an import fails, reactivate this environment and rerun the requirements command using its <code>python</code>.</p></div>
   <p class="step-next">Once the checks pass, <a href="#inspect">inspect the supplied measurements in step 2 →</a></p>
 </section>
 
