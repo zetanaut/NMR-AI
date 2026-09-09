@@ -10,6 +10,7 @@ assumptions, and sources behind the lessons.
 | [Baseline fitting](baseline-fitting.md) | Understand the cable constraint, fitted parameters, and residuals |
 | [Experimental matching](experimental-matching.md) | Understand lineshape fitting and generation from measured configurations |
 | [Butanol and UVA-ND3](material-examples.md) | Compare material models and inspect the ND3 interpolation and circuit assumptions |
+| [Training-data design](training-design.md) | Plan low-polarization coverage, non-uniform sampling, dataset size, and controlled training comparisons |
 | [Model comparison](model-comparison.md) | Inspect the MLP, DNN, CNN, and their saved results |
 | [Optional benchmarks](benchmarks.md) | Reproduce the controlled TE-area learning exercises |
 | [Uncertainty and distribution shift](distribution-shift.md) | Study the proposed validation work beyond synthetic test scores |

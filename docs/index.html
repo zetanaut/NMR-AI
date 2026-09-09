@@ -10,6 +10,7 @@
   <script defer src="assets/results.js"></script>
   <script defer src="assets/model-comparison.js"></script>
   <script defer src="assets/tutorial.js"></script>
+  <script defer src="assets/sampling-lab.js"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to the tutorial</a>
@@ -29,8 +30,10 @@
     <a href="butanol.html" class="subnav">Butanol: two-site comparison ↗</a>
     <a href="uva-nd3.html" class="subnav">UVA-ND3 data ↗</a>
     <a href="#generator"><span>01</span> Build the generator</a>
+    <a href="#training-coverage" class="subnav">Low polarization &amp; sampling</a>
     <a href="#network"><span>02</span> Design the network</a>
     <a href="#training"><span>03</span> Train &amp; evaluate</a>
+    <a href="#dataset-size" class="subnav">How much training data?</a>
     <a href="#error-lab" class="subnav">Bias &amp; precision lab</a>
     <a href="#distribution-shift">Matching uncertainty &amp; shift</a>
     <a href="#results" class="subnav">Benchmark results</a>
@@ -107,7 +110,30 @@ python -c "import torch; print('PyTorch:', torch.__version__); print('CUDA:', to
   --output local-results/broad_100k.npz</code></pre>
   <p>NPZ files contain raw <code>signals</code> and independent <code>baselines</code> in V, per-event <code>calibration</code>, fractional <code>P</code>, configuration IDs, and the grid. Voltages are stored in float64 so subtraction preserves small signals. The JSON records the physical configurations, seeds, model version, and dataset hash. Use fresh output paths; existing files are protected.</p>
   <p>The benchmark assumes a stable circuit between the reference and signal scan and an ideal TE calibration; reference noise is averaged over 16 sweeps by default. Calibration uncertainty, mechanical drift, and non-Gaussian pickup need separate experimental characterization and stress tests.</p>
-  <div class="checkpoint"><span>Phase 01 deliverable</span><p>A reproducible simulated dataset with independent configurations, explicit circuit and noise assumptions, and a record of which assumptions still need experimental validation.</p></div>
+  <div id="training-coverage" class="subsection">
+  <h3>5. Give difficult polarization regions enough coverage</h3>
+  <p>Uniform polarization sampling is a useful starting point, but it does not make every part of the problem equally easy. Here low polarization means small <strong>|P| on either side of zero</strong>. At fixed circuit settings, susceptibility scale, linewidth and noise, the nuclear response weakens as |P| decreases. Its two intrinsic branch weights also become more nearly equal, making the small imbalance harder to distinguish from noise and changes in amplitude.</p>
+  <div class="equation small">Q ≈ ¾P², &nbsp; w₊ = (P + Q)/2, &nbsp; w₋ = (P − Q)/2<br>For P ≠ 0: (w₊ − w₋)/(w₊ + w₋) = Q/P ≈ ¾P</div>
+  <p>This is the small-|P| limit of the spin-temperature model. The magnitude of the intrinsic fractional branch imbalance is only about 0.75% at |P| = 1%. Peak spacing and linewidth do not automatically shrink with P; weaker signal and nearly equal branch weights reduce their visibility. The observed detector peaks also include circuit and phase effects. Extra training examples can improve coverage, but cannot recover information absent from an individual noisy sweep. Use absolute errors near zero, where relative error is undefined.</p>
+  <p>Inspect validation errors and counts in signed P bands before deciding where to add data. Sample low-|P| examples across the supported noise, linewidth and electronics conditions, preserving their physical relationships. Keep both signs and sufficient coverage at larger |P|. A model trained only near zero is not a broad-range estimator.</p>
+  <div id="sampling-lab" class="lab-panel">
+    <div class="panel-heading"><div><p class="eyebrow">Interactive lab · a sampling design</p><h3>Where do the training examples go?</h3></div><span class="badge">Expected counts</span></div>
+    <p>Keep a broad uniform component on −60% to +60% polarization and allocate a fraction α of draws to a uniform band near zero. This illustrates a proposed training distribution; it does not change the generator or predict network accuracy.</p>
+    <div class="equation small">q(P) = (1 − α) Uniform(−0.6, 0.6) + α Uniform(−b, b)</div>
+    <div class="lab-grid"><div class="controls">
+      <label for="sampling-alpha">Extra low-|P| allocation <output id="sampling-alpha-value" for="sampling-alpha">50%</output></label><input id="sampling-alpha" type="range" min="0" max="90" step="5" value="50" disabled>
+      <label for="sampling-band">Band boundary |P| ≤ <output id="sampling-band-value" for="sampling-band">5%</output></label><input id="sampling-band" type="range" min="1" max="20" step="1" value="5" disabled>
+      <label for="sampling-count">Total training rows <output id="sampling-count-value" for="sampling-count">1,200</output></label><input id="sampling-count" type="range" min="1200" max="12000" step="1200" value="1200" disabled>
+    </div><div id="sampling-chart-container" hidden><svg id="sampling-chart" class="chart" viewBox="0 0 640 290" role="img" aria-label="Expected training counts in equal five-percentage-point polarization bins"></svg><p class="chart-caption">Equal 5-percentage-point P bins. Teal bars: mixture; orange outline: uniform. These are label bins, separate from the spectrum’s 500 frequency bins.</p></div></div>
+    <div class="lab-readout" aria-live="polite" aria-atomic="true"><div><span>Uniform: rows inside band</span><strong id="sampling-uniform">100</strong></div><div><span>Mixture: rows inside band</span><strong id="sampling-focused">650</strong></div><div><span>Mixture: rows outside band</span><strong id="sampling-outside">550</strong></div></div>
+    <p id="sampling-explanation">For 1,200 training rows, 50% extra allocation within ±5% gives 650 expected rows there, compared with 100 under uniform sampling. At the same total size, coverage outside that band falls from 1,100 to 550.</p>
+    <noscript><p>The numbers above show the default example. Enable JavaScript to vary the allocation, band and training count.</p></noscript>
+  </div>
+  <p>The broad draws also contribute to the central band, so “50% extra allocation” places more than half of all examples there. This choice is illustrative, not an optimal recipe. A smooth density or stratified draws are other possibilities. Choose the design using development data and evaluate the result on fixed, independent conditions.</p>
+  <details><summary>New examples, repeated rows, and loss weights have different roles</summary><div class="details-body"><p>Generating new low-|P| sweeps adds physical responses and fresh event noise. Repeating an existing row only changes how often the optimizer sees it. Weighting its loss changes the importance of its error. Oversampling and loss weights compound each other if both are applied. Keep these choices explicit and confined to training.</p><p>Changing the training P distribution can change the network’s preferred estimate for ambiguous weak spectra. Compare signed bias and error across the full range. If the intended operating population differs from the training mixture, report its own evaluation as well as a per-band diagnostic; a pooled score on the oversampled mixture measures a different objective. The <a href="https://github.com/zetanaut/NMR-AI/blob/main/docs/reference/training-design.md#keep-sampling-loss-weighting-and-evaluation-separate">sampling and loss discussion</a> explains the assumptions behind weighting.</p></div></details>
+  <aside class="note"><h4>What you can change in the current commands</h4><p><code>--num-samples</code> increases event count, <code>--num-configurations</code> increases simulated configurations, and <code>--p-min</code>/<code>--p-max</code> set a <strong>uniform</strong> P interval. The mixture above and weighted training need an explicit extension and a new evaluated run. A narrower uniform interval is a separate focused study. Preserve the exact grid, simulator labels, shared references and source groups. <a href="https://github.com/zetanaut/NMR-AI/blob/main/docs/reference/training-design.md#what-the-current-commands-support">See the runnable focused-study example and implementation boundaries.</a></p></aside>
+  </div>
+  <div class="checkpoint"><span>Phase 01 deliverable</span><p>A reproducible simulated dataset with independent configurations, explicit circuit and noise assumptions, a declared P sampling distribution, and a record of which assumptions still need experimental validation.</p></div>
 </section>
 
 <section id="network" class="chapter">
@@ -288,6 +314,7 @@ done</code></pre>
   <h3>Match the training objective to the scientific target</h3>
   <div class="equation">L = mean [ (P̂ − P) / s<sub>train</sub> ]²</div>
   <p>The trainer uses mean squared error normalized by the training-label standard deviation <i>s<sub>train</sub></i>. For a single P output, this constant rescaling preserves the absolute-MSE objective. A relative-error loss would weight small polarizations more strongly, which can conflict with an absolute-error target. Keep the training objective and the scientific acceptance criterion aligned.</p>
+  <p>Sampling and the loss jointly determine which errors receive attention. If low-|P| recovery is a priority, declare its tolerance and inspect that band during validation; a good pooled MSE may hide a poorly learned region. The current checkpoint selector uses pooled validation MSE. A different selection metric is a deliberate training change, not an effect of merely plotting more diagnostics.</p>
   <p class="code-label">Lab 03 · Train on the dataset from Lab 01</p>
 <pre><code>python tools/train_model.py \
   --data local-results/smoke.npz \
@@ -297,9 +324,28 @@ done</code></pre>
   <p>This small run checks the workflow. For a larger pilot, increase the dataset and epoch cap. Change one factor at a time: use <code>--architecture compact</code> with the same data and seed for an architecture comparison. The trainer selects CUDA when available; pass <code>--device cpu</code> for a CPU-only run.</p>
   <h3>Train long enough without chasing the training set</h3>
   <p>An epoch is one pass through the training data. A batch is the subset used for one optimizer update. The learning rate controls the step size. Our trainer uses AdamW with weight decay, dropout in the correction head, and a scheduler that reduces the learning rate when validation loss stalls.</p>
+  <p>For the walkthrough’s 1,200 training rows and default batch size 128, one epoch contains 10 updates, including a final smaller batch. Each update predicts the batch, computes scaled MSE, clears old gradients, backpropagates, clips the gradient norm at 5, and updates the trainable weights. Validation runs without gradient updates. The 26 ridge coefficients were already fitted on training rows and stay frozen. The epoch cap and early-stopping patience control how long this process runs; they do not add independent training examples.</p>
   <p>Track both curves. Falling training loss with persistently rising validation loss suggests overfitting. If both remain high, consider underfitting, optimization trouble, or missing information. Early stopping limits training after a specified number of epochs without a new best validation value; it does not prove the model is correct. The trainer restores and saves the best validation checkpoint, not simply the last epoch.</p>
   <aside class="note"><h4>Read the curves in context</h4><p>The multiscale model uses dropout during training and disables it for validation, so training loss can exceed validation loss. The compact example does not use dropout. For the single-output absolute MSE used here, <code>sqrt(val_loss) × target_scale</code> converts validation loss back to RMSE in fractional P.</p></aside>
   <p>The trainer saves <code>model.pt</code>, <code>scaler.npz</code>, <code>config.json</code>, <code>split.json</code>, <code>history.csv</code>, <code>metrics.json</code>, and <code>test_predictions.csv</code>. The prediction CSV retains configuration IDs for group-based analysis. Keep these files together. This version saves at the end of a completed run; an interrupted run may leave no checkpoint.</p>
+
+  <div id="dataset-size" class="subsection">
+  <h3>How much training data does this network need?</h3>
+  <p><strong>There is no dependable “examples per weight” ratio.</strong> Neural weights, per-spectrum physical fit parameters, and training examples count different things. The multiscale model has 82,391 parameters: 26 are fitted ridge coefficients and 82,365 are optimized during neural training. A raw single-site fit has 12 physical/readout unknowns. Neither number converts directly into a required number of labeled spectra. The 500 bins in a sweep are features, not 500 independent training examples.</p>
+  <p>Parameter count describes part of model capacity; shared weights, regularization, the complexity of the forward response, noise and independent setup coverage also matter. Networks may have more parameters than training examples and still generalize under some conditions, or memorize without useful generalization. The <a href="https://github.com/zetanaut/NMR-AI/blob/main/docs/reference/training-design.md#how-many-examples-for-this-many-parameters">parameter-count discussion and sources</a> explain why a fixed multiplier is not a reliable planning rule.</p>
+  <h4>Use an error-versus-dataset-size study</h4>
+  <p>Start with the runnable exercise, then compare nested training sizes—for example 1,200, 2,400, 4,800 and 9,600 rows when available. This doubling schedule is a planning example, not a minimum requirement. Keep validation inputs and source groups fixed, refit all preprocessing on each training subset, and compare the same models. Measure both pooled and signed low-|P| errors. Unlike the epoch curves above, this curve has <strong>training-set size</strong> on its horizontal axis.</p>
+  <p>Study fresh noise/P draws within existing configurations separately from adding independent configurations or acquisitions. Increasing the anchored dataset still leaves only five measured sources, with three used for training in the walkthrough. Do not count repeated spectra or descendants as new measured setups. Track optimizer updates and time as well as epochs, and repeat seeds; larger datasets give more updates per epoch.</p>
+  <div class="table-wrap"><table><caption>Use validation evidence to choose the next comparison</caption><thead><tr><th>What you observe</th><th>What to investigate next</th></tr></thead><tbody>
+  <tr><td>Low training error, higher validation error</td><td>More independent coverage, regularization, or a smaller model.</td></tr>
+  <tr><td>Both errors remain high</td><td>Inputs and labels, optimization, model capacity, and available signal information.</td></tr>
+  <tr><td>Pooled error improves but low-|P| error does not</td><td>Counts, signed bias and noise in that band; targeted sampling under the same validation conditions.</td></tr>
+  <tr><td>Low-|P| improvement costs accuracy elsewhere</td><td>More total coverage or less emphasis; evaluate the declared full-range objective.</td></tr>
+  <tr><td>More rows on the same sources stop helping</td><td>Independent acquisition coverage and model/measurement limitations.</td></tr>
+  </tbody></table></div>
+  <p>Stop growing the dataset when the tested design meets the declared validation target with adequate per-band coverage, or when the evidence directs you to a different limitation. A plateau alone does not prove an information limit. Keep the final test untouched until the design is fixed. Compare errors in percentage points: changing the sampling distribution changes the fitted target scale, so normalized losses across runs are not directly comparable.</p>
+  <p>The current CLI does not automate a fixed-validation dataset-size study. Regenerating datasets and rerunning the trainer can change the held-out rows. The <a href="https://github.com/zetanaut/NMR-AI/blob/main/docs/reference/training-design.md#measure-dataset-size-with-a-controlled-learning-curve">detailed study protocol</a> explains the required split control, counts and uncertainty. These proposed comparisons do not revise the published uniform-sampling results.</p>
+  </div>
 
   <div id="metrics" class="subsection">
   <h3>Accuracy and precision need separate numbers</h3>

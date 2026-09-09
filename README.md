@@ -72,6 +72,10 @@ calibration. The network lesson uses raw sweeps and corresponding independent
 baseline references. Its reported errors measure recovery of simulated
 polarization; experimental polarization accuracy remains to be established.
 
+For your own training study, see the [training-data design guide](docs/reference/training-design.md):
+low-polarization coverage, non-uniform sampling, and choosing dataset size from
+validation evidence rather than a fixed examples-per-weight rule.
+
 ## Find your way around
 
 | Location | Use it for |
