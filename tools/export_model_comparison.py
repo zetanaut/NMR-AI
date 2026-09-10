@@ -17,6 +17,7 @@ import torch
 from analyze_predictions import summarize
 from learning_data import SIMULATOR, load_dataset, validate_contract
 from nmr_lab import FREQUENCY, build_model, group_split, make_features
+from polarization_metrics import polarization_profile
 
 ROOT = Path(__file__).resolve().parents[1]
 LABELS = {"mlp": "Basic MLP", "dnn": "Deep dense DNN", "physics_multiscale": "Multiscale CNN + summaries"}
@@ -193,6 +194,78 @@ def draw_errors(snapshot, output):
     output.write_text("\n".join(line.rstrip() for line in output.read_text().splitlines())+"\n")
 
 
+def draw_polarization_errors(snapshot, output):
+    profile = snapshot['polarization_profile']
+    with plt.rc_context({'font.family': 'DejaVu Sans', 'font.size': 10, 'svg.fonttype': 'none',
+                         'svg.hashsalt': 'polarization-bands-v1', 'axes.spines.top': False,
+                         'axes.spines.right': False, 'axes.edgecolor': '#d8dcd3',
+                         'text.color': '#173c3a', 'axes.labelcolor': '#173c3a'}):
+        fig, axes = plt.subplots(2, 2, figsize=(11, 7.7), facecolor='#fffefa')
+        fig.subplots_adjust(left=.085, right=.98, bottom=.21, top=.88, hspace=.42, wspace=.25)
+        for row, sign in enumerate(('positive', 'negative')):
+            for column, (key, label) in enumerate((('rmse_pp', 'Absolute RMSE (pp)'), ('relative_rms_percent', 'Relative RMS error (%)'))):
+                ax = axes[row, column]
+                ax.set_facecolor('#fffefa')
+                for run, color in zip(profile['views'][sign], COLORS):
+                    bands = [band for band in run['bands'] if band[key] is not None]
+                    ax.plot([50*(band['low_inclusive']+band['high']) for band in bands],
+                            [band[key] for band in bands], marker='o', ms=4, lw=1.5,
+                            color=color, label=run['label'])
+                ax.set_yscale('log')
+                ax.set_xlim(0, 25)
+                ax.set_xlabel('|True polarization| (%)')
+                ax.set_ylabel(label+' · log scale')
+                ax.set_title(('P ≥ 0' if sign == 'positive' else 'P < 0')+' · '+label, loc='left', fontsize=11)
+                ax.grid(axis='y', color='#dce2d8')
+        fig.legend(*axes[0, 0].get_legend_handles_labels(), loc='upper center', ncol=3, frameon=False)
+        counts = []
+        for sign, label in (('positive', '+'), ('negative', '−')):
+            bands = profile['views'][sign][0]['bands']
+            counts.append(f"P{label}: events "+', '.join(str(b['n']) for b in bands)+
+                          '; configuration groups '+', '.join(str(b['n_groups']) for b in bands))
+        fig.text(.085, .135, 'Band edges in |P| (%): 0, 1, 2.5, 5, 10, 15, 20, 25. Markers are band centers; lines guide the eye.', fontsize=9)
+        fig.text(.085, .105, counts[0], fontsize=9)
+        fig.text(.085, .08, counts[1], fontsize=9)
+        fig.text(.085, .035, 'Same 600 saved test rows; no fixed-P experiment or uncertainty intervals. Bands share groups.\nRelative RMS uses each true P; omitted for bands touching zero. No denominator floor.', fontsize=9)
+        fig.savefig(output, metadata={'Date': None, 'Description': profile['scope']})
+        plt.close(fig)
+    output = Path(output)
+    output.write_text('\n'.join(line.rstrip() for line in output.read_text().splitlines())+'\n')
+
+
+def render_polarization_block(snapshot):
+    profile = snapshot['polarization_profile']
+    def number(value):
+        return '—' if value is None else f'{value:.5g}'
+    default_rows = ''.join(
+        '<tr><td>'+html.escape(run['label'])+'</td>'+''.join(f'<td>{number(run["default_evaluation"][key])}</td>'
+        for key in ('n', 'n_groups', 'bias_pp', 'rmse_pp', 'relative_rms_percent', 'p95_absolute_error_pp'))+'</tr>'
+        for run in profile['views']['positive'])
+    return f'''<div id="polarization-performance" class="subsection">
+  <h3>How does model error change with polarization?</h3>
+  <p>A pooled score can hide the weak-signal region you need to measure. These curves recompute errors from the same saved MLP, DNN and CNN test predictions in declared <strong>true-P bands</strong>. They do not rescale one pooled RMSE or simulate a new performance trend. Choose a sign and compare absolute with relative error.</p>
+  <div class="results-panel">
+    <div class="polarization-controls">
+      <div><label for="polarization-sign">Polarization sign</label><select id="polarization-sign" disabled><option value="positive">Positive (P ≥ 0)</option><option value="negative">Negative (P &lt; 0)</option></select></div>
+      <div><label for="polarization-metric">Error measure</label><select id="polarization-metric" disabled><option value="relative_rms_percent">Relative RMS error (%)</option><option value="rmse_pp">Absolute RMSE (pp)</option></select></div>
+      <div class="controls"><label for="polarization-minimum">Lowest |P| scale of interest <output id="polarization-minimum-value" for="polarization-minimum">1.0%</output></label><input id="polarization-minimum" type="range" min="0" max="24.5" step="0.1" value="1" disabled></div>
+    </div>
+    <div id="polarization-live" hidden><svg id="polarization-chart" class="chart" viewBox="0 0 760 340" role="img" aria-label="Saved model errors versus true polarization magnitude"></svg>
+    <p class="chart-caption" id="polarization-caption"></p></div>
+    <p class="polarization-legend"><span>Rust: MLP</span><span>Sage: DNN</span><span>Dark green: CNN + summaries</span></p>
+    <p id="polarization-band-label" aria-live="polite">Evaluate near +1%: 0.5% ≤ P &lt; 1.5%. This finite band is not a fixed-P experiment.</p>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Selected polarization-band errors; scroll horizontally"><table><caption>Selected evaluation band · unchanged held-out predictions</caption><thead><tr><th>Model</th><th>Events</th><th>Configuration groups</th><th>Bias (pp)</th><th>RMSE (pp)</th><th>Relative RMS (%)</th><th>95th |error| (pp)</th></tr></thead><tbody id="polarization-band-table">{default_rows}</tbody></table></div>
+    <p id="polarization-count-note">Inspect both event and independent configuration counts. Related rows are not independent acquisitions; these descriptive metrics have no uncertainty intervals.</p>
+    <details id="polarization-static" open><summary>All polarization bands: printable figure and counts</summary><div class="details-body"><div class="model-chart-scroll" tabindex="0" role="region" aria-label="Polarization-dependent error figure; scroll horizontally"><img class="chart" src="assets/model-polarization.svg" width="1100" height="770" alt="Absolute and relative model errors in positive and negative polarization bands, with event and configuration counts. Trends differ between models and error measures."></div><p>Download the <a href="assets/model-polarization.svg">four-panel SVG</a> or the band metrics and all prediction rows in the <a href="assets/model-comparison.json">comparison record</a>. The absolute curves retain the 0–1% band. Relative curves omit bands touching zero; they do not floor denominators or discard rows from the absolute metrics.</p></div></details>
+    <noscript><p>The default selected-band table and complete figure remain available above. Enable JavaScript to select another sign, metric or evaluation scale.</p></noscript>
+  </div>
+  <h4>Make the low end of your operating range an explicit evaluation point</h4>
+  <p>At fixed absolute error, relative error increases as 1/|P|. At fixed noise and other physical settings, small |P| also weakens the spin-1 signal and its branch imbalance. Define the lowest nonzero |P| you need <strong>before choosing the model</strong>, collect enough validation cases near it, and report that band's error and counts. Repeat the check across the relevant signs, SNR and setup conditions, then evaluate the frozen design on a final holdout. The <a href="#error-lab">idealized scale demo</a> below isolates the 1/|P| effect.</p>
+  <p>Higher polarization often helps relative precision, but <strong>higher P is not always better for every metric or model</strong>. In these saved runs, absolute RMSE can grow at larger |P| and relative curves are not uniformly decreasing. Calibration, model mismatch and training coverage can change the trend. A low-end result is an essential reported check, not a substitute for verifying the rest of the intended range. These existing test curves are descriptive; they were not used to retune a model.</p>
+  <details><summary>Definitions, band boundaries and limits</summary><div class="details-body"><p>For selected events, <code>e = P_true − P_pred</code>. Absolute RMSE is <code>100 × sqrt(mean(e²))</code> in pp. Relative RMS is <code>100 × sqrt(mean((e/P_true)²))</code> in percent: each event supplies its own denominator. This differs from dividing a band's RMSE by its midpoint, and from changing P₀ under a pooled score.</p><p>Curve edges in |P| are 0, 1, 2.5, 5, 10, 15, 20 and 25 percent, lower-inclusive and upper-exclusive except that 25% is included. Markers sit at band midpoints; their connecting lines do not imply fixed-P measurements or monotonic interpolation. The slider separately recomputes a band ±0.5 percentage points around its chosen magnitude, clipped to 0–25%, for the selected sign. The sign and magnitude inequalities define negative bands too.</p><p>Bands touching zero show absolute errors only. Near zero, relative errors can be dominated by tiny denominators; no hidden floor is used. Empty bands show unavailable metrics, not zero error. Sign and scale selections retain the original configuration IDs. Bands can share groups and differ in their noise/setup composition, so the curves do not isolate changing P with every nuisance fixed. Use paired fixed-P simulations for that controlled question, and independent acquisitions for experimental accuracy.</p></div></details>
+  </div>'''
+
+
 def render_block(snapshot):
     runs = snapshot["runs"]
     row_html = "".join(
@@ -228,6 +301,7 @@ def render_block(snapshot):
   This comparison measures the complete estimators. It does not isolate convolution, establish a universal
   ordering, or measure experimental polarization accuracy. The generator assumes ideal TE calibration
   and a stable, independently noisy reference.</p>
+  {render_polarization_block(snapshot)}
   <div class="results-panel"><div class="panel-heading"><div><p class="eyebrow">Watch learning on the same data</p>
   <label for="model-curve-select" class="select-label">Learning curves</label>
   <select id="model-curve-select"><option value="all">Compare all validation curves</option>{options}</select></div>
@@ -248,9 +322,13 @@ def main():
     parser.add_argument("--runs-dir", type=Path)
     args = parser.parse_args()
     snapshot = verify_comparison(args.protocol, args.runs_dir)
+    snapshot['polarization_profile'] = polarization_profile(snapshot)
+    snapshot['polarization_metrics_sha256'] = digest(ROOT/'tools/polarization_metrics.py')
     assets = ROOT/"docs/assets"
     draw_errors(snapshot, assets/"model-comparison.svg")
     snapshot["figure_sha256"] = digest(assets/"model-comparison.svg")
+    draw_polarization_errors(snapshot, assets/'model-polarization.svg')
+    snapshot['polarization_figure_sha256'] = digest(assets/'model-polarization.svg')
     (assets/"model-comparison.json").write_text(json.dumps(snapshot, indent=2, allow_nan=False)+"\n")
     (assets/"model-comparison.js").write_text("// Generated by tools/export_model_comparison.py.\nwindow.MODEL_COMPARISON = "
                                              +json.dumps(snapshot, separators=(",", ":"), allow_nan=False)+";\n")

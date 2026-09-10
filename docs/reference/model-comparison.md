@@ -61,6 +61,54 @@ estimator rather than the isolated benefit of convolution. The separate
 recorded units, no TE calibration, a different P range and source-scan holdouts;
 its error belongs to that contract.
 
+## Errors versus polarization scale
+
+The [interactive polarization comparison](https://zetanaut.github.io/NMR-AI/index.html#polarization-performance)
+reuses all 600 saved test predictions for each estimator. Its
+[downloadable figure](../assets/model-polarization.svg) shows positive and
+negative P separately. Absolute RMSE and relative RMS answer different questions:
+
+```text
+e = P_true - P_pred                         (fractional polarization)
+absolute RMSE (pp) = 100 * sqrt(mean(e²))
+relative RMS (%) = 100 * sqrt(mean((e / P_true)²))
+```
+
+Relative RMS uses each event's true P, not a band midpoint or an arbitrary
+reference beneath a pooled score. At a fixed nonzero P and fixed absolute RMSE,
+it scales as 1/|P|. For example, 0.05 pp absolute RMSE is 5% relative at P=1%,
+1% at P=5%, and 0.25% at P=20%. The separate
+[constant-error demo](https://zetanaut.github.io/NMR-AI/index.html#error-lab)
+isolates that algebra; it is not a prediction of a model's changing error.
+
+Choose the lowest nonzero |P| required by the application before selecting a
+model. Report errors near that scale, with enough validation events and independent
+groups to support the intended precision, then test the frozen choice on a final
+holdout. Small |P| also weakens the response and branch imbalance at fixed noise
+and other physical settings; the [spin-1 derivation](training-design.md#why-small-polarization-can-be-harder)
+explains why this is particularly relevant without area calibration. Check both
+signs and the relevant noise/setup conditions, as well as the entire operating
+range. Higher P need not improve every error measure: in these saved predictions,
+absolute RMSE can grow and relative RMS does not decrease monotonically for all
+models. The low-end check therefore cannot establish the worst case by itself.
+
+Curve edges in |P| are 0, 1, 2.5, 5, 10, 15, 20 and 25 percent. Intervals
+include their lower edge and exclude the upper, except that 25% is included.
+Markers sit at midpoints; connecting lines only guide the eye. The slider
+recomputes a separate ±0.5 pp band around the chosen magnitude, clipped to
+0–25%, for the selected sign. Every band reports event and configuration counts.
+Relative metrics are unavailable for bands touching zero, where the denominator
+becomes problematic; all those events remain in absolute metrics. No denominator
+floor or hidden row exclusion is used. Empty selections show unavailable errors.
+
+This is a descriptive analysis of existing test predictions, not a new fixed-P
+simulation study or model selection on test data. Bands can share configuration
+groups and have different noise/setup mixtures. Their displayed counts are not
+counts of independent acquisitions, and no uncertainty intervals are claimed.
+A controlled polarization study would vary P while holding nuisance conditions
+and noise sampling comparable. The curves do not establish experimental accuracy
+or the performance of the separate raw/reference lineshape network.
+
 ## Shared filters, summaries and frozen coefficients
 
 ### Why a convolutional network for a one-dimensional spectrum?

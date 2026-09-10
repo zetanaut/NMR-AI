@@ -41,6 +41,14 @@ make noisy, indistinguishable inputs uniquely informative. Evaluate absolute
 errors near zero; relative error is undefined at zero. Detector polarity alone
 does not determine the polarization sign without the readout convention.
 
+Define the lowest nonzero |P| of interest before model selection, and make its
+local validation error an explicit criterion. At fixed absolute RMSE, relative
+RMS scales as 1/|P|; the actual model's absolute error may also change with P.
+The [polarization-error demo](https://zetanaut.github.io/NMR-AI/index.html#polarization-performance)
+shows both effects and band counts on saved predictions. A low-end criterion
+must accompany checks throughout the operating range: higher polarization does
+not guarantee smaller errors for every model, calibration or noise condition.
+
 ## Decide where the training examples should go
 
 Start with broad coverage, then inspect validation errors in **signed** P bands

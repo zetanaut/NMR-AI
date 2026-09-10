@@ -608,6 +608,47 @@ tbody tr:nth-child(even) {
   min-width: 640px
 }
 
+.polarization-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px
+}
+
+.polarization-controls label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px
+}
+
+.polarization-controls select {
+  width: 100%;
+  min-width: 0
+}
+
+.polarization-controls .controls {
+  grid-column: 1 / -1
+}
+
+.polarization-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  font-size: 12px !important
+}
+
+.polarization-legend span::before {
+  content: "";
+  display: inline-block;
+  width: 16px;
+  height: 3px;
+  margin: 0 6px 3px 0;
+  background: #b44c30
+}
+
+.polarization-legend span:nth-child(2)::before { background: #57786e }
+.polarization-legend span:nth-child(3)::before { background: #173c3a }
+
 td:first-child {
   font-weight: 550
 }
@@ -1486,6 +1527,9 @@ footer button {
 }
 
 @media(max-width:540px) {
+  .polarization-controls {
+    grid-template-columns: 1fr
+  }
   main {
     padding-inline: 20px
   }
@@ -1729,6 +1773,9 @@ footer button {
 }
 
 @media print {
+  #polarization-live, .polarization-controls {
+    display: none !important
+  }
   html {
     scroll-behavior: auto
   }

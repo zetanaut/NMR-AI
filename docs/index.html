@@ -11,6 +11,7 @@
   <script defer src="assets/model-comparison.js"></script>
   <script defer src="assets/tutorial.js"></script>
   <script defer src="assets/sampling-lab.js"></script>
+  <script defer src="assets/polarization-scale.js"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to the tutorial</a>
@@ -38,6 +39,7 @@
     <a href="#training"><span>03</span> Train &amp; evaluate</a>
     <a href="#dataset-size" class="subnav">How much training data?</a>
     <a href="#error-lab" class="subnav">Bias &amp; precision lab</a>
+    <a href="#polarization-performance" class="subnav">Error versus polarization</a>
     <a href="#distribution-shift">Matching uncertainty &amp; shift</a>
     <a href="#results" class="subnav">Benchmark results</a>
     <a href="#assignment">Your investigation</a>
@@ -360,6 +362,29 @@ P_hat = target_scale * (linear estimate + CNN correction)</code></pre>
   This comparison measures the complete estimators. It does not isolate convolution, establish a universal
   ordering, or measure experimental polarization accuracy. The generator assumes ideal TE calibration
   and a stable, independently noisy reference.</p>
+  <div id="polarization-performance" class="subsection">
+  <h3>How does model error change with polarization?</h3>
+  <p>A pooled score can hide the weak-signal region you need to measure. These curves recompute errors from the same saved MLP, DNN and CNN test predictions in declared <strong>true-P bands</strong>. They do not rescale one pooled RMSE or simulate a new performance trend. Choose a sign and compare absolute with relative error.</p>
+  <div class="results-panel">
+    <div class="polarization-controls">
+      <div><label for="polarization-sign">Polarization sign</label><select id="polarization-sign" disabled><option value="positive">Positive (P ≥ 0)</option><option value="negative">Negative (P &lt; 0)</option></select></div>
+      <div><label for="polarization-metric">Error measure</label><select id="polarization-metric" disabled><option value="relative_rms_percent">Relative RMS error (%)</option><option value="rmse_pp">Absolute RMSE (pp)</option></select></div>
+      <div class="controls"><label for="polarization-minimum">Lowest |P| scale of interest <output id="polarization-minimum-value" for="polarization-minimum">1.0%</output></label><input id="polarization-minimum" type="range" min="0" max="24.5" step="0.1" value="1" disabled></div>
+    </div>
+    <div id="polarization-live" hidden><svg id="polarization-chart" class="chart" viewBox="0 0 760 340" role="img" aria-label="Saved model errors versus true polarization magnitude"></svg>
+    <p class="chart-caption" id="polarization-caption"></p></div>
+    <p class="polarization-legend"><span>Rust: MLP</span><span>Sage: DNN</span><span>Dark green: CNN + summaries</span></p>
+    <p id="polarization-band-label" aria-live="polite">Evaluate near +1%: 0.5% ≤ P &lt; 1.5%. This finite band is not a fixed-P experiment.</p>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Selected polarization-band errors; scroll horizontally"><table><caption>Selected evaluation band · unchanged held-out predictions</caption><thead><tr><th>Model</th><th>Events</th><th>Configuration groups</th><th>Bias (pp)</th><th>RMSE (pp)</th><th>Relative RMS (%)</th><th>95th |error| (pp)</th></tr></thead><tbody id="polarization-band-table"><tr><td>Basic MLP</td><td>16</td><td>14</td><td>0.0038166</td><td>0.011395</td><td>1.2316</td><td>0.024564</td></tr><tr><td>Deep dense DNN</td><td>16</td><td>14</td><td>-0.001021</td><td>0.017001</td><td>2.7748</td><td>0.032385</td></tr><tr><td>Multiscale CNN + summaries</td><td>16</td><td>14</td><td>-0.00016793</td><td>0.00033318</td><td>0.043574</td><td>0.00063166</td></tr></tbody></table></div>
+    <p id="polarization-count-note">Inspect both event and independent configuration counts. Related rows are not independent acquisitions; these descriptive metrics have no uncertainty intervals.</p>
+    <details id="polarization-static" open><summary>All polarization bands: printable figure and counts</summary><div class="details-body"><div class="model-chart-scroll" tabindex="0" role="region" aria-label="Polarization-dependent error figure; scroll horizontally"><img class="chart" src="assets/model-polarization.svg" width="1100" height="770" alt="Absolute and relative model errors in positive and negative polarization bands, with event and configuration counts. Trends differ between models and error measures."></div><p>Download the <a href="assets/model-polarization.svg">four-panel SVG</a> or the band metrics and all prediction rows in the <a href="assets/model-comparison.json">comparison record</a>. The absolute curves retain the 0–1% band. Relative curves omit bands touching zero; they do not floor denominators or discard rows from the absolute metrics.</p></div></details>
+    <noscript><p>The default selected-band table and complete figure remain available above. Enable JavaScript to select another sign, metric or evaluation scale.</p></noscript>
+  </div>
+  <h4>Make the low end of your operating range an explicit evaluation point</h4>
+  <p>At fixed absolute error, relative error increases as 1/|P|. At fixed noise and other physical settings, small |P| also weakens the spin-1 signal and its branch imbalance. Define the lowest nonzero |P| you need <strong>before choosing the model</strong>, collect enough validation cases near it, and report that band's error and counts. Repeat the check across the relevant signs, SNR and setup conditions, then evaluate the frozen design on a final holdout. The <a href="#error-lab">idealized scale demo</a> below isolates the 1/|P| effect.</p>
+  <p>Higher polarization often helps relative precision, but <strong>higher P is not always better for every metric or model</strong>. In these saved runs, absolute RMSE can grow at larger |P| and relative curves are not uniformly decreasing. Calibration, model mismatch and training coverage can change the trend. A low-end result is an essential reported check, not a substitute for verifying the rest of the intended range. These existing test curves are descriptive; they were not used to retune a model.</p>
+  <details><summary>Definitions, band boundaries and limits</summary><div class="details-body"><p>For selected events, <code>e = P_true − P_pred</code>. Absolute RMSE is <code>100 × sqrt(mean(e²))</code> in pp. Relative RMS is <code>100 × sqrt(mean((e/P_true)²))</code> in percent: each event supplies its own denominator. This differs from dividing a band's RMSE by its midpoint, and from changing P₀ under a pooled score.</p><p>Curve edges in |P| are 0, 1, 2.5, 5, 10, 15, 20 and 25 percent, lower-inclusive and upper-exclusive except that 25% is included. Markers sit at band midpoints; their connecting lines do not imply fixed-P measurements or monotonic interpolation. The slider separately recomputes a band ±0.5 percentage points around its chosen magnitude, clipped to 0–25%, for the selected sign. The sign and magnitude inequalities define negative bands too.</p><p>Bands touching zero show absolute errors only. Near zero, relative errors can be dominated by tiny denominators; no hidden floor is used. Empty bands show unavailable metrics, not zero error. Sign and scale selections retain the original configuration IDs. Bands can share groups and differ in their noise/setup composition, so the curves do not isolate changing P with every nuisance fixed. Use paired fixed-P simulations for that controlled question, and independent acquisitions for experimental accuracy.</p></div></details>
+  </div>
   <div class="results-panel"><div class="panel-heading"><div><p class="eyebrow">Watch learning on the same data</p>
   <label for="model-curve-select" class="select-label">Learning curves</label>
   <select id="model-curve-select"><option value="all">Compare all validation curves</option><option value="mlp">Basic MLP</option><option value="dnn">Deep dense DNN</option><option value="physics_multiscale">Multiscale CNN + summaries</option></select></div>
@@ -458,6 +483,10 @@ done</code></pre>
       <button id="reset-lab" type="button" class="secondary-button">Reset example</button>
     </div><div><svg id="error-chart" class="chart" viewBox="0 0 680 290" role="img" aria-label="Illustrative residual density; its center is bias and its spread is width"></svg><p class="chart-caption">Residual e = P − P̂, in percentage points. Shading marks the ±0.05 pp absolute-error band; it is not a per-event guarantee.</p></div></div>
     <div class="lab-readout" aria-live="polite" aria-atomic="true"><div><span>Absolute RMSE</span><strong id="lab-rmse">0.0539 pp</strong></div><div><span>Relative bias</span><strong id="lab-relative-bias">0.400%</strong></div><div><span>Relative width</span><strong id="lab-relative-width">1.000%</strong></div><div><span>Relative RMSE</span><strong id="lab-relative-rmse">1.077%</strong></div></div><p id="gate-status" class="gate-status">Above the 0.05 pp RMSE target.</p>
+    <h4>The same absolute error becomes harder at small polarization</h4>
+    <p>Keep bias and width fixed, then move P₀. The absolute RMSE stays fixed while <code>relative RMS (%) = 100 × RMSE (pp) / |P₀ (%)|</code> grows toward zero. With the default controls, the same 0.0539 pp absolute RMSE is about 5.39% relative at 1% polarization, 1.08% at 5%, and 0.269% at 20%. This explains why a relative-error requirement must be checked at the lowest nonzero polarization you need.</p>
+    <div id="polarization-ideal-live" hidden><svg id="polarization-ideal-chart" class="chart" viewBox="0 0 760 330" role="img" aria-label="Hypothetical relative RMS versus polarization for fixed absolute error"></svg><p id="polarization-ideal-caption" class="chart-caption"></p></div>
+    <p>Only this constant-error scenario guarantees the falling 1/|P| curve. The <a href="#polarization-performance">saved model curves</a> above recompute actual errors in true-P bands and can behave differently. At P = 0 use absolute error; relative error is undefined.</p>
     <details><summary>Think it through: can a narrow distribution still be inaccurate?</summary><div class="details-body"><p>Yes. Set width to 0.010 pp and bias to 0.100 pp. Predictions cluster tightly, but far from truth. Conversely, zero bias with a broad width gives an unbiased but imprecise estimator. To reach the RMSE target, the combination of both contributions must fit the error budget.</p></div></details>
   </div>
 
