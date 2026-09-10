@@ -604,6 +604,10 @@ tbody tr:nth-child(even) {
   background: #f1f2eb
 }
 
+#cnn-pooling table {
+  min-width: 640px
+}
+
 td:first-child {
   font-weight: 550
 }

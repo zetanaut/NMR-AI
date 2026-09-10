@@ -283,6 +283,69 @@ Changing from angular frequency gives `dω/ω=df/f`, with no extra `2π`. `integ
 
 Each configuration has one independent noisy baseline reference, averaged over 16 sweeps by default and shared by its events. The TE calibration is ideal/noiseless in this benchmark. Voltage storage is float64 to retain tiny signals during subtraction; network inputs are float32 after preprocessing. Applying this TE-area workflow to measurements requires measured references and independently established area calibration, including their uncertainty and any reference-to-signal drift. The separate 500-bin spin-1 lineshape workflow fits polarization and an effective signal amplitude without a TE-area input.
 
+### Area calibration beyond a thermal reference
+
+An area-to-polarization map is not restricted to TE-sized signals. The name
+`te_area` identifies the reference procedure used to generate this repository's
+saved benchmark, whose labels already cover enhanced polarization. A suitable
+reference at enhanced polarization can also establish an area scale. The
+following generalization is a derivation from a proportional-response assumption,
+distinct from the paper's explicitly TE reference and from the current generator:
+
+```
+A[S] = integral S(f)/f df
+Assume A[S(P)] = K P over the validated conditions.
+C_cal = P_ref / A[S_ref] = 1/K
+P_area = C_cal A[S(P)].
+```
+
+Thus reference and target P can differ; a known 10% reference and twice its
+weighted area imply 20% under this assumption. This is an algebraic example,
+not measured calibration evidence or permission to multiply a raw sweep to
+generate a new labeled spectrum. A usable nonzero reference area is required;
+P=0 supplies no nuclear area for determining K. If S is in V, A[S] is in V
+because df/f is dimensionless, and C_cal is in V⁻¹. A different area definition
+needs its own matching calibration and units.
+
+**Spin equilibrium is distinct from lattice equilibrium.** The supplied
+spin-temperature model uses Boltzmann populations at a common spin temperature
+to relate Q and P and determine the branch weights. Enhanced polarization can
+satisfy this population relation without the spin temperature equaling the
+lattice temperature. Lattice TE is useful because the measured field and
+temperature establish P_ref through the thermal formula. For a non-TE reference,
+P_ref must be established by another appropriate method, for example a validated
+spin-1 branch-ratio analysis retaining its model and fitting uncertainty. It is
+not taken from the unknown target label. Boltzmann populations alone specify
+neither an unknown spin temperature nor the instrument's amplitude scale.
+
+The normalized intrinsic kernels each integrate to one over reduced frequency,
+so their weighted absorption integral is `w_plus + w_minus = P`. This motivates
+an area descriptor; it does not prove that the finite-window phase-sensitive
+detector area is exactly proportional to P. The complete circuit can be nonlinear,
+mix dispersion, and weight changing shapes differently across the scan. Stable
+or corrected gain, coupling, reference treatment, detector phase, unsaturated
+response and an adequate window must support transferring the calibration.
+Boltzmann equilibrium alone is therefore insufficient to validate one scalar
+over every P and setup. Populations outside the supplied spin-temperature
+contract require their own model; these notes do not extend that contract.
+
+`te_calibration()` still uses the ideal TE response for each simulated
+configuration. `make_features()` consumes the supplied calibration value and
+does not itself infer a temperature. It builds per-bin contributions
+`a_j = C_cal * (raw_j-reference_j) * trapezoidal_df_over_f_j`; their sum is
+P_area before standardization. These contributions are inputs, not forced
+truth labels. A changed experimental reference procedure must preserve the
+checkpoint's units and feature meaning and validate its response and uncertainty
+against the model's training coverage. The lineshape workflow remains independent
+of an area-calibration input.
+
+Sources: the paper's [Eq. (24), page 8](https://arxiv.org/pdf/2603.10146v5#page=8)
+for Boltzmann populations and [Eqs. (28)–(34), page 10](https://arxiv.org/pdf/2603.10146v5#page=10)
+for the stated TE method. The arbitrary-reference equation above follows by
+eliminating K, and the finite-response limitations follow from the local full
+circuit and observation definitions. No new calibration measurements, datasets,
+training runs or accuracy claims accompany this clarification (2026-09-10).
+
 ## 6. Noise and physical parameter coverage
 
 [Paper §2.2, §6.4, and Eq. (45)](https://arxiv.org/pdf/2603.10146v5#page=5) distinguish Gaussian electronic noise, coherent pickup, microphonics, and tuning drift. A full noise model is more than a histogram width. Characterize repeat differences, covariance, autocorrelation, spectral density, tails, and sweep-to-sweep coherence using development measurements.
@@ -315,6 +378,13 @@ CNN runs remain separate. The multiscale estimator includes the frozen ridge
 branch, so its gain does not isolate the effect of convolution.
 
 The compact CNN (3,889 parameters) and ridge-summary-plus-multiscale CNN (82,391) are independent teaching architectures, not the paper's residual/Inception/SE model. Both see the same two-channel preprocessing. The multiscale model combines filters of widths 5/15/31, dilated residual blocks, pooling, and a correction head with a train-only frozen ridge estimate from 25 summaries. Network size is not a substitute for measured inference latency.
+
+The [architecture reference](model-comparison.md#shared-filters-summaries-and-frozen-coefficients)
+and [CNN lesson](https://zetanaut.github.io/NMR-AI/index.html#multiscale-cnn)
+explain the 1D rationale, every layer shape, local versus global pooling,
+normalization, moment-family motivations and proposed ablations. The moment
+orders and pooling choices are design hypotheses, not uniquely derived physics
+or independently established sources of the reported gain.
 
 Configuration IDs define disjoint 80/10/10 train/validation/test groups. Scalers, target normalization, and ridge coefficients are fitted only on training rows. AdamW optimizes normalized absolute MSE; validation selects the checkpoint and early stopping. Test scores must not be reused to optimize the final estimator. Forward-pass benchmarking excludes preprocessing, IO, and transfers; measure end-to-end cost before deployment. The tutorial saves inference checkpoints, not a complete optimizer-resume state.
 

@@ -13,6 +13,14 @@ Both use the exact 500-bin grid. Their units, calibration assumptions, and saved
 preprocessing differ. The [physics reference](physics-electronics-theory.md)
 derives the full circuit and the TE area calibration.
 
+TE names the ideal reference used in these saved runs; their training spectra
+already span enhanced polarization. More generally, a suitable known-P reference
+can set the area scale at enhanced polarization too. Spin Boltzmann equilibrium
+is distinct from equilibrium with the lattice, and does not by itself validate
+calibration transfer through a changing or nonlinear detector response. Read the
+[area-calibration explanation](physics-electronics-theory.md#area-calibration-beyond-a-thermal-reference)
+before changing a reference procedure or applying a saved checkpoint.
+
 ## Compare an MLP, DNN and CNN
 
 Use the [README setup](../../README.md#set-up), then run these commands from the

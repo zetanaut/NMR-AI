@@ -17,7 +17,8 @@ These are **polarization regression models**: each spectrum produces one signed
 value, the vector polarization P. The main walkthrough uses a multiscale
 convolutional neural network (CNN); simpler dense networks provide comparisons.
 A denoising autoencoder (DAE) instead reconstructs a cleaner spectrum for further
-analysis.
+analysis. Read [how the 1D CNN works](https://zetanaut.github.io/NMR-AI/#multiscale-cnn):
+shared filters, pooling, the exact architecture, and why it includes spectral moments.
 
 Experimental polarization estimates can have roughly 5% relative uncertainty in
 the motivating measurements. We therefore use measured spectra and known setup
@@ -94,6 +95,12 @@ Fitting these spin-1 lineshapes does not require thermal-equilibrium (TE)
 calibration. The network lesson uses raw sweeps and corresponding independent
 baseline references. Its reported errors measure recovery of simulated
 polarization; experimental polarization accuracy remains to be established.
+
+The optional TE-area benchmark uses an area-to-polarization scale set by an ideal
+TE reference. That map can apply at enhanced polarization, and a suitable known-P
+reference need not be at lattice thermal equilibrium. Boltzmann spin populations
+and a validated calibration response are distinct requirements. See the
+[calibration explanation](https://zetanaut.github.io/NMR-AI/#area-calibration).
 
 For your own training study, see the [training-data design guide](docs/reference/training-design.md):
 low-polarization coverage, non-uniform sampling, and choosing dataset size from
