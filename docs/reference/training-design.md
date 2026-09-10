@@ -45,9 +45,17 @@ Define the lowest nonzero |P| of interest before model selection, and make its
 local validation error an explicit criterion. At fixed absolute RMSE, relative
 RMS scales as 1/|P|; the actual model's absolute error may also change with P.
 The [polarization-error demo](https://zetanaut.github.io/NMR-AI/index.html#polarization-performance)
-shows both effects and band counts on saved predictions. A low-end criterion
-must accompany checks throughout the operating range: higher polarization does
-not guarantee smaller errors for every model, calibration or noise condition.
+shows both effects and band counts on saved predictions. With comparable setup
+conditions, fixed additive noise and a response that remains sensitive to P,
+noise-limited relative precision should improve as |P| grows. A persistent flat
+or rising relative-error curve is a warning to investigate data coverage,
+convergence, the model and unresolved nuisance effects. The saved TE-area
+benchmark uses fixed noise SD and ideal calibration; its nearly flat CNN curve
+does not establish a physical limit or sufficient training. Use the
+[plateau diagnostic](https://zetanaut.github.io/NMR-AI/index.html#polarization-diagnostic)
+to choose the next study. Small fluctuations with limited band counts are not
+the same as a sustained trend, and more data are a hypothesis to test. Retain
+both the low-end criterion and checks throughout the operating range.
 
 ## Decide where the training examples should go
 
@@ -263,6 +271,7 @@ The trainer restores the best validation weights. These are current
 | --- | --- |
 | Low training error, worse validation error | Add supported independent training coverage; compare stronger regularization or a smaller network |
 | Both errors remain high | Check units, targets and preprocessing; inspect optimization, model capacity, and whether the inputs contain the needed information |
+| Relative RMS stays flat or rises as \|P\| grows under comparable fixed-noise conditions | Check band/group counts and bias; compare noise-free and repeated-noise development cases, then more independent training coverage and convergence on fixed validation arrays |
 | Pooled error improves but low-\|P\| error does not | Check counts, signed bias, noise and amplitude ambiguity; compare targeted coverage under the same validation distribution |
 | Low-\|P\| error improves but larger-\|P\| error worsens | Increase total coverage or reduce the emphasis; quantify the tradeoff against the declared objective |
 | Different sources or seeds give different conclusions | Add independent acquisition evidence and report the variation |

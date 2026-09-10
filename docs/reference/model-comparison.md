@@ -88,9 +88,42 @@ holdout. Small |P| also weakens the response and branch imbalance at fixed noise
 and other physical settings; the [spin-1 derivation](training-design.md#why-small-polarization-can-be-harder)
 explains why this is particularly relevant without area calibration. Check both
 signs and the relevant noise/setup conditions, as well as the entire operating
-range. Higher P need not improve every error measure: in these saved predictions,
-absolute RMSE can grow and relative RMS does not decrease monotonically for all
-models. The low-end check therefore cannot establish the worst case by itself.
+range. Under fixed additive noise and comparable conditions, a response that
+remains sensitive to P should provide better noise-limited relative precision
+as |P| increases. A persistent failure to improve is a diagnostic warning of
+possible estimator underperformance or an unresolved limitation. The CNN's
+nearly flat relative-error curve deserves investigation even though its pooled
+RMSE is small. It does not demonstrate that training is sufficient or that the
+noise limit has been reached. Finite band counts can also produce small wiggles;
+strict monotonicity of every sampled point is not the acceptance criterion.
+
+The saved dataset has fixed **10⁻⁹ V additive noise SD**, ideal/noiseless TE
+calibration, and a configuration-shared independent reference averaged 16 times.
+Noise is not scaled with P to maintain constant SNR. No calibration uncertainty
+was sampled. These are verified settings in `generate_data.py`, `nmr_lab.py`
+and the saved dataset record, not inferred hardware properties.
+
+Diagnose the missing improvement on a separate development set: compare fixed-P
+cases with matched setup distributions and fixed absolute noise; compare
+noise-free and repeated-noise inputs; then vary training size and independent
+configuration coverage with fixed validation arrays. Refit training-only scalers
+and ridge coefficients for every candidate. Inspect convergence and repeated
+initializations before attributing the plateau to insufficient data. Compare
+architecture or objective changes when justified; the present selection metric
+is pooled absolute MSE, so local relative-error requirements also need explicit
+validation criteria. See the [controlled learning-curve protocol](training-design.md#measure-dataset-size-with-a-controlled-learning-curve)
+and the [interactive diagnostic explanation](https://zetanaut.github.io/NMR-AI/index.html#polarization-diagnostic).
+If these already-inspected test curves guide development, reserve a fresh final
+holdout. A smoother declining curve alone is not proof of improved accuracy.
+
+For intuition, suppose `e = ε + δP`, with zero-mean additive error ε of constant
+SD σₐ and a constant fractional mismatch δ. Then at fixed nonzero P,
+`relative RMS (%) = 100 * sqrt(σₐ²/P² + δ²)`: a scale error can mask the falling
+additive-noise contribution. This derivation is not a fitted description of the
+CNN's errors. In a measurement, independently established calibration uncertainty
+could cause a relative floor that more training cannot remove by itself. Such
+uncertainty is absent from this ideal-calibration benchmark; an explanation of
+its plateau must be tested rather than assumed.
 
 Curve edges in |P| are 0, 1, 2.5, 5, 10, 15, 20 and 25 percent. Intervals
 include their lower edge and exclude the upper, except that 25% is included.

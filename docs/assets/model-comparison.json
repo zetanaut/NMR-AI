@@ -534,7 +534,7 @@
   },
   "group_column": "configuration_id",
   "protocol_sha256": "f4568daefc014adb5994a6a4b2d336a159262948a5fb4f0fe7488249d726a2fb",
-  "exporter_sha256": "5c73915df39e33e4846f4f6f824b2d549a88573d8a9760418cbbd93c088f1b4b",
+  "exporter_sha256": "ee24b5b591782f899e0e542cdf0c9a4ca2da4aca14c4d9c2480d805ab275a86e",
   "dataset_sha256": "af70281eb8bd6efd52dcfe3b764d2bc12712259207342b937bb9e9f2aa157c37",
   "events": 6000,
   "bins": 500,
